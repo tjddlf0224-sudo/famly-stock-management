@@ -15,6 +15,8 @@
     
     <!-- Chart.js 라이브러리: 도넛/라인 차트 그리기용 -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chart.js 데이터 라벨 플러그인 -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <style>
         /* ============================================
            CSS 변수 정의 (전역 색상 테마)
@@ -29,6 +31,49 @@
             --up: #FF3B30;          /* 상승/수익 (빨강) */
             --down: #007AFF;        /* 하락/손실 (파랑) */
             --nav-height: 60px;     /* 하단 네비게이션 높이 */
+            --border-color: #eee;   /* 테두리 색상 */
+            --divider-color: #eee;  /* 구분선 색상 */
+        }
+        
+        /* 다크모드 */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --primary: #0A84FF;      /* 밝은 파란색 */
+                --bg: #000000;           /* 진한 검정 배경 */
+                --card-bg: #1C1C1E;      /* 카드 배경 (다크 그레이) */
+                --text-main: #FFFFFF;    /* 주 텍스트 (흰색) */
+                --text-sub: #98989D;     /* 보조 텍스트 (연한 회색) */
+                --up: #FF453A;           /* 상승/수익 (밝은 빨강) */
+                --down: #0A84FF;         /* 하락/손실 (밝은 파랑) */
+                --border-color: #38383A; /* 테두리 색상 */
+                --divider-color: #38383A;/* 구분선 색상 */
+            }
+        }
+        
+        /* 강제 다크모드 클래스 (수동 토글용) */
+        body.dark-mode {
+            --primary: #0A84FF;
+            --bg: #000000;
+            --card-bg: #1C1C1E;
+            --text-main: #FFFFFF;
+            --text-sub: #98989D;
+            --up: #FF453A;
+            --down: #0A84FF;
+            --border-color: #38383A;
+            --divider-color: #38383A;
+        }
+        
+        /* 강제 라이트모드 클래스 (수동 토글용) */
+        body.light-mode {
+            --primary: #007AFF;
+            --bg: #F2F4F8;
+            --card-bg: #FFFFFF;
+            --text-main: #333;
+            --text-sub: #666;
+            --up: #FF3B30;
+            --down: #007AFF;
+            --border-color: #eee;
+            --divider-color: #eee;
         }
         body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text-main); padding-bottom: var(--nav-height); -webkit-tap-highlight-color: transparent; }
         
@@ -39,7 +84,7 @@
             position: sticky; 
             top: 0; 
             z-index: 100; 
-            box-shadow: 0 1px 5px rgba(0,0,0,0.05); 
+            box-shadow: 0 1px 5px rgba(0,0,0,0.1); 
             display: flex; 
             justify-content: space-between; 
             align-items: center;
@@ -57,9 +102,10 @@
         select#userSelect { 
             padding: 5px 10px; 
             border-radius: 15px; 
-            border: 1px solid #ddd; 
+            border: 1px solid var(--border-color); 
             font-size: 14px; 
-            background: #fff; 
+            background: var(--card-bg); 
+            color: var(--text-main);
             outline: none;
             flex-shrink: 1;
             max-width: 60%;
@@ -79,13 +125,13 @@
         .up { color: var(--up); }
         .down { color: var(--down); }
         .flex-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .divider { border-top: 1px solid #eee; margin: 15px 0; }
+        .divider { border-top: 1px solid var(--divider-color); margin: 15px 0; }
 
         /* 도넛 차트 컨테이너 */
         .chart-container { position: relative; height: 250px; width: 100%; }
 
         /* 리스트 스타일 */
-        .stock-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+        .stock-item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border-color); }
         .stock-item:last-child { border-bottom: none; }
         .stock-name { font-weight: 600; font-size: 15px; }
         .stock-ticker { font-size: 12px; color: #888; margin-top: 2px; }
@@ -95,35 +141,61 @@
         /* 테이블 스타일 */
         .table-wrap { overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
-       th, td { padding: 10px; text-align: right; border-bottom: 1px solid #eee; }
+       th, td { padding: 10px; text-align: right; border-bottom: 1px solid var(--border-color); }
     
         /* ✅ 권장: 스크롤 시 헤더 고정 */
         th { 
             text-align: center; 
-            background: #f9f9f9; 
+            background: var(--card-bg); 
             font-weight: 600; 
-            color: #555;
+            color: var(--text-sub);
             position: sticky;
             top: 0;
             z-index: 10;
+            border-bottom: 2px solid var(--border-color);
         } 
         td:first-child { text-align: left; font-weight: 600; background: var(--card-bg); }
     
         /* 거래내역 폼 */
         .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-size: 13px; color: #666; }
-        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        label { display: block; margin-bottom: 5px; font-size: 13px; color: var(--text-sub); }
+        input, select, textarea { 
+            width: 100%; 
+            padding: 12px; 
+            border: 1px solid var(--border-color); 
+            border-radius: 8px; 
+            font-size: 16px; 
+            box-sizing: border-box;
+            background: var(--card-bg);
+            color: var(--text-main);
+        }
         button.btn-primary { width: 100%; background: var(--primary); color: white; padding: 15px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; }
         button.btn-primary:active { opacity: 0.9; }
 
         /* 하단 네비게이션 */
-        nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card-bg); height: var(--nav-height); border-top: 1px solid #eee; display: flex; justify-content: space-around; align-items: center; z-index: 100; }
+        nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card-bg); height: var(--nav-height); border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; align-items: center; z-index: 100; }
         .nav-item { flex: 1; text-align: center; font-size: 11px; color: #999; cursor: pointer; padding: 8px 0; }
         .nav-item.active { color: var(--primary); font-weight: 600; }
         .nav-icon { font-size: 20px; display: block; margin-bottom: 3px; }
 
         /* 로딩 화면 */
-        #loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        #loader { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: var(--bg); 
+            z-index: 200; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+        }
+        #loadingText {
+            color: var(--text-main);
+            margin-top: 10px;
+        }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
@@ -133,16 +205,19 @@
             gap: 5px;
             margin-bottom: 15px;
             align-items: center;
-            background: #f9f9f9;
+            background: var(--card-bg);
             padding: 10px;
             border-radius: 8px;
+            border: 1px solid var(--border-color);
         }
         .history-filter input {
-            border: 1px solid #ddd;
+            border: 1px solid var(--border-color);
             padding: 8px;
             border-radius: 4px;
             font-size: 13px;
             width: 110px;
+            background: var(--bg);
+            color: var(--text-main);
         }
         .history-filter button {
             background: #333;
@@ -203,7 +278,7 @@
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0,0,0,0.5);
+            background-color: rgba(0,0,0,0.7);
         }
         .modal-content {
             background-color: var(--card-bg);
@@ -212,12 +287,13 @@
             border-radius: 16px;
             width: 90%;
             max-width: 400px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
         }
         .modal-header {
             font-size: 18px;
             font-weight: 700;
             margin-bottom: 20px;
+            color: var(--text-main);
         }
         .input-group {
             margin-bottom: 15px;
@@ -226,15 +302,17 @@
             display: block;
             margin-bottom: 5px;
             font-size: 13px;
-            color: #666;
+            color: var(--text-sub);
         }
         .input-group input {
             width: 100%;
             padding: 12px;
-            border: 1px solid #ddd;
+            border: 1px solid var(--border-color);
             border-radius: 8px;
             font-size: 16px;
             box-sizing: border-box;
+            background: var(--bg);
+            color: var(--text-main);
         }
         .modal-actions {
             display: flex;
@@ -251,16 +329,17 @@
             cursor: pointer;
         }
         .btn-cancel {
-            background: #ddd;
-            color: #333;
+            background: var(--border-color);
+            color: var(--text-main);
         }
         .btn-save {
             background: var(--primary);
             color: white;
         }
         .btn-save:disabled {
-            background: #ccc;
+            background: var(--border-color);
             cursor: not-allowed;
+            opacity: 0.5;
         }
     </style>
 </head>
@@ -291,12 +370,35 @@
 
 <header>
     <h1>투자 관리</h1>
-    <select id="userSelect" onchange="changeUser()">
-        <option value="윤성일">윤성일 (아빠)</option>
-        <option value="윤채현">윤채현 (딸)</option>
-        <option value="윤시환">윤시환 (아들)</option>
-        <option value="가족전체">👨‍👩‍👧‍👦 가족 전체</option>
-    </select>
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <select id="userSelect" onchange="changeUser()">
+            <option value="윤성일">윤성일 (아빠)</option>
+            <option value="윤채현">윤채현 (딸)</option>
+            <option value="윤시환">윤시환 (아들)</option>
+            <option value="가족전체">👨‍👩‍👧‍👦 가족 전체</option>
+        </select>
+        <button onclick="toggleTheme()" id="themeToggle" style="
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        " title="테마 변경">🌓</button>
+        <button onclick="forceRefresh()" style="
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+        " title="새로고침">🔄</button>
+    </div>
 </header>
 
 <div id="tab-portfolio" class="container active">
@@ -609,6 +711,13 @@
         // 날짜 세팅 (기존 기능)
         document.getElementById('inputDate').valueAsDate = new Date();
         
+        // 다크모드 설정 복원
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            document.body.className = savedTheme;
+            updateThemeIcon();
+        }
+        
         // [보안] 암호가 있으면 바로 데이터 로드, 없으면 로그인창 띄움
         const loginModal = document.getElementById('loginModal');
         if (currentAuthKey) {
@@ -618,6 +727,49 @@
             if(loginModal) loginModal.style.display = "flex";
         }
     };
+
+    /**
+     * 테마 토글 함수
+     */
+    function toggleTheme() {
+        const body = document.body;
+        
+        if (body.classList.contains('dark-mode')) {
+            // 다크모드 → 라이트모드
+            body.className = 'light-mode';
+            localStorage.setItem('theme', 'light-mode');
+        } else if (body.classList.contains('light-mode')) {
+            // 라이트모드 → 시스템 기본
+            body.className = '';
+            localStorage.removeItem('theme');
+        } else {
+            // 시스템 기본 → 다크모드
+            body.className = 'dark-mode';
+            localStorage.setItem('theme', 'dark-mode');
+        }
+        
+        updateThemeIcon();
+    }
+
+    /**
+     * 테마 아이콘 업데이트
+     */
+    function updateThemeIcon() {
+        const btn = document.getElementById('themeToggle');
+        if (!btn) return;
+        
+        const body = document.body;
+        if (body.classList.contains('dark-mode')) {
+            btn.textContent = '🌙'; // 다크모드
+            btn.title = '라이트모드로 전환';
+        } else if (body.classList.contains('light-mode')) {
+            btn.textContent = '☀️'; // 라이트모드
+            btn.title = '시스템 설정으로 전환';
+        } else {
+            btn.textContent = '🌓'; // 시스템 기본
+            btn.title = '다크모드로 전환';
+        }
+    }
 
     // 시장 데이터 처리
     function processMarketData(data) {
@@ -650,14 +802,91 @@
         return mappedData;
     }
 
-    // 데이터 가져오기
-    function fetchData() {
-        console.log("데이터 불러오기 시작...");
-        
+    // ============================================
+    // 캐시 관련 상수 및 함수
+    // ============================================
+    const CACHE_KEY = 'portfolio_data_cache';
+    const CACHE_TIME_KEY = 'portfolio_cache_time';
+    const CACHE_VALIDITY_MINUTES = 30; // 캐시 유효 시간 (30분)
+
+    /**
+     * 캐시된 데이터 로드 및 처리
+     */
+    function loadFromCache() {
         try {
+            const cachedData = localStorage.getItem(CACHE_KEY);
+            const cacheTime = localStorage.getItem(CACHE_TIME_KEY);
+            
+            if (!cachedData || !cacheTime) return false;
+            
+            const ageMinutes = (Date.now() - Number(cacheTime)) / 60000;
+            
+            if (ageMinutes > CACHE_VALIDITY_MINUTES) {
+                console.log(`캐시 만료됨 (${ageMinutes.toFixed(1)}분 경과)`);
+                return false;
+            }
+            
+            console.log(`✅ 캐시 사용 (${ageMinutes.toFixed(1)}분 전 데이터)`);
+            const data = JSON.parse(cachedData);
+            applyDataToApp(data);
+            return true;
+        } catch (e) {
+            console.error("캐시 로드 실패:", e);
+            return false;
+        }
+    }
+
+    /**
+     * 데이터를 캐시에 저장
+     */
+    function saveToCache(data) {
+        try {
+            localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+            localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
+            console.log("✅ 캐시 저장 완료");
+        } catch (e) {
+            console.error("캐시 저장 실패:", e);
+            // 저장 공간 부족 시 기존 캐시 삭제
+            if (e.name === 'QuotaExceededError') {
+                localStorage.removeItem(CACHE_KEY);
+                localStorage.removeItem(CACHE_TIME_KEY);
+            }
+        }
+    }
+
+    /**
+     * 데이터를 앱에 적용
+     */
+    function applyDataToApp(data) {
+        if (data.prices) {
+            CURRENT_PRICES = data.prices;
+        }
+
+        LAST_FETCHED_DATA = data;
+        RAW_DATA = data.logs || [];
+        
+        if (data.market) {
+            MARKET_DATA = processMarketData(data.market);
+        } else {
+            MARKET_DATA = [];
+        }
+        
+        PERFORMANCE_DATA = data.performance || [];
+        
+        if (RAW_DATA.length > 0) {
+            processData(RAW_DATA);
+        }
+    }
+
+    /**
+     * 서버에서 데이터 가져오기 (실제 네트워크 요청)
+     */
+    function fetchDataFromServer(isBackground = false) {
+        if (!isBackground) {
+            console.log("서버에서 데이터 불러오는 중...");
             showLoading();
-        } catch(e) {
-            alert("로딩 화면 함수 에러: " + e);
+        } else {
+            console.log("🔄 백그라운드 데이터 업데이트 중...");
         }
 
         if (!GOOGLE_SCRIPT_URL) {
@@ -666,7 +895,6 @@
             return;
         }
 
-        // [보안 수정] URL 뒤에 암호를 붙여서 전송
         const requestUrl = `${GOOGLE_SCRIPT_URL}?who=${currentUser}&authKey=${currentAuthKey}`;
 
         fetch(requestUrl)
@@ -677,8 +905,6 @@
                 return res.text();
             })
             .then(text => {
-                // console.log("받은 데이터:", text); // 보안상 로그 주석 처리 가능
-
                 if (text.trim().startsWith("<")) {
                     throw new Error("서버에서 데이터 대신 HTML(에러페이지)을 보냈습니다.\n앱스스크립트 배포 주소를 확인하거나 '새 버전' 배포를 다시 해주세요.");
                 }
@@ -692,42 +918,73 @@
             .then(data => {
                 // [보안 체크] 서버가 에러를 보냈는지 확인
                 if (data.status === 'error') {
-                    // 암호 틀림 에러인 경우 처리
                     if(data.message.includes("비밀번호") || data.message.includes("권한")) {
                         alert("비밀번호가 틀렸거나 변경되었습니다.\n다시 로그인해주세요.");
-                        localStorage.removeItem(STORAGE_KEY); // 잘못된 비번 삭제
-                        location.reload(); // 새로고침해서 로그인창 다시 띄움
+                        localStorage.removeItem(STORAGE_KEY);
+                        location.reload();
                         return;
                     }
                     throw new Error("앱스스크립트 내부 오류: " + data.message);
                 }
 
-                // 서버에서 온 prices를 전역 변수에 저장!
-                if (data.prices) {
-                    CURRENT_PRICES = data.prices; 
-                    console.log("현재가 데이터 수신 완료:", CURRENT_PRICES.length, "건");
-                } else {
-                    console.log("현재가 데이터가 없습니다.");
-                }
+                // 캐시에 저장
+                saveToCache(data);
 
-                LAST_FETCHED_DATA = data;
-                RAW_DATA = data.logs;
-                
-                if (data.market) {
-                    MARKET_DATA = processMarketData(data.market);
+                // 앱에 데이터 적용
+                applyDataToApp(data);
+
+                if (!isBackground) {
+                    hideLoading();
                 } else {
-                    MARKET_DATA = [];
+                    console.log("✅ 백그라운드 업데이트 완료");
                 }
-                
-                PERFORMANCE_DATA = data.performance || [];
-                processData(RAW_DATA);
-                hideLoading();
             })
             .catch(err => {
-                hideLoading();
-                console.error(err);
-                // alert("🚨 오류 발생 🚨\n\n" + err); // 너무 잦은 알림 방지
+                if (!isBackground) {
+                    hideLoading();
+                }
+                console.error("데이터 로드 실패:", err);
+                
+                // 백그라운드 업데이트 실패는 조용히 처리
+                if (!isBackground) {
+                    // alert("🚨 오류 발생 🚨\n\n" + err);
+                }
             });
+    }
+
+    /**
+     * 메인 데이터 로드 함수 (캐시 우선, 서버 백그라운드)
+     */
+    function fetchData() {
+        console.log("📱 데이터 불러오기 시작...");
+        
+        // 1단계: 캐시된 데이터 확인 및 즉시 표시
+        const cacheLoaded = loadFromCache();
+        
+        if (cacheLoaded) {
+            // 캐시 로드 성공 → 즉시 화면 표시
+            hideLoading();
+            
+            // 2단계: 백그라운드에서 최신 데이터 가져오기 (조용히)
+            setTimeout(() => {
+                fetchDataFromServer(true);
+            }, 500); // 0.5초 후 백그라운드 업데이트
+        } else {
+            // 캐시 없음 → 서버에서 직접 가져오기
+            showLoading();
+            fetchDataFromServer(false);
+        }
+    }
+
+    /**
+     * 강제 새로고침 (캐시 무시)
+     */
+    function forceRefresh() {
+        console.log("🔄 강제 새로고침...");
+        localStorage.removeItem(CACHE_KEY);
+        localStorage.removeItem(CACHE_TIME_KEY);
+        showLoading();
+        fetchDataFromServer(false);
     }
 
     // 사용자 변경
@@ -742,9 +999,13 @@
             inputUser.value = currentUser === '가족전체' ? '윤성일' : currentUser;
         }
 
+        // 캐시된 데이터가 있으면 즉시 재계산, 없으면 서버에서 가져오기
         if (typeof processData === 'function' && RAW_DATA && RAW_DATA.length > 0) {
             console.log(`사용자 변경됨: ${currentUser} -> 화면 갱신`);
             processData(RAW_DATA);
+        } else {
+            // 캐시에 데이터가 없으면 새로 로드
+            fetchData();
         }
     }
 
@@ -1048,7 +1309,7 @@
         }
     }
 
-    // 도넛 차트 렌더링 (예수금 포함)
+    // 도넛 차트 렌더링 (예수금 포함) - 데이터 라벨 추가
     function renderDonutChart(labels, values, cash, totalAsset) {
         const ctx = document.getElementById('donutChart');
         if (!ctx) return;
@@ -1096,13 +1357,27 @@
                                 return `${label}: ${value.toLocaleString()}원 (${percentage}%)`;
                             }
                         }
+                    },
+                    datalabels: {
+                        color: '#fff',
+                        font: {
+                            weight: 'bold',
+                            size: 12
+                        },
+                        formatter: function(value, context) {
+                            let total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            let percentage = ((value / total) * 100).toFixed(1);
+                            // 비중이 5% 미만이면 라벨 표시 안함 (차트가 깔끔해짐)
+                            if (percentage < 5) return '';
+                            return percentage + '%';
+                        }
                     }
                 }
             }
         });
     }
 
-    // 보유 종목 리스트 렌더링 (신규 추가)
+    // 보유 종목 리스트 렌더링 (신규 추가) - 색상 및 단위 수정
     function renderStockList(balanceList) {
         const listDiv = document.getElementById('stockList');
         if (!listDiv) return;
@@ -1125,8 +1400,8 @@
                     <div class="stock-ticker">${item.ticker}</div>
                 </div>
                 <div>
-                    <div class="stock-price ${colorClass}">${Math.round(item.evalAmt).toLocaleString()}원</div>
-                    <div class="stock-change ${colorClass}">${item.rate.toFixed(1)}% (${Math.round(item.profit).toLocaleString()})</div>
+                    <div class="stock-price" style="color: #333;">${Math.round(item.evalAmt).toLocaleString()}원</div>
+                    <div class="stock-change ${colorClass}">${item.rate.toFixed(1)}% (${Math.round(item.profit).toLocaleString()}원)</div>
                 </div>
             `;
             
@@ -1805,6 +2080,9 @@
                                 return label;
                             }
                         }
+                    },
+                    datalabels: {
+                        display: false  // 라인 차트에는 라벨 표시 안함
                     }
                 }
             }
@@ -1836,6 +2114,9 @@
             body: JSON.stringify(data)
         }).then(() => {
             alert("저장되었습니다! (데이터 반영까지 잠시 걸릴 수 있습니다)");
+            // 캐시 삭제 후 새로고침
+            localStorage.removeItem(CACHE_KEY);
+            localStorage.removeItem(CACHE_TIME_KEY);
             location.reload();
         }).catch(err => {
             alert("오류 발생: " + err);
@@ -1929,6 +2210,9 @@
             // no-cors 모드에서는 응답을 읽을 수 없으므로 성공으로 간주
             alert("예수금이 수정되었습니다.\n페이지를 새로고침합니다.");
             closeCashEditModal();
+            // 캐시 삭제 후 새로고침
+            localStorage.removeItem(CACHE_KEY);
+            localStorage.removeItem(CACHE_TIME_KEY);
             location.reload(); // 페이지 새로고침
         })
         .catch(err => {
