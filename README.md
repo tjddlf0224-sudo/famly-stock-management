@@ -1,1 +1,0 @@
-# famly-stock-management
