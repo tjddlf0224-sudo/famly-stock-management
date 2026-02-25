@@ -2265,6 +2265,43 @@
             }
         }
 
+        // 연도 구분 점선 플러그인
+        const yearLinePlugin = {
+            id: 'yearLines',
+            afterDraw(chart) {
+                const { ctx, chartArea, scales } = chart;
+                if (!chartArea) return;
+                const isDark = document.body.classList.contains('dark-mode') ||
+                    (!document.body.classList.contains('light-mode') &&
+                     window.matchMedia('(prefers-color-scheme: dark)').matches);
+                const xScale = scales.x;
+                const labelsArr = chart.data.labels;
+                let prevYear = null;
+                labelsArr.forEach((label, i) => {
+                    const yr = new Date(label).getFullYear();
+                    if (prevYear !== null && yr !== prevYear) {
+                        const x = xScale.getPixelForValue(i);
+                        ctx.save();
+                        ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.18)';
+                        ctx.lineWidth = 1;
+                        ctx.setLineDash([3, 3]);
+                        ctx.beginPath();
+                        ctx.moveTo(x, chartArea.top);
+                        ctx.lineTo(x, chartArea.bottom);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                        // 연도 레이블
+                        ctx.fillStyle = isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.45)';
+                        ctx.font = 'bold 10px -apple-system, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(yr + '년', x, chartArea.top + 11);
+                        ctx.restore();
+                    }
+                    prevYear = yr;
+                });
+            }
+        };
+
         myLineChart = new Chart(context, {
             type: 'line',
             data: {
@@ -2344,9 +2381,11 @@
                     },
                     datalabels: {
                         display: false  // 라인 차트에는 라벨 표시 안함
-                    }
+                    },
+                    yearLines: {}
                 }
-            }
+            },
+            plugins: [yearLinePlugin]
         });
 
         // 성과 차트 터치 인터랙션 (드래그 이동 + 핀치 줌)
