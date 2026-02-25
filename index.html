@@ -2830,7 +2830,7 @@
         // Google Apps Script로 전송 (수정된 URL 사용)
         fetch(GOOGLE_SCRIPT_URL, {
             method: "POST",
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         })
         .then(() => {
@@ -3763,26 +3763,38 @@
                 </div>`;
         }).join('');
 
-        // ── 연도별 집계
+        // ── 연도별 집계 (FIFO 기준 실현손익 정확 계산)
         const yearMap = {};
-        fxRows.forEach(row => {
+        // 전체 행을 날짜순 정렬 후 FIFO 순회하면서 연도별 실현손익 추적
+        const allFxSorted = [...fxRows].sort((a, b) => new Date(a[1]) - new Date(b[1]));
+        let fifoQueue = []; // { usd, rate }
+
+        allFxSorted.forEach(row => {
             const type = String(row[4]).trim();
             const usd  = Math.abs(Number(row[6]) || 0);
             const rate = Number(row[7]) || 0;
             const yr   = String(row[1]).substring(0, 4);
             if (!yr || usd === 0 || rate === 0) return;
-            if (!yearMap[yr]) yearMap[yr] = { buyUsd: 0, sellUsd: 0, buyKRW: 0, sellKRW: 0 };
+
+            if (!yearMap[yr]) yearMap[yr] = { buyUsd: 0, buyKRW: 0, realized: 0 };
+
             if (type === '환전매입') {
-                yearMap[yr].buyUsd  += usd;
-                yearMap[yr].buyKRW  += usd * rate;
+                fifoQueue.push({ usd, rate });
+                yearMap[yr].buyUsd += usd;
+                yearMap[yr].buyKRW += usd * rate;
             } else if (type === '환전매도') {
-                yearMap[yr].sellUsd += usd;
-                yearMap[yr].sellKRW += usd * rate;
+                let remaining = usd;
+                while (remaining > 0.001 && fifoQueue.length > 0) {
+                    const oldest = fifoQueue[0];
+                    const matched = Math.min(oldest.usd, remaining);
+                    yearMap[yr].realized += matched * (rate - oldest.rate);
+                    oldest.usd -= matched;
+                    remaining  -= matched;
+                    if (oldest.usd < 0.001) fifoQueue.shift();
+                }
             }
         });
 
-        // 연도별 실현 손익은 전체 FIFO 기준 정확 계산 (간이: 매도금액 - 매수평균×매도량)
-        // 여기서는 단순히 해당 연도 매도 시 발생한 손익을 전체 FIFO 결과와 별도로 표시
         const sortedYears = Object.keys(yearMap).sort().reverse();
         const yearListEl = document.getElementById('fxYearList');
         if (sortedYears.length === 0) {
@@ -3791,17 +3803,20 @@
             yearListEl.innerHTML = sortedYears.map(yr => {
                 const y = yearMap[yr];
                 const avgBuyRate = y.buyUsd > 0 ? y.buyKRW / y.buyUsd : 0;
+                const realizedStr = y.realized !== 0
+                    ? `<span class="${colorClass(y.realized)}">${fmt(y.realized)}</span>`
+                    : '<span style="color:var(--text-sub);">-</span>';
                 return `
                     <div class="fx-year-item">
                         <div>
                             <div style="font-weight:700; font-size:15px;">${yr}년</div>
                             <div style="font-size:11px; color:var(--text-sub); margin-top:2px;">
-                                환전매입 $${y.buyUsd.toLocaleString(undefined,{maximumFractionDigits:0})}
-                                ${y.sellUsd > 0 ? '· 환전매도 $' + y.sellUsd.toLocaleString(undefined,{maximumFractionDigits:0}) : ''}
+                                평균매입환율 ${avgBuyRate > 0 ? Math.round(avgBuyRate).toLocaleString() + '원' : '-'}
                             </div>
                         </div>
                         <div style="text-align:right;">
-                            <div style="font-size:12px; color:var(--text-sub);">평균매입환율 ${avgBuyRate > 0 ? Math.round(avgBuyRate).toLocaleString() + '원' : '-'}</div>
+                            <div style="font-size:14px; font-weight:700;">${realizedStr}</div>
+                            <div style="font-size:11px; color:var(--text-sub); margin-top:2px;">실현손익</div>
                         </div>
                     </div>`;
             }).join('');
