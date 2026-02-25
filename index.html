@@ -180,19 +180,27 @@
             height: var(--nav-height);
             border-top: 1px solid var(--border-color);
             display: flex;
-            justify-content: space-around;
+            justify-content: flex-start;
             align-items: center;
             z-index: 100;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none; /* Firefox */
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            box-sizing: content-box;
         }
+        nav::-webkit-scrollbar { display: none; } /* Chrome/Safari */
         .nav-item {
-            flex: 1;
+            flex: 0 0 auto;
+            min-width: 72px;
             text-align: center;
             font-size: 13px;
             color: #aaa;
             cursor: pointer;
-            padding: 8px 0;
-            min-width: 0;
+            padding: 8px 6px 12px;
             font-weight: 500;
+            white-space: nowrap;
         }
         .nav-item.active { color: #000; font-weight: 700; }
         body.dark-mode .nav-item { color: #666; }
@@ -1312,7 +1320,12 @@
         document.querySelectorAll('.container').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
         document.getElementById('tab-' + tabName).classList.add('active');
-        event.currentTarget.classList.add('active');
+        const activeNavItem = event.currentTarget;
+        activeNavItem.classList.add('active');
+        // 활성 탭이 네비게이션 바 중앙에 오도록 스크롤
+        const nav = document.querySelector('nav');
+        const itemCenter = activeNavItem.offsetLeft + activeNavItem.offsetWidth / 2;
+        nav.scrollTo({ left: itemCenter - nav.offsetWidth / 2, behavior: 'smooth' });
         if (tabName === 'chart') {
             initChartTab();
         }
