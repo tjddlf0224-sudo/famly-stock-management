@@ -2830,8 +2830,7 @@
         // Google Apps Script로 전송 (수정된 URL 사용)
         fetch(GOOGLE_SCRIPT_URL, {
             method: "POST",
-            mode: "no-cors", // ⚠️ 추가: 브라우저의 CORS 차단을 우회하기 위한 모드
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(payload)
         })
         .then(() => {
