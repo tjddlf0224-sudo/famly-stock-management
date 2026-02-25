@@ -292,6 +292,72 @@
             color: var(--text-sub);
             margin-top: 2px;
         }
+
+        /* 환차손익 탭 스타일 */
+        .fx-total-card {
+            background: linear-gradient(135deg, #5856D6 0%, #3634A3 100%);
+            border-radius: 16px;
+            padding: 24px 20px;
+            margin-bottom: 15px;
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(88,86,214,0.3);
+        }
+        .fx-total-card .label {
+            font-size: 13px;
+            opacity: 0.85;
+            margin-bottom: 2px;
+        }
+        .fx-total-card .amount {
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+        .fx-total-card .sub {
+            font-size: 12px;
+            opacity: 0.75;
+            margin-top: 8px;
+        }
+        .fx-member-card {
+            background: var(--card-bg);
+            border-radius: 14px;
+            padding: 14px 10px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .fx-member-card .member-name {
+            font-size: 12px;
+            color: var(--text-sub);
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+        .fx-member-card .realized {
+            font-size: 14px;
+            font-weight: 800;
+        }
+        .fx-member-card .unrealized {
+            font-size: 11px;
+            color: var(--text-sub);
+            margin-top: 3px;
+        }
+        .fx-year-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 11px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .fx-year-item:last-child { border-bottom: none; }
+        .fx-history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 11px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .fx-history-item:last-child { border-bottom: none; }
+        .fx-profit { color: var(--up); }
+        .fx-loss   { color: var(--down); }
+        .fx-zero   { color: var(--text-sub); }
         .nav-icon { display: none; }
 
         /* 로딩 화면 */
@@ -711,12 +777,14 @@
                 </div>
                 <div style="flex:1;">
                     <label>유형</label>
-                    <select id="inputType">
+                    <select id="inputType" onchange="onTypeChange()">
                         <option value="매수">매수</option>
                         <option value="매도">매도</option>
                         <option value="입금">입금</option>
                         <option value="출금">출금</option>
                         <option value="배당">배당</option>
+                        <option value="환전매수">환전매수 (원→달러)</option>
+                        <option value="환전매도">환전매도 (달러→원)</option>
                     </select>
                 </div>
             </div>
@@ -725,20 +793,20 @@
             <label>종목명</label>
             <input type="text" id="inputName" placeholder="애플">
         </div>
-        <div class="form-group">
+        <div class="form-group" id="qtyRow">
             <div style="display:flex; gap:10px;">
-                <div style="flex:1;">
+                <div style="flex:1;" id="qtyWrap">
                     <label>수량</label>
                     <input type="number" id="inputQty" placeholder="0">
                 </div>
                 <div style="flex:1;">
-                    <label>단가/금액</label>
+                    <label id="priceLabel">단가/금액</label>
                     <input type="number" id="inputPrice" placeholder="USD/KRW">
                 </div>
             </div>
         </div>
         <div class="form-group">
-            <label>환율 (입력 안하면 자동)</label>
+            <label id="fxLabel">환율 (입력 안하면 자동)</label>
             <input type="number" id="inputFx" placeholder="예: 1400">
         </div>
         <div class="form-group">
@@ -788,6 +856,9 @@
     </div>
     <div class="nav-item" onclick="switchTab('dividend')">
         <span class="nav-icon">💸</span>배당
+    </div>
+    <div class="nav-item" onclick="switchTab('fx')">
+        <span class="nav-icon">💱</span>환차손익
     </div>
 </nav>
 
@@ -844,6 +915,45 @@
     <div class="card">
         <h3>배당 내역 <span id="dividendHistoryCount" style="font-size:12px; color:var(--text-sub); font-weight:400;"></span></h3>
         <div id="dividendHistoryList">
+            <div style="color:var(--text-sub); font-size:13px; text-align:center; padding:20px 0;">데이터 로딩 중...</div>
+        </div>
+    </div>
+</div>
+
+<!-- 환차손익 탭 -->
+<div id="tab-fx" class="container">
+
+    <!-- 전체 환차손익 -->
+    <div class="fx-total-card">
+        <div class="label">💱 우리 가족 환차손익 합계</div>
+        <div style="display:flex; gap:20px; margin-top:10px; flex-wrap:wrap;">
+            <div>
+                <div style="font-size:11px; opacity:0.8; margin-bottom:3px;">실현 손익</div>
+                <div class="amount" id="fxFamilyRealized">-</div>
+            </div>
+            <div>
+                <div style="font-size:11px; opacity:0.8; margin-bottom:3px;">미실현 손익</div>
+                <div class="amount" id="fxFamilyUnrealized">-</div>
+            </div>
+        </div>
+        <div class="sub" id="fxFamilySub"></div>
+    </div>
+
+    <!-- 구성원별 환차손익 -->
+    <div class="dividend-member-grid" id="fxMemberGrid"></div>
+
+    <!-- 연도별 환차손익 -->
+    <div class="card">
+        <h3>연도별 환차손익</h3>
+        <div id="fxYearList">
+            <div style="color:var(--text-sub); font-size:13px; text-align:center; padding:20px 0;">데이터 로딩 중...</div>
+        </div>
+    </div>
+
+    <!-- 환전 내역 -->
+    <div class="card">
+        <h3>환전 내역 <span id="fxHistoryCount" style="font-size:12px; color:var(--text-sub); font-weight:400;"></span></h3>
+        <div id="fxHistoryList">
             <div style="color:var(--text-sub); font-size:13px; text-align:center; padding:20px 0;">데이터 로딩 중...</div>
         </div>
     </div>
@@ -1333,6 +1443,9 @@
         }
         if (tabName === 'dividend') {
             renderDividendTab();
+        }
+        if (tabName === 'fx') {
+            renderFxTab();
         }
     }
 
@@ -3377,6 +3490,41 @@
     }
 
     // ============================================
+    // 유형 변경 시 폼 필드 동적 변경
+    // ============================================
+    function onTypeChange() {
+        const type = document.getElementById('inputType').value;
+        const isFx = (type === '환전매수' || type === '환전매도');
+        const qtyWrap   = document.getElementById('qtyWrap');
+        const priceLabel = document.getElementById('priceLabel');
+        const fxLabel    = document.getElementById('fxLabel');
+        const tickerInput = document.getElementById('inputTicker');
+        const nameInput   = document.getElementById('inputName');
+        const priceInput  = document.getElementById('inputPrice');
+        const fxInput     = document.getElementById('inputFx');
+
+        if (isFx) {
+            // 수량 칸 숨기기
+            qtyWrap.style.display = 'none';
+            // 라벨/placeholder 변경
+            priceLabel.textContent = '달러 금액 ($)';
+            priceInput.placeholder = '예: 1000';
+            fxLabel.textContent    = '환전 환율 ★ 필수';
+            fxInput.placeholder    = '예: 1380';
+            // 티커/종목명 자동입력 (공란 / 환전)
+            tickerInput.value = '';
+            nameInput.value   = '환전';
+        } else {
+            qtyWrap.style.display = '';
+            priceLabel.textContent = '단가/금액';
+            priceInput.placeholder = 'USD/KRW';
+            fxLabel.textContent    = '환율 (입력 안하면 자동)';
+            fxInput.placeholder    = '예: 1400';
+            if (nameInput.value === '환전') nameInput.value = '';
+        }
+    }
+
+    // ============================================
     // 배당 탭 렌더링
     // ============================================
     function renderDividendTab() {
@@ -3487,6 +3635,199 @@
                     <div class="right">
                         <div class="krw">₩${Math.round(krw).toLocaleString()}</div>
                         ${originalStr ? `<div class="original">${originalStr}</div>` : ''}
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    // ============================================
+    // 환차손익 탭 렌더링
+    // ============================================
+    function renderFxTab() {
+        if (!RAW_DATA || RAW_DATA.length === 0) {
+            document.getElementById('fxFamilyRealized').textContent = '데이터 없음';
+            return;
+        }
+
+        const usdRate = (LAST_FETCHED_DATA && LAST_FETCHED_DATA.currentUsdRate)
+            ? Number(LAST_FETCHED_DATA.currentUsdRate) : 1450;
+
+        // 환전 행만 필터링
+        const fxRows = RAW_DATA.filter(row => {
+            const t = String(row[4]).trim();
+            return t === '환전매수' || t === '환전매도';
+        });
+
+        // 구성원 목록
+        const memberSet = new Set();
+        RAW_DATA.forEach(row => {
+            const name = String(row[0]).trim();
+            if (name && name !== '가족 전체') memberSet.add(name);
+        });
+        const members = Array.from(memberSet);
+
+        // ── 사용자별 FIFO 계산 ──────────────────────
+        // G열(row[6]) = 달러금액, H열(row[7]) = 환율
+        function calcFx(rows) {
+            // FIFO 큐: { usd, rate } 형태로 매수 내역 누적
+            let buyQueue = [];   // { usd, rate }
+            let realized = 0;   // 실현 환차손익 (원화)
+            let buyCount = 0, sellCount = 0;
+
+            rows.forEach(row => {
+                const type = String(row[4]).trim();
+                const usd  = Math.abs(Number(row[6]) || 0);  // G열: 달러금액
+                const rate = Number(row[7]) || 0;            // H열: 환율
+                if (usd === 0 || rate === 0) return;
+
+                if (type === '환전매수') {
+                    buyQueue.push({ usd, rate });
+                    buyCount++;
+                } else if (type === '환전매도') {
+                    // FIFO로 매수 소진
+                    let remaining = usd;
+                    sellCount++;
+                    while (remaining > 0.001 && buyQueue.length > 0) {
+                        const oldest = buyQueue[0];
+                        const matched = Math.min(oldest.usd, remaining);
+                        realized += matched * (rate - oldest.rate);
+                        oldest.usd -= matched;
+                        remaining  -= matched;
+                        if (oldest.usd < 0.001) buyQueue.shift();
+                    }
+                }
+            });
+
+            // 미실현: 남은 매수 달러 × (현재환율 - 매수환율)
+            let unrealized = 0;
+            let holdUsd = 0;
+            buyQueue.forEach(b => {
+                unrealized += b.usd * (usdRate - b.rate);
+                holdUsd += b.usd;
+            });
+
+            return { realized, unrealized, holdUsd, buyCount, sellCount };
+        }
+
+        // 구성원별 계산
+        const memberStats = {};
+        members.forEach(m => {
+            const myRows = fxRows.filter(r => String(r[0]).trim() === m)
+                .sort((a, b) => new Date(a[1]) - new Date(b[1]));
+            memberStats[m] = calcFx(myRows);
+        });
+
+        // 가족 합산
+        const family = members.reduce((acc, m) => {
+            acc.realized   += memberStats[m].realized;
+            acc.unrealized += memberStats[m].unrealized;
+            acc.holdUsd    += memberStats[m].holdUsd;
+            return acc;
+        }, { realized: 0, unrealized: 0, holdUsd: 0 });
+
+        // ── 색상 헬퍼
+        function colorClass(v) {
+            if (v > 0) return 'fx-profit';
+            if (v < 0) return 'fx-loss';
+            return 'fx-zero';
+        }
+        function fmt(v) {
+            const sign = v > 0 ? '+' : '';
+            return sign + Math.round(v).toLocaleString() + '원';
+        }
+
+        // ── 상단 카드
+        document.getElementById('fxFamilyRealized').innerHTML =
+            `<span class="${colorClass(family.realized)}">${fmt(family.realized)}</span>`;
+        document.getElementById('fxFamilyUnrealized').innerHTML =
+            `<span class="${colorClass(family.unrealized)}">${fmt(family.unrealized)}</span>`;
+        document.getElementById('fxFamilySub').textContent =
+            `보유 달러: $${family.holdUsd.toLocaleString(undefined,{maximumFractionDigits:0})}  ·  현재환율 ${Math.round(usdRate).toLocaleString()}원`;
+
+        // ── 중단: 구성원 카드
+        const grid = document.getElementById('fxMemberGrid');
+        grid.innerHTML = members.map(m => {
+            const s = memberStats[m];
+            return `
+                <div class="dividend-member-card">
+                    <div class="member-name">${m}</div>
+                    <div class="member-amount ${colorClass(s.realized)}" style="color:inherit;">${fmt(s.realized)}</div>
+                    <div class="member-count" style="color:var(--text-sub);">미실현 <span class="${colorClass(s.unrealized)}">${fmt(s.unrealized)}</span></div>
+                </div>`;
+        }).join('');
+
+        // ── 연도별 집계
+        const yearMap = {};
+        fxRows.forEach(row => {
+            const type = String(row[4]).trim();
+            const usd  = Math.abs(Number(row[6]) || 0);
+            const rate = Number(row[7]) || 0;
+            const yr   = String(row[1]).substring(0, 4);
+            if (!yr || usd === 0 || rate === 0) return;
+            if (!yearMap[yr]) yearMap[yr] = { buyUsd: 0, sellUsd: 0, buyKRW: 0, sellKRW: 0 };
+            if (type === '환전매수') {
+                yearMap[yr].buyUsd  += usd;
+                yearMap[yr].buyKRW  += usd * rate;
+            } else if (type === '환전매도') {
+                yearMap[yr].sellUsd += usd;
+                yearMap[yr].sellKRW += usd * rate;
+            }
+        });
+
+        // 연도별 실현 손익은 전체 FIFO 기준 정확 계산 (간이: 매도금액 - 매수평균×매도량)
+        // 여기서는 단순히 해당 연도 매도 시 발생한 손익을 전체 FIFO 결과와 별도로 표시
+        const sortedYears = Object.keys(yearMap).sort().reverse();
+        const yearListEl = document.getElementById('fxYearList');
+        if (sortedYears.length === 0) {
+            yearListEl.innerHTML = '<div style="color:var(--text-sub); font-size:13px; text-align:center; padding:15px 0;">환전 내역이 없습니다</div>';
+        } else {
+            yearListEl.innerHTML = sortedYears.map(yr => {
+                const y = yearMap[yr];
+                const avgBuyRate = y.buyUsd > 0 ? y.buyKRW / y.buyUsd : 0;
+                return `
+                    <div class="fx-year-item">
+                        <div>
+                            <div style="font-weight:700; font-size:15px;">${yr}년</div>
+                            <div style="font-size:11px; color:var(--text-sub); margin-top:2px;">
+                                환전매수 $${y.buyUsd.toLocaleString(undefined,{maximumFractionDigits:0})}
+                                ${y.sellUsd > 0 ? '· 환전매도 $' + y.sellUsd.toLocaleString(undefined,{maximumFractionDigits:0}) : ''}
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:12px; color:var(--text-sub);">평균매수 ${avgBuyRate > 0 ? Math.round(avgBuyRate).toLocaleString() + '원' : '-'}</div>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        // ── 환전 내역 목록 (최신순)
+        const sortedFx = [...fxRows].sort((a, b) => new Date(b[1]) - new Date(a[1]));
+        document.getElementById('fxHistoryCount').textContent = `(${sortedFx.length}건)`;
+
+        const histEl = document.getElementById('fxHistoryList');
+        if (sortedFx.length === 0) {
+            histEl.innerHTML = '<div style="color:var(--text-sub); font-size:13px; text-align:center; padding:20px 0;">환전 내역이 없습니다<br><span style="font-size:11px;">내역 탭에서 환전매수/매도를 입력해주세요</span></div>';
+            return;
+        }
+        histEl.innerHTML = sortedFx.map(row => {
+            const name  = String(row[0]).trim();
+            const date  = String(row[1]).substring(0, 10);
+            const type  = String(row[4]).trim();
+            const usd   = Math.abs(Number(row[6]) || 0);
+            const rate  = Number(row[7]) || 0;
+            const krw   = Math.round(usd * rate);
+            const isBuy = type === '환전매수';
+            const typeColor = isBuy ? '#34C759' : '#FF9500';
+            const typeLabel = isBuy ? '매수 🟢' : '매도 🟠';
+            return `
+                <div class="fx-history-item">
+                    <div>
+                        <div style="font-weight:700; font-size:14px; color:${typeColor};">${typeLabel}</div>
+                        <div style="font-size:11px; color:var(--text-sub); margin-top:2px;">${date} · ${name}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-weight:700; font-size:14px;">$${usd.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
+                        <div style="font-size:11px; color:var(--text-sub); margin-top:2px;">${Math.round(rate).toLocaleString()}원 · ₩${krw.toLocaleString()}</div>
                     </div>
                 </div>`;
         }).join('');
