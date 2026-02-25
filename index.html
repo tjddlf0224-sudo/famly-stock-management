@@ -783,7 +783,7 @@
                         <option value="입금">입금</option>
                         <option value="출금">출금</option>
                         <option value="배당">배당</option>
-                        <option value="환전매수">환전매수 (원→달러)</option>
+                        <option value="환전매입">환전매입 (원→달러)</option>
                         <option value="환전매도">환전매도 (달러→원)</option>
                     </select>
                 </div>
@@ -3494,7 +3494,7 @@
     // ============================================
     function onTypeChange() {
         const type = document.getElementById('inputType').value;
-        const isFx = (type === '환전매수' || type === '환전매도');
+        const isFx = (type === '환전매입' || type === '환전매도');
         const qtyWrap   = document.getElementById('qtyWrap');
         const priceLabel = document.getElementById('priceLabel');
         const fxLabel    = document.getElementById('fxLabel');
@@ -3513,14 +3513,14 @@
             fxInput.placeholder    = '예: 1380';
             // 티커/종목명 자동입력 (공란 / 환전)
             tickerInput.value = '';
-            nameInput.value   = '환전';
+            nameInput.value   = '환전매입/매도';
         } else {
             qtyWrap.style.display = '';
             priceLabel.textContent = '단가/금액';
             priceInput.placeholder = 'USD/KRW';
             fxLabel.textContent    = '환율 (입력 안하면 자동)';
             fxInput.placeholder    = '예: 1400';
-            if (nameInput.value === '환전') nameInput.value = '';
+            if (nameInput.value === '환전매입/매도') nameInput.value = '';
         }
     }
 
@@ -3655,7 +3655,7 @@
         // 환전 행만 필터링
         const fxRows = RAW_DATA.filter(row => {
             const t = String(row[4]).trim();
-            return t === '환전매수' || t === '환전매도';
+            return t === '환전매입' || t === '환전매도';
         });
 
         // 구성원 목록
@@ -3669,7 +3669,7 @@
         // ── 사용자별 FIFO 계산 ──────────────────────
         // G열(row[6]) = 달러금액, H열(row[7]) = 환율
         function calcFx(rows) {
-            // FIFO 큐: { usd, rate } 형태로 매수 내역 누적
+            // FIFO 큐: { usd, rate } 형태로 매입 내역 누적
             let buyQueue = [];   // { usd, rate }
             let realized = 0;   // 실현 환차손익 (원화)
             let buyCount = 0, sellCount = 0;
@@ -3680,11 +3680,11 @@
                 const rate = Number(row[7]) || 0;            // H열: 환율
                 if (usd === 0 || rate === 0) return;
 
-                if (type === '환전매수') {
+                if (type === '환전매입') {
                     buyQueue.push({ usd, rate });
                     buyCount++;
                 } else if (type === '환전매도') {
-                    // FIFO로 매수 소진
+                    // FIFO로 매입 소진
                     let remaining = usd;
                     sellCount++;
                     while (remaining > 0.001 && buyQueue.length > 0) {
@@ -3698,15 +3698,19 @@
                 }
             });
 
-            // 미실현: 남은 매수 달러 × (현재환율 - 매수환율)
+            // 미실현: 남은 매입 달러 × (현재환율 - 매입환율)
             let unrealized = 0;
             let holdUsd = 0;
+            let holdKRW = 0;
             buyQueue.forEach(b => {
                 unrealized += b.usd * (usdRate - b.rate);
                 holdUsd += b.usd;
+                holdKRW += b.usd * b.rate;
             });
+            // 현재 보유 달러의 평균매입환율
+            const avgBuyRate = holdUsd > 0 ? holdKRW / holdUsd : 0;
 
-            return { realized, unrealized, holdUsd, buyCount, sellCount };
+            return { realized, unrealized, holdUsd, avgBuyRate, buyCount, sellCount };
         }
 
         // 구성원별 계산
@@ -3722,8 +3726,10 @@
             acc.realized   += memberStats[m].realized;
             acc.unrealized += memberStats[m].unrealized;
             acc.holdUsd    += memberStats[m].holdUsd;
+            acc.holdKRW    += memberStats[m].holdUsd * memberStats[m].avgBuyRate;
             return acc;
-        }, { realized: 0, unrealized: 0, holdUsd: 0 });
+        }, { realized: 0, unrealized: 0, holdUsd: 0, holdKRW: 0 });
+        const familyAvgBuyRate = family.holdUsd > 0 ? family.holdKRW / family.holdUsd : 0;
 
         // ── 색상 헬퍼
         function colorClass(v) {
@@ -3742,7 +3748,8 @@
         document.getElementById('fxFamilyUnrealized').innerHTML =
             `<span class="${colorClass(family.unrealized)}">${fmt(family.unrealized)}</span>`;
         document.getElementById('fxFamilySub').textContent =
-            `보유 달러: $${family.holdUsd.toLocaleString(undefined,{maximumFractionDigits:0})}  ·  현재환율 ${Math.round(usdRate).toLocaleString()}원`;
+            `보유 달러: $${family.holdUsd.toLocaleString(undefined,{maximumFractionDigits:0})}  ·  현재환율 ${Math.round(usdRate).toLocaleString()}원` +
+            (familyAvgBuyRate > 0 ? `  ·  평균매입환율 ${Math.round(familyAvgBuyRate).toLocaleString()}원` : '');
 
         // ── 중단: 구성원 카드
         const grid = document.getElementById('fxMemberGrid');
@@ -3765,7 +3772,7 @@
             const yr   = String(row[1]).substring(0, 4);
             if (!yr || usd === 0 || rate === 0) return;
             if (!yearMap[yr]) yearMap[yr] = { buyUsd: 0, sellUsd: 0, buyKRW: 0, sellKRW: 0 };
-            if (type === '환전매수') {
+            if (type === '환전매입') {
                 yearMap[yr].buyUsd  += usd;
                 yearMap[yr].buyKRW  += usd * rate;
             } else if (type === '환전매도') {
@@ -3789,36 +3796,36 @@
                         <div>
                             <div style="font-weight:700; font-size:15px;">${yr}년</div>
                             <div style="font-size:11px; color:var(--text-sub); margin-top:2px;">
-                                환전매수 $${y.buyUsd.toLocaleString(undefined,{maximumFractionDigits:0})}
+                                환전매입 $${y.buyUsd.toLocaleString(undefined,{maximumFractionDigits:0})}
                                 ${y.sellUsd > 0 ? '· 환전매도 $' + y.sellUsd.toLocaleString(undefined,{maximumFractionDigits:0}) : ''}
                             </div>
                         </div>
                         <div style="text-align:right;">
-                            <div style="font-size:12px; color:var(--text-sub);">평균매수 ${avgBuyRate > 0 ? Math.round(avgBuyRate).toLocaleString() + '원' : '-'}</div>
+                            <div style="font-size:12px; color:var(--text-sub);">평균매입환율 ${avgBuyRate > 0 ? Math.round(avgBuyRate).toLocaleString() + '원' : '-'}</div>
                         </div>
                     </div>`;
             }).join('');
         }
 
-        // ── 환전 내역 목록 (최신순)
+        // ── 환전 내역 목록 (최신순, 최대 20개)
         const sortedFx = [...fxRows].sort((a, b) => new Date(b[1]) - new Date(a[1]));
         document.getElementById('fxHistoryCount').textContent = `(${sortedFx.length}건)`;
 
         const histEl = document.getElementById('fxHistoryList');
         if (sortedFx.length === 0) {
-            histEl.innerHTML = '<div style="color:var(--text-sub); font-size:13px; text-align:center; padding:20px 0;">환전 내역이 없습니다<br><span style="font-size:11px;">내역 탭에서 환전매수/매도를 입력해주세요</span></div>';
+            histEl.innerHTML = '<div style="color:var(--text-sub); font-size:13px; text-align:center; padding:20px 0;">환전 내역이 없습니다<br><span style="font-size:11px;">내역 탭에서 환전매입/매도를 입력해주세요</span></div>';
             return;
         }
-        histEl.innerHTML = sortedFx.map(row => {
+        histEl.innerHTML = sortedFx.slice(0, 20).map(row => {
             const name  = String(row[0]).trim();
             const date  = String(row[1]).substring(0, 10);
             const type  = String(row[4]).trim();
             const usd   = Math.abs(Number(row[6]) || 0);
             const rate  = Number(row[7]) || 0;
             const krw   = Math.round(usd * rate);
-            const isBuy = type === '환전매수';
+            const isBuy = type === '환전매입';
             const typeColor = isBuy ? '#34C759' : '#FF9500';
-            const typeLabel = isBuy ? '매수 🟢' : '매도 🟠';
+            const typeLabel = isBuy ? '매입 🟢' : '매도 🟠';
             return `
                 <div class="fx-history-item">
                     <div>
@@ -3831,7 +3838,10 @@
                     </div>
                 </div>`;
         }).join('');
-    }
+        if (sortedFx.length > 20) {
+            histEl.innerHTML += `<div style="text-align:center; font-size:12px; color:var(--text-sub); padding:10px 0;">최근 20건만 표시 (전체 ${sortedFx.length}건)</div>`;
+        }
+    }  // renderFxTab 끝
 
     // 모달 외부 클릭 시 닫기
     window.onclick = function(event) {
