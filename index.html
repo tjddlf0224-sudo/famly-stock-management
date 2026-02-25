@@ -197,6 +197,91 @@
         .nav-item.active { color: #000; font-weight: 700; }
         body.dark-mode .nav-item { color: #666; }
         body.dark-mode .nav-item.active { color: #fff; }
+
+        /* 배당 탭 스타일 */
+        .dividend-total-card {
+            background: linear-gradient(135deg, #FF9500 0%, #FF6B00 100%);
+            border-radius: 16px;
+            padding: 24px 20px;
+            margin-bottom: 15px;
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(255,149,0,0.3);
+        }
+        .dividend-total-card .label {
+            font-size: 13px;
+            opacity: 0.85;
+            margin-bottom: 6px;
+        }
+        .dividend-total-card .amount {
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+        .dividend-total-card .sub {
+            font-size: 12px;
+            opacity: 0.75;
+            margin-top: 6px;
+        }
+        .dividend-member-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .dividend-member-card {
+            background: var(--card-bg);
+            border-radius: 14px;
+            padding: 16px 12px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .dividend-member-card .member-name {
+            font-size: 12px;
+            color: var(--text-sub);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        .dividend-member-card .member-amount {
+            font-size: 16px;
+            font-weight: 800;
+            color: #FF9500;
+            line-height: 1.2;
+        }
+        .dividend-member-card .member-count {
+            font-size: 11px;
+            color: var(--text-sub);
+            margin-top: 5px;
+        }
+        .dividend-history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 11px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .dividend-history-item:last-child { border-bottom: none; }
+        .dividend-history-item .left .ticker {
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .dividend-history-item .left .meta {
+            font-size: 11px;
+            color: var(--text-sub);
+            margin-top: 2px;
+        }
+        .dividend-history-item .right {
+            text-align: right;
+        }
+        .dividend-history-item .right .krw {
+            font-weight: 700;
+            font-size: 14px;
+            color: #FF9500;
+        }
+        .dividend-history-item .right .original {
+            font-size: 11px;
+            color: var(--text-sub);
+            margin-top: 2px;
+        }
         .nav-icon { display: none; }
 
         /* 로딩 화면 */
@@ -691,6 +776,9 @@
     <div class="nav-item" onclick="switchTab('chart')">
         <span class="nav-icon">🕯️</span>차트
     </div>
+    <div class="nav-item" onclick="switchTab('dividend')">
+        <span class="nav-icon">💸</span>배당
+    </div>
 </nav>
 
 <!-- 차트 탭 -->
@@ -725,6 +813,29 @@
     <div id="chartLoadingMsg" style="display:none;">
         <div class="spinner" style="margin:0 auto 10px;"></div>
         <div>차트 데이터 로딩 중...</div>
+    </div>
+</div>
+
+<!-- 배당 탭 -->
+<div id="tab-dividend" class="container">
+    <!-- 가족 배당 총액 -->
+    <div class="dividend-total-card">
+        <div class="label">💸 우리 가족 배당금 총액</div>
+        <div class="amount" id="dividendFamilyTotal">계산 중...</div>
+        <div class="sub" id="dividendFamilyCount"></div>
+    </div>
+
+    <!-- 가족 구성원별 배당 총액 -->
+    <div class="dividend-member-grid" id="dividendMemberGrid">
+        <!-- JS로 렌더링 -->
+    </div>
+
+    <!-- 배당 내역 -->
+    <div class="card">
+        <h3>배당 내역 <span id="dividendHistoryCount" style="font-size:12px; color:var(--text-sub); font-weight:400;"></span></h3>
+        <div id="dividendHistoryList">
+            <div style="color:var(--text-sub); font-size:13px; text-align:center; padding:20px 0;">데이터 로딩 중...</div>
+        </div>
     </div>
 </div>
 
@@ -1204,6 +1315,9 @@
         event.currentTarget.classList.add('active');
         if (tabName === 'chart') {
             initChartTab();
+        }
+        if (tabName === 'dividend') {
+            renderDividendTab();
         }
     }
 
@@ -3245,6 +3359,122 @@
     function hideTradePopup() {
         const popup = document.getElementById('tradePopup');
         if (popup) popup.style.display = 'none';
+    }
+
+    // ============================================
+    // 배당 탭 렌더링
+    // ============================================
+    function renderDividendTab() {
+        if (!RAW_DATA || RAW_DATA.length === 0) {
+            document.getElementById('dividendFamilyTotal').textContent = '데이터 없음';
+            return;
+        }
+
+        // 현재 환율 (LAST_FETCHED_DATA에서 가져오거나 기본값 사용)
+        const usdRate = (LAST_FETCHED_DATA && LAST_FETCHED_DATA.currentUsdRate)
+            ? Number(LAST_FETCHED_DATA.currentUsdRate)
+            : 1450;
+
+        // 배당 행만 필터링
+        const dividendRows = RAW_DATA.filter(row => String(row[4]).trim() === '배당');
+
+        // 구성원 목록 추출 (가족 전체 제외)
+        const memberSet = new Set();
+        RAW_DATA.forEach(row => {
+            const name = String(row[0]).trim();
+            if (name && name !== '가족 전체') memberSet.add(name);
+        });
+        const members = Array.from(memberSet);
+
+        // 원화 환산 계산 함수
+        // 앱스스크립트 로직과 동일: 환율(H열=row[7]) > 100이면 달러 배당
+        function toKRW(row) {
+            const price  = Number(row[6]) || 0;  // G열: 단가(배당금액)
+            const fxRate = Number(row[7]) || 1;   // H열: 환율
+            if (fxRate > 100) {
+                // 달러 배당 → 현재 환율로 환산
+                return price * usdRate;
+            } else {
+                // 원화 배당
+                return price;
+            }
+        }
+
+        // 사용자별 합산
+        const memberStats = {};
+        members.forEach(m => {
+            memberStats[m] = { totalKRW: 0, count: 0 };
+        });
+
+        dividendRows.forEach(row => {
+            const name = String(row[0]).trim();
+            if (!memberStats[name]) return;
+            memberStats[name].totalKRW += toKRW(row);
+            memberStats[name].count++;
+        });
+
+        // 가족 전체 합산
+        const familyTotal = members.reduce((sum, m) => sum + memberStats[m].totalKRW, 0);
+        const familyCount = dividendRows.length;
+
+        // ── 상단: 가족 총액 렌더링
+        document.getElementById('dividendFamilyTotal').textContent =
+            '₩' + Math.round(familyTotal).toLocaleString();
+        document.getElementById('dividendFamilyCount').textContent =
+            `총 ${familyCount}회 배당 수령`;
+
+        // ── 중단: 구성원 카드 렌더링
+        const grid = document.getElementById('dividendMemberGrid');
+        grid.innerHTML = members.map(m => {
+            const stat = memberStats[m];
+            return `
+                <div class="dividend-member-card">
+                    <div class="member-name">${m}</div>
+                    <div class="member-amount">₩${Math.round(stat.totalKRW).toLocaleString()}</div>
+                    <div class="member-count">${stat.count}회 수령</div>
+                </div>`;
+        }).join('');
+
+        // ── 하단: 배당 내역 목록 (최신순)
+        const sorted = [...dividendRows].sort((a, b) => {
+            return new Date(b[1]) - new Date(a[1]);
+        });
+
+        document.getElementById('dividendHistoryCount').textContent =
+            `(${familyCount}건)`;
+
+        const listEl = document.getElementById('dividendHistoryList');
+        if (sorted.length === 0) {
+            listEl.innerHTML = '<div style="color:var(--text-sub); font-size:13px; text-align:center; padding:20px 0;">배당 내역이 없습니다</div>';
+            return;
+        }
+
+        listEl.innerHTML = sorted.map(row => {
+            const name    = String(row[0]).trim();
+            const date    = String(row[1]).substring(0, 10);
+            const ticker  = String(row[2]).trim() || '-';
+            const stkName = String(row[3]).trim() || '';
+            const price   = Number(row[6]) || 0;
+            const fxRate  = Number(row[7]) || 1;
+            const krw     = toKRW(row);
+            const isDollar = fxRate > 100;
+
+            const originalStr = isDollar
+                ? `$${price.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} × ${Math.round(fxRate).toLocaleString()}원`
+                : '';
+
+            return `
+                <div class="dividend-history-item">
+                    <div class="left">
+                        <div class="ticker">${ticker}${stkName && stkName !== ticker ? ' <span style="font-weight:400; color:var(--text-sub);">' + stkName + '</span>' : ''}</div>
+                        <div class="meta">${date} &nbsp;·&nbsp; ${name}</div>
+                    </div>
+                    <div class="right">
+                        <div class="krw">₩${Math.round(krw).toLocaleString()}</div>
+                        ${originalStr ? `<div class="original">${originalStr}</div>` : ''}
+                    </div>
+                </div>`;
+        }).join('');
     }
 
     // 모달 외부 클릭 시 닫기
