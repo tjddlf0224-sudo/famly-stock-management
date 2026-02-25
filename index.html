@@ -186,11 +186,12 @@
             overflow-x: auto;
             overflow-y: hidden;
             -webkit-overflow-scrolling: touch;
-            scrollbar-width: none; /* Firefox */
-            padding-bottom: env(safe-area-inset-bottom, 0px);
+            scrollbar-width: none;
+            padding-bottom: env(safe-area-inset-bottom, 8px);
             box-sizing: content-box;
+            touch-action: pan-x;
         }
-        nav::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+        nav::-webkit-scrollbar { display: none; }
         .nav-item {
             flex: 0 0 auto;
             min-width: 72px;
@@ -198,9 +199,10 @@
             font-size: 13px;
             color: #aaa;
             cursor: pointer;
-            padding: 8px 6px 12px;
+            padding: 8px 6px 26px;
             font-weight: 500;
             white-space: nowrap;
+            touch-action: pan-x;
         }
         .nav-item.active { color: #000; font-weight: 700; }
         body.dark-mode .nav-item { color: #666; }
