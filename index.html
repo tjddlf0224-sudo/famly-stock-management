@@ -2745,9 +2745,9 @@
         let currentKRW = 0;
         let currentUSD = 0;
 
-        if (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.cashInfo && LAST_FETCHED_DATA.cashInfo[currentUser]) {
-            currentKRW = LAST_FETCHED_DATA.cashInfo[currentUser].cashKRW || 0;
-            currentUSD = LAST_FETCHED_DATA.cashInfo[currentUser].cashUSD || 0;
+        if (typeof RAW_DATA !== 'undefined' && RAW_DATA.cashInfo && RAW_DATA.cashInfo[currentUser]) {
+            currentKRW = RAW_DATA.cashInfo[currentUser].cashKRW || 0;
+            currentUSD = RAW_DATA.cashInfo[currentUser].cashUSD || 0;
         }
 
         // 입력칸에 현재 값 채워넣기 (수정하기 편하도록)
