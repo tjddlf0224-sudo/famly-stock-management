@@ -931,12 +931,17 @@
                 <div style="font-size:11px; opacity:0.8; margin-bottom:3px;">실현 손익</div>
                 <div class="amount" id="fxFamilyRealized">-</div>
             </div>
-            <div>
-                <div style="font-size:11px; opacity:0.8; margin-bottom:3px;">미실현 손익</div>
-                <div class="amount" id="fxFamilyUnrealized">-</div>
-            </div>
         </div>
         <div class="sub" id="fxFamilySub"></div>
+    </div>
+
+    <!-- 보유 달러 카드 -->
+    <div class="card" style="margin-bottom:15px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="margin:0;">보유 달러</h3>
+            <button class="edit-cash-btn" onclick="openUsdEditModal()">수정</button>
+        </div>
+        <div id="fxUsdHoldingList" style="margin-top:12px;"></div>
     </div>
 
     <!-- 구성원별 환차손익 -->
@@ -959,7 +964,21 @@
     </div>
 </div>
 
-<!-- 예수금 수정 모달 -->
+<!-- 보유 달러 수정 모달 -->
+<div id="usdEditModal" class="modal">
+    <div class="modal-content">
+        <h3>보유 달러 수정</h3>
+        <p style="font-size:14px; color:#666; margin-bottom:15px;">
+            각 구성원의 실제 보유 달러를 입력해주세요.<br>
+            입력한 금액으로 예수금(달러)이 보정됩니다.
+        </p>
+        <div id="usdEditInputs"></div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeUsdEditModal()">취소</button>
+            <button class="btn-save" id="usdSaveBtn" onclick="saveUsdEdit()">저장</button>
+        </div>
+    </div>
+</div>
 <div id="cashEditModal" class="modal">
     <div class="modal-content">
         <h3>예수금 잔고 수정</h3>
@@ -3642,25 +3661,22 @@
         });
         const members = Array.from(memberSet);
 
-        // ── 사용자별 FIFO 계산 ──────────────────────
-        // G열(row[6]) = 달러금액, H열(row[7]) = 환율
+        // ── 사용자별 FIFO 계산 (실현손익만)
         function calcFx(rows) {
-            // FIFO 큐: { usd, rate } 형태로 매입 내역 누적
-            let buyQueue = [];   // { usd, rate }
-            let realized = 0;   // 실현 환차손익 (원화)
+            let buyQueue = [];
+            let realized = 0;
             let buyCount = 0, sellCount = 0;
 
             rows.forEach(row => {
                 const type = String(row[4]).trim();
-                const usd  = Math.abs(Number(row[6]) || 0);  // G열: 달러금액
-                const rate = Number(row[7]) || 0;            // H열: 환율
+                const usd  = Math.abs(Number(row[6]) || 0);
+                const rate = Number(row[7]) || 0;
                 if (usd === 0 || rate === 0) return;
 
                 if (type === '환전매입') {
                     buyQueue.push({ usd, rate });
                     buyCount++;
                 } else if (type === '환전매도') {
-                    // FIFO로 매입 소진
                     let remaining = usd;
                     sellCount++;
                     while (remaining > 0.001 && buyQueue.length > 0) {
@@ -3674,19 +3690,7 @@
                 }
             });
 
-            // 미실현: 남은 매입 달러 × (현재환율 - 매입환율)
-            let unrealized = 0;
-            let holdUsd = 0;
-            let holdKRW = 0;
-            buyQueue.forEach(b => {
-                unrealized += b.usd * (usdRate - b.rate);
-                holdUsd += b.usd;
-                holdKRW += b.usd * b.rate;
-            });
-            // 현재 보유 달러의 평균매입환율
-            const avgBuyRate = holdUsd > 0 ? holdKRW / holdUsd : 0;
-
-            return { realized, unrealized, holdUsd, avgBuyRate, buyCount, sellCount };
+            return { realized, buyCount, sellCount };
         }
 
         // 구성원별 계산
@@ -3697,15 +3701,11 @@
             memberStats[m] = calcFx(myRows);
         });
 
-        // 가족 합산
+        // 가족 합산 (실현손익만)
         const family = members.reduce((acc, m) => {
-            acc.realized   += memberStats[m].realized;
-            acc.unrealized += memberStats[m].unrealized;
-            acc.holdUsd    += memberStats[m].holdUsd;
-            acc.holdKRW    += memberStats[m].holdUsd * memberStats[m].avgBuyRate;
+            acc.realized += memberStats[m].realized;
             return acc;
-        }, { realized: 0, unrealized: 0, holdUsd: 0, holdKRW: 0 });
-        const familyAvgBuyRate = family.holdUsd > 0 ? family.holdKRW / family.holdUsd : 0;
+        }, { realized: 0 });
 
         // ── 색상 헬퍼
         function colorClass(v) {
@@ -3721,13 +3721,32 @@
         // ── 상단 카드
         document.getElementById('fxFamilyRealized').innerHTML =
             `<span class="${colorClass(family.realized)}">${fmt(family.realized)}</span>`;
-        document.getElementById('fxFamilyUnrealized').innerHTML =
-            `<span class="${colorClass(family.unrealized)}">${fmt(family.unrealized)}</span>`;
         document.getElementById('fxFamilySub').textContent =
-            `보유 달러: $${family.holdUsd.toLocaleString(undefined,{maximumFractionDigits:0})}  ·  현재환율 ${Math.round(usdRate).toLocaleString()}원` +
-            (familyAvgBuyRate > 0 ? `  ·  평균매입환율 ${Math.round(familyAvgBuyRate).toLocaleString()}원` : '');
+            `현재환율 ${Math.round(usdRate).toLocaleString()}원`;
 
-        // ── 중단: 구성원 카드
+        // ── 보유 달러 카드 (cashInfo 기준)
+        const usdListEl = document.getElementById('fxUsdHoldingList');
+        if (usdListEl && LAST_FETCHED_DATA && LAST_FETCHED_DATA.cashInfo) {
+            const cInfo = LAST_FETCHED_DATA.cashInfo;
+            let totalUsd = 0;
+            const rows = members.map(m => {
+                const d = cInfo[m] || {};
+                const usd = d.cashUSD || 0;
+                totalUsd += usd;
+                return `
+                    <div class="flex-row" style="margin-bottom:6px;">
+                        <span style="font-size:14px; color:var(--text-sub);">${m}</span>
+                        <span style="font-size:14px; font-weight:700;">$${usd.toLocaleString(undefined,{maximumFractionDigits:2})}</span>
+                    </div>`;
+            }).join('');
+            usdListEl.innerHTML = rows + `
+                <div style="border-top:1px solid var(--border-color); margin-top:8px; padding-top:8px;" class="flex-row">
+                    <span style="font-size:14px; font-weight:600;">합계</span>
+                    <span style="font-size:15px; font-weight:800;">$${totalUsd.toLocaleString(undefined,{maximumFractionDigits:2})}</span>
+                </div>`;
+        }
+
+        // ── 구성원 카드 (실현손익만)
         const grid = document.getElementById('fxMemberGrid');
         grid.innerHTML = members.map(m => {
             const s = memberStats[m];
@@ -3735,15 +3754,14 @@
                 <div class="dividend-member-card">
                     <div class="member-name">${m}</div>
                     <div class="member-amount ${colorClass(s.realized)}" style="color:inherit;">${fmt(s.realized)}</div>
-                    <div class="member-count" style="color:var(--text-sub);">미실현 <span class="${colorClass(s.unrealized)}">${fmt(s.unrealized)}</span></div>
+                    <div class="member-count" style="color:var(--text-sub);">실현손익</div>
                 </div>`;
         }).join('');
 
-        // ── 연도별 집계 (FIFO 기준 실현손익 정확 계산)
+        // ── 연도별 집계 (FIFO 기준 실현손익)
         const yearMap = {};
-        // 전체 행을 날짜순 정렬 후 FIFO 순회하면서 연도별 실현손익 추적
         const allFxSorted = [...fxRows].sort((a, b) => new Date(a[1]) - new Date(b[1]));
-        let fifoQueue = []; // { usd, rate }
+        let fifoQueue = [];
 
         allFxSorted.forEach(row => {
             const type = String(row[4]).trim();
@@ -3798,7 +3816,7 @@
             }).join('');
         }
 
-        // ── 환전 내역 목록 (최신순, 최대 20개)
+        // ── 환전 내역 목록
         const sortedFx = [...fxRows].sort((a, b) => new Date(b[1]) - new Date(a[1]));
         document.getElementById('fxHistoryCount').textContent = `(${sortedFx.length}건)`;
 
@@ -3834,12 +3852,113 @@
         }
     }  // renderFxTab 끝
 
+    // ============================================
+    // 보유 달러 수정 모달
+    // ============================================
+    function openUsdEditModal() {
+        const modal = document.getElementById('usdEditModal');
+        const inputsEl = document.getElementById('usdEditInputs');
+
+        // 구성원 목록 추출
+        const memberSet = new Set();
+        RAW_DATA.forEach(row => {
+            const name = String(row[0]).trim();
+            if (name && name !== '가족 전체') memberSet.add(name);
+        });
+        const members = Array.from(memberSet);
+
+        // 현재 cashUSD 값 가져오기
+        const cInfo = (LAST_FETCHED_DATA && LAST_FETCHED_DATA.cashInfo) || {};
+
+        inputsEl.innerHTML = members.map(m => {
+            const currentUsd = (cInfo[m] && cInfo[m].cashUSD) || 0;
+            return `
+                <div class="input-group">
+                    <label>${m}</label>
+                    <input type="number" step="0.01" id="usd-input-${m}"
+                        placeholder="예: 150.50" value="${currentUsd}">
+                </div>`;
+        }).join('');
+
+        modal.style.display = 'block';
+    }
+
+    function closeUsdEditModal() {
+        document.getElementById('usdEditModal').style.display = 'none';
+    }
+
+    function saveUsdEdit() {
+        const memberSet = new Set();
+        RAW_DATA.forEach(row => {
+            const name = String(row[0]).trim();
+            if (name && name !== '가족 전체') memberSet.add(name);
+        });
+        const members = Array.from(memberSet);
+
+        const cInfo = (LAST_FETCHED_DATA && LAST_FETCHED_DATA.cashInfo) || {};
+        const btn = document.getElementById('usdSaveBtn');
+
+        // 각 구성원별로 순차 저장
+        let pending = members.filter(m => {
+            const input = document.getElementById(`usd-input-${m}`);
+            if (!input) return false;
+            const newUsd = parseFloat(input.value) || 0;
+            const curUsd = (cInfo[m] && cInfo[m].cashUSD) || 0;
+            return Math.abs(newUsd - curUsd) > 0.001; // 변경 있는 경우만
+        });
+
+        if (pending.length === 0) {
+            alert('변경된 값이 없습니다.');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerText = '저장 중...';
+
+        let idx = 0;
+        function saveNext() {
+            if (idx >= pending.length) {
+                alert('보유 달러가 수정되었습니다.\n페이지를 새로고침합니다.');
+                closeUsdEditModal();
+                localStorage.removeItem(CACHE_KEY);
+                localStorage.removeItem(CACHE_TIME_KEY);
+                location.reload();
+                return;
+            }
+            const m = pending[idx++];
+            const newUsd = parseFloat(document.getElementById(`usd-input-${m}`).value) || 0;
+            const curKRW = (cInfo[m] && cInfo[m].cashKRW) || 0;
+
+            const payload = {
+                authKey: currentAuthKey,
+                type: 'adjustCash',
+                who: m,
+                actualKRW: curKRW,  // 원화는 현재값 유지
+                actualUSD: newUsd
+            };
+
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(() => {
+                saveNext();
+            }).catch(err => {
+                btn.disabled = false;
+                btn.innerText = '저장';
+                alert('오류 발생: ' + err.message);
+            });
+        }
+        saveNext();
+    }
+
     // 모달 외부 클릭 시 닫기
     window.onclick = function(event) {
-        const modal = document.getElementById('cashEditModal');
-        if (event.target === modal) {
-            closeCashEditModal();
-        }
+        const cashModal = document.getElementById('cashEditModal');
+        const usdModal = document.getElementById('usdEditModal');
+        if (event.target === cashModal) closeCashEditModal();
+        if (event.target === usdModal) closeUsdEditModal();
     }
 
 </script>
