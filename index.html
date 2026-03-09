@@ -1913,21 +1913,24 @@
         _applySignalBanner(score,signals,'KR','linear-gradient(135deg,#1C1C2E 0%,#2C2C4E 100%)');
     }
     function renderSignalBannerUS(){
-        let score=0,signals=[];
+        let score=0,signals=[],dataCount=0;
         const fgVal=document.getElementById('maFGValue');
-        if(fgVal){const v=parseInt(fgVal.textContent);if(!isNaN(v)){let s=v<=25?20:v<=45?15:v<=55?8:v<=75?3:0;score+=s;if(s>=15)signals.push('공포탐욕('+v+')');}}
+        if(fgVal){const v=parseInt(fgVal.textContent);if(!isNaN(v)&&fgVal.textContent!=='-'){dataCount++;let s=v<=25?20:v<=45?15:v<=55?8:v<=75?3:0;score+=s;if(s>=15)signals.push('공포탐욕('+v+')');}}
         const vixVal=document.getElementById('maVixValue');
-        if(vixVal){const v=parseFloat(vixVal.textContent);if(!isNaN(v)){let s=v>=40?20:v>=30?15:v>=20?8:v>=15?3:0;score+=s;if(s>=15)signals.push('VIX('+v.toFixed(0)+')');}}
+        if(vixVal){const v=parseFloat(vixVal.textContent);if(!isNaN(v)&&vixVal.textContent!=='-'){dataCount++;let s=v>=40?20:v>=30?15:v>=20?8:v>=15?3:0;score+=s;if(s>=15)signals.push('VIX('+v.toFixed(0)+')');}}
         const spyVal=document.getElementById('maSPYPERValue');
-        if(spyVal){const v=parseFloat(spyVal.textContent);if(!isNaN(v)){let s=v<18?15:v<22?8:v<27?3:0;score+=s;if(s>=10)signals.push('SPY PER('+v.toFixed(0)+'x)');}}
+        if(spyVal){const v=parseFloat(spyVal.textContent);if(!isNaN(v)&&spyVal.textContent!=='-'){dataCount++;let s=v<15?15:v<20?8:v<25?3:0;score+=s;if(s>=10)signals.push('SPY Fwd PER('+v.toFixed(0)+'x)');}}
+        // 데이터가 하나도 없으면 신호 표시 안 함
+        if(dataCount===0){document.getElementById('maScoreNumUS').textContent='-';return;}
         _applySignalBanner(score,signals,'US','linear-gradient(135deg,#1C2E1C 0%,#2C4E2C 100%)');
     }
     function _applySignalBanner(score,signals,suffix,defaultGrad){
         let emoji,valueText,desc,bgGrad;
-        if(score>=60){emoji='🎯';valueText='강한 바닥 신호';desc='여러 지표가 극단적 공포를 가리킵니다.';bgGrad='linear-gradient(135deg,#1a0050 0%,#2d0080 100%)';}
-        else if(score>=40){emoji='📉';valueText='바닥권 접근';desc='일부 지표에서 공포 신호가 감지됩니다.';bgGrad='linear-gradient(135deg,#001a40 0%,#003060 100%)';}
-        else if(score>=25){emoji='😐';valueText='중립 — 방향 탐색';desc='뚜렷한 방향성이 없는 구간입니다.';bgGrad=defaultGrad;}
-        else if(score>=10){emoji='⚠️';valueText='상승세 — 고점 주의';desc='시장이 과열 방향으로 움직이고 있습니다.';bgGrad='linear-gradient(135deg,#3C1C00 0%,#5C3000 100%)';}
+        // score 최대 55점 (CNN 20 + VIX 20 + SPY PER 15)
+        if(score>=38){emoji='🎯';valueText='강한 바닥 신호';desc='여러 지표가 극단적 공포를 가리킵니다.';bgGrad='linear-gradient(135deg,#1a0050 0%,#2d0080 100%)';}
+        else if(score>=25){emoji='📉';valueText='바닥권 접근';desc='일부 지표에서 공포 신호가 감지됩니다.';bgGrad='linear-gradient(135deg,#001a40 0%,#003060 100%)';}
+        else if(score>=14){emoji='😐';valueText='중립 — 방향 탐색';desc='뚜렷한 방향성이 없는 구간입니다.';bgGrad=defaultGrad;}
+        else if(score>=5){emoji='⚠️';valueText='상승세 — 고점 주의';desc='시장이 과열 방향으로 움직이고 있습니다.';bgGrad='linear-gradient(135deg,#3C1C00 0%,#5C3000 100%)';}
         else{emoji='🔴';valueText='과열 — 매수 자제';desc='대부분의 지표가 과열을 가리킵니다.';bgGrad='linear-gradient(135deg,#3C0000 0%,#600000 100%)';}
         const banner=document.getElementById('maSignalBanner'+suffix); if(banner) banner.style.background=bgGrad;
         const eEl=document.getElementById('maSignalEmoji'+suffix); if(eEl) eEl.textContent=emoji;
@@ -1953,9 +1956,9 @@
         // 실시간 fallback
         updEl.textContent = '실시간 조회 중...';
         const enc = encodeURIComponent('https://production.dataviz.cnn.io/index/fearandgreed/graphdata');
-        fetch('https://api.allorigins.win/get?url=' + enc)
+        fetch('https://corsproxy.io/?' + enc)
             .then(r=>r.json()).then(d=>{
-                const j=JSON.parse(d.contents);
+                const j=d;
                 const score = Math.round(j.fear_and_greed.score);
                 const label = j.fear_and_greed.rating||'';
                 _applyFG(score, label, '실시간', valEl, badgeEl, updEl, thumbEl, cardEl, tableEl);
@@ -2000,7 +2003,7 @@
         const cardEl=document.getElementById('maVixCard');
         updEl.textContent = '실시간 조회 중...';
         const enc = encodeURIComponent('https://query2.finance.yahoo.com/v8/finance/chart/%5EVIX?interval=1d&range=1d');
-        fetch('https://api.allorigins.win/get?url=' + enc)
+        fetch('https://corsproxy.io/?' + enc)
             .then(r=>r.json()).then(d=>{
                 const j=JSON.parse(d.contents);
                 const price = j.chart.result[0].meta.regularMarketPrice;
