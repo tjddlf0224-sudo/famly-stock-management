@@ -460,7 +460,7 @@
     <div class="ma-signal-banner card" id="maSignalBanner" style="background: linear-gradient(135deg, #1C1C2E 0%, #2C2C4E 100%); color:#fff;">
         <div class="ma-signal-emoji" id="maSignalEmoji">📊</div>
         <div class="ma-signal-content">
-            <div class="ma-signal-label">국내 시장 종합 신호</div>
+            <div class="ma-signal-label">국내·해외 시장 종합 신호</div>
             <div class="ma-signal-value" id="maSignalValue">계산 중...</div>
             <div class="ma-signal-desc" id="maSignalDesc">지표를 불러오는 중입니다</div>
         </div>
@@ -615,6 +615,132 @@
             </table>
         </div>
     </div>
+    <div class="ma-section-title">🌍 해외 시장 지표</div>
+    <div class="ma-grid">
+        <!-- ① CNN 공포탐욕지수 -->
+        <div class="ma-card" id="maFGCard">
+            <div class="ma-card-top">
+                <div class="ma-card-name">📊 CNN 공포탐욕지수</div>
+                <div class="ma-card-badge" id="maFGBadge">-</div>
+            </div>
+            <div class="ma-card-value-row">
+                <div class="ma-card-value" id="maFGValue">-</div>
+                <div class="ma-card-unit">/ 100</div>
+            </div>
+            <div class="ma-card-updated" id="maFGUpdated">불러오는 중...</div>
+            <div class="ma-spectrum">
+                <div class="ma-spectrum-track" style="background: linear-gradient(to right, #007AFF 0%, #34C759 25%, #FFCC00 50%, #FF9500 75%, #FF3B30 100%);">
+                    <div class="ma-spectrum-thumb" id="maFGThumb" style="left:0%"></div>
+                </div>
+                <div class="ma-spectrum-labels">
+                    <span class="ma-spectrum-label">0</span><span class="ma-spectrum-label">25</span>
+                    <span class="ma-spectrum-label">50</span><span class="ma-spectrum-label">75</span>
+                    <span class="ma-spectrum-label">100</span>
+                </div>
+            </div>
+            <table class="ma-range-table" id="maFGTable">
+                <tr><td><span class="ma-range-dot" style="background:#007AFF"></span>0~25</td><td>극도 공포</td><td>🎯 역사적 바닥 신호</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>25~45</td><td>공포</td><td>좋은 매수 구간</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FFCC00"></span>45~55</td><td>중립</td><td>방향성 탐색 중</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>55~75</td><td>탐욕</td><td>고점 매수 주의</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>75~100</td><td>극도 탐욕</td><td>⚠️ 조정 위험 높음</td></tr>
+            </table>
+        </div>
+        <!-- ② VIX 변동성지수 -->
+        <div class="ma-card" id="maVixCard">
+            <div class="ma-card-top">
+                <div class="ma-card-name">🌪️ VIX — 미국 변동성지수</div>
+                <div class="ma-card-badge" id="maVixBadge">-</div>
+            </div>
+            <div class="ma-card-value-row">
+                <div class="ma-card-value" id="maVixValue">-</div>
+                <div class="ma-card-unit">pt</div>
+            </div>
+            <div class="ma-card-updated" id="maVixUpdated">불러오는 중...</div>
+            <div class="ma-spectrum">
+                <div class="ma-spectrum-track" style="background: linear-gradient(to right, #34C759 0%, #FFCC00 25%, #FF9500 55%, #FF3B30 75%, #5856D6 100%);">
+                    <div class="ma-spectrum-thumb" id="maVixThumb" style="left:0%"></div>
+                </div>
+                <div class="ma-spectrum-labels">
+                    <span class="ma-spectrum-label">0</span><span class="ma-spectrum-label">15</span>
+                    <span class="ma-spectrum-label">20</span><span class="ma-spectrum-label">30</span>
+                    <span class="ma-spectrum-label">40</span><span class="ma-spectrum-label">60+</span>
+                </div>
+            </div>
+            <table class="ma-range-table" id="maVixTable">
+                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>~15</td><td>안정</td><td>시장 낙관, 과열 주의</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FFCC00"></span>15~20</td><td>보통</td><td>정상 변동성 수준</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>20~30</td><td>불안</td><td>시장 우려 확대</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>30~40</td><td>공포</td><td>바닥 탐색 가능성</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>40+</td><td>패닉</td><td>🎯 역사적 매수 기회</td></tr>
+            </table>
+        </div>
+        <!-- ③ S&P500 / QQQ PER -->
+        <div class="ma-card" id="maSPYPERCard">
+            <div class="ma-card-top">
+                <div class="ma-card-name">📈 미국 시장 PER</div>
+                <div class="ma-card-badge" id="maSPYPERBadge">-</div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:4px;">
+                <div>
+                    <div style="font-size:11px; color:var(--text-sub); margin-bottom:3px;">S&amp;P500 (SPY)</div>
+                    <div style="font-size:26px; font-weight:800;" id="maSPYPERValue">-</div>
+                    <div style="font-size:11px; color:var(--text-sub); margin-top:2px;">TTM PER</div>
+                </div>
+                <div>
+                    <div style="font-size:11px; color:var(--text-sub); margin-bottom:3px;">나스닥100 (QQQ)</div>
+                    <div style="font-size:26px; font-weight:800;" id="maQQQPERValue">-</div>
+                    <div style="font-size:11px; color:var(--text-sub); margin-top:2px;">TTM PER</div>
+                </div>
+            </div>
+            <div class="ma-card-updated" id="maSPYPERUpdated" style="margin-top:8px;">불러오는 중...</div>
+            <table class="ma-range-table" style="margin-top:12px;" id="maSPYPERTable">
+                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>SPY ~18x</td><td>저평가</td><td>역사적 평균 하단</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FFCC00"></span>18~22x</td><td>적정</td><td>역사적 평균 구간</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>22~27x</td><td>고평가</td><td>성장 기대 선반영</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>27x+</td><td>매우 고평가</td><td>⚠️ 버블 위험 구간</td></tr>
+            </table>
+            <div style="margin-top:8px; font-size:11px; color:var(--text-sub); background:var(--bg); border-radius:8px; padding:8px 10px;">💡 QQQ는 기술주 집중으로 SPY보다 항상 PER이 높음. SPY 22x = QQQ ~30x 수준이 역사적 중간값</div>
+        </div>
+        <!-- ④ AAII 투자자심리 -->
+        <div class="ma-card" id="maAAIICard">
+            <div class="ma-card-top">
+                <div class="ma-card-name">🧠 AAII 투자자 심리</div>
+                <div class="ma-card-badge" id="maAAIIBadge">-</div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:8px;">
+                <div style="text-align:center;">
+                    <div style="font-size:11px; color:#34C759; font-weight:700; margin-bottom:4px;">강세 📈</div>
+                    <div style="font-size:22px; font-weight:800; color:#34C759;" id="maAAIIBull">-</div>
+                    <div style="font-size:10px; color:var(--text-sub);">%</div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="font-size:11px; color:var(--text-sub); font-weight:700; margin-bottom:4px;">중립 ➡️</div>
+                    <div style="font-size:22px; font-weight:800;" id="maAAIINeutral">-</div>
+                    <div style="font-size:10px; color:var(--text-sub);">%</div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="font-size:11px; color:#FF3B30; font-weight:700; margin-bottom:4px;">약세 📉</div>
+                    <div style="font-size:22px; font-weight:800; color:#FF3B30;" id="maAAIIBear">-</div>
+                    <div style="font-size:10px; color:var(--text-sub);">%</div>
+                </div>
+            </div>
+            <div class="ma-card-updated" id="maAAIIUpdated" style="margin-top:8px;">GAS market 시트에서 가져오는 중...</div>
+            <div style="margin-top:10px; height:8px; background:var(--border-color); border-radius:4px; overflow:hidden;">
+                <div id="maAAIIBar" style="height:100%; width:38%; background: linear-gradient(to right, #FF3B30, #34C759); border-radius:4px; transition:width 0.5s ease;"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-sub); margin-top:3px;"><span>약세 우세</span><span>강세 우세</span></div>
+            <table class="ma-range-table" style="margin-top:10px;" id="maAAIITable">
+                <tr><td><span class="ma-range-dot" style="background:#007AFF"></span>강세 &lt;25%</td><td>극도 비관</td><td>🎯 역발상 매수 신호</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>강세 25~35%</td><td>비관</td><td>좋은 매수 구간</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FFCC00"></span>강세 35~45%</td><td>중립</td><td>역사적 평균 수준</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>강세 45~55%</td><td>낙관</td><td>고점 주의 시작</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>강세 55%+</td><td>극도 낙관</td><td>⚠️ 역발상 매도 신호</td></tr>
+            </table>
+            <div style="margin-top:8px; font-size:11px; color:var(--text-sub); background:var(--bg); border-radius:8px; padding:8px 10px;">💡 AAII 심리는 역발상 지표 — 모두가 비관적일 때가 매수 기회, 낙관적일 때가 매도 시점</div>
+        </div>
+    </div>
+
     <div class="ma-update-notice">데이터는 GAS market 시트에 수동 입력 또는 트리거로 자동 업데이트됩니다<span class="ma-manual-badge">GAS 연동</span></div>
 </div>
 
@@ -1742,6 +1868,8 @@
         renderVkospi(ma ? ma.vkospi : null); renderKospiPer(ma ? ma.kospiPer : null);
         renderCredit(ma ? ma.creditBalance : null); renderForeign(ma ? ma.foreign : null);
         renderADRatio(ma ? ma.adRatio : null); renderSignalBanner();
+        // 해외 지표
+        renderFGIndex(); renderVIX(); renderSPYQQQPER(); renderAAII(ma ? ma.aaii : null);
     }
     function maSetCard(cardId, colorClass) { const card=document.getElementById(cardId); if(!card) return; card.className='ma-card '+colorClass; }
     function maSetBadge(badgeId, text, colorClass) {
@@ -1818,6 +1946,123 @@
         document.getElementById('maSignalDesc').textContent=desc+(signals.length?' ('+signals.slice(0,3).join(', ')+')':'');
         const arc=document.getElementById('maScoreArc'),num=document.getElementById('maScoreNum');
         if(arc) arc.style.strokeDashoffset=138.2-(score/100)*138.2; if(num) num.textContent=score;
+    }
+
+    // ====== 해외 시장 지표 렌더링 ======
+
+    // ① CNN 공포탐욕지수 (allorigins 프록시 실시간, GAS 캐시 우선)
+    function renderFGIndex() {
+        const valEl=document.getElementById('maFGValue'), badgeEl=document.getElementById('maFGBadge');
+        const updEl=document.getElementById('maFGUpdated'), thumbEl=document.getElementById('maFGThumb');
+        const cardEl=document.getElementById('maFGCard'), tableEl=document.getElementById('maFGTable');
+
+        // GAS 캐시 우선
+        const fg = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA) ? LAST_FETCHED_DATA.cnnFearGreed : null;
+        if (fg && fg.score) {
+            _applyFG(fg.score, fg.label||'', fg.updated||'캐시', valEl, badgeEl, updEl, thumbEl, cardEl, tableEl); return;
+        }
+        // 실시간 fallback
+        updEl.textContent = '실시간 조회 중...';
+        const enc = encodeURIComponent('https://production.dataviz.cnn.io/index/fearandgreed/graphdata');
+        fetch('https://api.allorigins.win/get?url=' + enc)
+            .then(r=>r.json()).then(d=>{
+                const j=JSON.parse(d.contents);
+                _applyFG(Math.round(j.fear_and_greed.score), j.fear_and_greed.rating||'', '실시간',
+                         valEl, badgeEl, updEl, thumbEl, cardEl, tableEl);
+            }).catch(()=>{ valEl.textContent='N/A'; updEl.textContent='⚠️ CNN API 연결 실패'; });
+    }
+    function _applyFG(score, label, updated, valEl, badgeEl, updEl, thumbEl, cardEl, tableEl) {
+        let color,kor,idx;
+        if(score<=25){color='#007AFF';kor='극도 공포';idx=0;}
+        else if(score<=45){color='#34C759';kor='공포';idx=1;}
+        else if(score<=55){color='#FFCC00';kor='중립';idx=2;}
+        else if(score<=75){color='#FF9500';kor='탐욕';idx=3;}
+        else{color='#FF3B30';kor='극도 탐욕';idx=4;}
+        valEl.innerHTML='<span style="color:'+color+';">'+score+'</span>';
+        maSetBadge('maFGBadge', kor, color==='#007AFF'?'ma-fear':color==='#34C759'?'ma-cool':color==='#FFCC00'?'ma-normal':color==='#FF9500'?'ma-warn':'ma-hot');
+        updEl.textContent = '업데이트: '+updated+(label?' ('+label+')':'');
+        if(thumbEl) thumbEl.style.left = score+'%';
+        if(cardEl) cardEl.style.borderColor = color+'55';
+        maHighlightRange('maFGTable', idx);
+    }
+
+    // ② VIX 실시간 (Yahoo Finance ^VIX, allorigins)
+    function renderVIX() {
+        const valEl=document.getElementById('maVixValue'), badgeEl=document.getElementById('maVixBadge');
+        const updEl=document.getElementById('maVixUpdated'), thumbEl=document.getElementById('maVixThumb');
+        const cardEl=document.getElementById('maVixCard');
+        updEl.textContent = '실시간 조회 중...';
+        const enc = encodeURIComponent('https://query2.finance.yahoo.com/v8/finance/chart/%5EVIX?interval=1d&range=1d');
+        fetch('https://api.allorigins.win/get?url=' + enc)
+            .then(r=>r.json()).then(d=>{
+                const j=JSON.parse(d.contents);
+                const price = j.chart.result[0].meta.regularMarketPrice;
+                const v = Math.round(price*10)/10;
+                let color,kor,idx;
+                if(v<15){color='#34C759';kor='안정';idx=0;}
+                else if(v<20){color='#FFCC00';kor='보통';idx=1;}
+                else if(v<30){color='#FF9500';kor='불안';idx=2;}
+                else if(v<40){color='#FF3B30';kor='공포';idx=3;}
+                else{color='#5856D6';kor='패닉 🎯';idx=4;}
+                valEl.innerHTML='<span style="color:'+color+';">'+v+'</span>';
+                maSetBadge('maVixBadge', kor, color==='#34C759'?'ma-cool':color==='#FFCC00'?'ma-normal':color==='#FF9500'?'ma-warn':color==='#FF3B30'?'ma-hot':'ma-panic');
+                updEl.textContent = '업데이트: 실시간 (Yahoo Finance)';
+                if(thumbEl) thumbEl.style.left = maThumbPos(v,0,60);
+                if(cardEl) cardEl.style.borderColor = color+'55';
+                maHighlightRange('maVixTable', idx);
+            }).catch(()=>{ valEl.textContent='N/A'; updEl.textContent='⚠️ Yahoo Finance 연결 실패'; });
+    }
+
+    // ③ S&P500(SPY) / QQQ PER 실시간 (Yahoo Finance, allorigins)
+    function renderSPYQQQPER() {
+        const spyEl=document.getElementById('maSPYPERValue'), qqqEl=document.getElementById('maQQQPERValue');
+        const updEl=document.getElementById('maSPYPERUpdated'), badgeEl=document.getElementById('maSPYPERBadge');
+        updEl.textContent = '실시간 조회 중...';
+        function fetchPER(ticker) {
+            const enc=encodeURIComponent('https://query2.finance.yahoo.com/v10/finance/quoteSummary/'+ticker+'?modules=summaryDetail');
+            return fetch('https://api.allorigins.win/get?url='+enc)
+                .then(r=>r.json()).then(d=>{
+                    const j=JSON.parse(d.contents);
+                    return j.quoteSummary.result[0].summaryDetail.trailingPE?.raw || null;
+                }).catch(()=>null);
+        }
+        Promise.all([fetchPER('SPY'),fetchPER('QQQ')]).then(([spy,qqq])=>{
+            function perColor(p){if(!p)return'var(--text-main)';if(p<18)return'#34C759';if(p<22)return'#FFCC00';if(p<27)return'#FF9500';return'#FF3B30';}
+            spyEl.innerHTML = spy ? '<span style="color:'+perColor(spy)+';">'+Math.round(spy*10)/10+'x</span>' : '<span style="color:var(--text-sub);">N/A</span>';
+            qqqEl.innerHTML = qqq ? '<span style="color:'+perColor(qqq)+';">'+Math.round(qqq*10)/10+'x</span>' : '<span style="color:var(--text-sub);">N/A</span>';
+            let kor,clr;
+            const v=spy||0;
+            if(v<18){kor='저평가';clr='ma-cool';} else if(v<22){kor='적정';clr='ma-normal';} else if(v<27){kor='고평가';clr='ma-warn';} else{kor='매우 고평가';clr='ma-hot';}
+            maSetBadge('maSPYPERBadge', kor, clr);
+            updEl.textContent = '업데이트: 실시간 (Yahoo Finance)';
+            maHighlightRange('maSPYPERTable', v<18?0:v<22?1:v<27?2:3);
+        });
+    }
+
+    // ④ AAII 투자자심리 (GAS market 시트에서 aaii 데이터 사용)
+    function renderAAII(data) {
+        const bullEl=document.getElementById('maAAIIBull'), neutralEl=document.getElementById('maAAIINeutral');
+        const bearEl=document.getElementById('maAAIIBear'), updEl=document.getElementById('maAAIIUpdated');
+        const barEl=document.getElementById('maAAIIBar');
+        if(!data||data.bull===undefined){
+            updEl.textContent='⚠️ GAS market 시트에 aaii 데이터를 입력해주세요';
+            bullEl.textContent='-'; neutralEl.textContent='-'; bearEl.textContent='-';
+            return;
+        }
+        const bull=Number(data.bull)||0, neutral=Number(data.neutral)||0, bear=Number(data.bear)||0;
+        bullEl.textContent = bull.toFixed(1);
+        neutralEl.textContent = neutral.toFixed(1);
+        bearEl.textContent = bear.toFixed(1);
+        updEl.textContent = '업데이트: '+(data.updated||'-');
+        if(barEl) barEl.style.width = bull+'%';
+        let kor,clr,idx;
+        if(bull<25){kor='극도 비관 🎯';clr='ma-fear';idx=0;}
+        else if(bull<35){kor='비관';clr='ma-cool';idx=1;}
+        else if(bull<45){kor='중립';clr='ma-normal';idx=2;}
+        else if(bull<55){kor='낙관';clr='ma-warn';idx=3;}
+        else{kor='극도 낙관 ⚠️';clr='ma-hot';idx=4;}
+        maSetBadge('maAAIIBadge', kor, clr);
+        maHighlightRange('maAAIITable', idx);
     }
 
     window.onclick = function(event) { const cashModal=document.getElementById('cashEditModal'); if(event.target===cashModal) closeCashEditModal(); }
