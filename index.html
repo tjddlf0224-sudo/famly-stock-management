@@ -162,7 +162,6 @@
         .buy-warning-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
         .warn-card { border-radius: 14px; padding: 14px 16px; border: 1.5px solid var(--border-color); background: var(--bg); position: relative; overflow: hidden; }
         .warn-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--warn-accent, #ccc); }
-        .warn-card.fear-greed { --warn-accent: #aaa; }
         .warn-card.per-card   { --warn-accent: #007AFF; }
         .warn-card.cash-card  { --warn-accent: #FF9500; }
         .warn-card-label { font-size: 11px; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px; }
@@ -1782,7 +1781,7 @@
         if (sub) { const isKorea=/^\d{6}$/.test(ticker); const priceStr=price>0?` · ${isKorea?Math.round(price).toLocaleString()+'원':'$'+price} × ${qty}주`:''; sub.textContent=`${name}${ticker?' ('+ticker+')':''}${priceStr}`; }
         document.getElementById('buyWarningOverlay').classList.add('show');
         document.body.style.overflow = 'hidden';
-        fillFearGreedData(ticker); fillPERData(ticker); fillCashData();
+        fillPERData(ticker); fillCashData();
     }
     function closeBuyWarning(event) { if (event.target === document.getElementById('buyWarningOverlay')) closeBuyWarningDirect(); }
     function closeBuyWarningDirect() { document.getElementById('buyWarningOverlay').classList.remove('show'); document.body.style.overflow = ''; }
