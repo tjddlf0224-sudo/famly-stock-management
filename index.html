@@ -162,6 +162,7 @@
         .buy-warning-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
         .warn-card { border-radius: 14px; padding: 14px 16px; border: 1.5px solid var(--border-color); background: var(--bg); position: relative; overflow: hidden; }
         .warn-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--warn-accent, #ccc); }
+        .warn-card.fear-greed { --warn-accent: #aaa; }
         .warn-card.per-card   { --warn-accent: #007AFF; }
         .warn-card.cash-card  { --warn-accent: #FF9500; }
         .warn-card-label { font-size: 11px; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px; }
@@ -181,6 +182,9 @@
         .mini-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border-color); border-top-color: var(--text-sub); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; }
 
         /* ====== 시장분석 탭 CSS ====== */
+        .ma-tab-switcher { display: flex; gap: 8px; margin: 12px 0 14px; }
+        .ma-tab-btn { flex: 1; padding: 10px 0; border-radius: 12px; border: 1.5px solid var(--border-color); background: var(--card-bg); color: var(--text-sub); font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+        .ma-tab-btn.active { background: var(--text-main); color: var(--bg); border-color: var(--text-main); }
         .ma-section-title { font-size: 13px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-sub); margin: 20px 0 10px; display: flex; align-items: center; gap: 6px; }
         .ma-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
         .ma-signal-banner { border-radius: 18px; padding: 20px; margin-bottom: 16px; display: flex; align-items: center; gap: 16px; position: relative; overflow: hidden; }
@@ -456,22 +460,48 @@
 
 <!-- 시장분석 탭 -->
 <div id="tab-market" class="container">
-    <div class="ma-signal-banner card" id="maSignalBanner" style="background: linear-gradient(135deg, #1C1C2E 0%, #2C2C4E 100%); color:#fff;">
-        <div class="ma-signal-emoji" id="maSignalEmoji">📊</div>
+
+    <!-- 탭 전환 버튼 -->
+    <div class="ma-tab-switcher">
+        <button class="ma-tab-btn active" id="maBtnKR" onclick="switchMarketView('kr')">🇰🇷 국내 시장 지표</button>
+        <button class="ma-tab-btn" id="maBtnUS" onclick="switchMarketView('us')">🇺🇸 미국 시장 지표</button>
+    </div>
+
+    <!-- 국내 배너 -->
+    <div class="ma-signal-banner card" id="maSignalBannerKR" style="background: linear-gradient(135deg, #1C1C2E 0%, #2C2C4E 100%); color:#fff;">
+        <div class="ma-signal-emoji" id="maSignalEmojiKR">📊</div>
         <div class="ma-signal-content">
-            <div class="ma-signal-label">국내·해외 시장 종합 신호</div>
-            <div class="ma-signal-value" id="maSignalValue">계산 중...</div>
-            <div class="ma-signal-desc" id="maSignalDesc">지표를 불러오는 중입니다</div>
+            <div class="ma-signal-label">🇰🇷 국내 시장 종합 신호</div>
+            <div class="ma-signal-value" id="maSignalValueKR">계산 중...</div>
+            <div class="ma-signal-desc" id="maSignalDescKR">지표를 불러오는 중입니다</div>
         </div>
         <div class="ma-signal-score-ring">
             <svg viewBox="0 0 56 56">
                 <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="5"/>
-                <circle cx="28" cy="28" r="22" fill="none" stroke="white" stroke-width="5" stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="138.2" id="maScoreArc" transform="rotate(-90 28 28)" style="transition: stroke-dashoffset 1s ease;"/>
+                <circle cx="28" cy="28" r="22" fill="none" stroke="white" stroke-width="5" stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="138.2" id="maScoreArcKR" transform="rotate(-90 28 28)" style="transition: stroke-dashoffset 1s ease;"/>
             </svg>
-            <div class="ma-score-num" id="maScoreNum" style="color:white;">-</div>
+            <div class="ma-score-num" id="maScoreNumKR" style="color:white;">-</div>
         </div>
     </div>
 
+    <!-- 미국 배너 -->
+    <div class="ma-signal-banner card" id="maSignalBannerUS" style="background: linear-gradient(135deg, #1C2E1C 0%, #2C4E2C 100%); color:#fff; display:none;">
+        <div class="ma-signal-emoji" id="maSignalEmojiUS">📊</div>
+        <div class="ma-signal-content">
+            <div class="ma-signal-label">🇺🇸 미국 시장 종합 신호</div>
+            <div class="ma-signal-value" id="maSignalValueUS">계산 중...</div>
+            <div class="ma-signal-desc" id="maSignalDescUS">지표를 불러오는 중입니다</div>
+        </div>
+        <div class="ma-signal-score-ring">
+            <svg viewBox="0 0 56 56">
+                <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="5"/>
+                <circle cx="28" cy="28" r="22" fill="none" stroke="white" stroke-width="5" stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="138.2" id="maScoreArcUS" transform="rotate(-90 28 28)" style="transition: stroke-dashoffset 1s ease;"/>
+            </svg>
+            <div class="ma-score-num" id="maScoreNumUS" style="color:white;">-</div>
+        </div>
+    </div>
+
+    <div id="maViewKR">
     <div class="ma-section-title">🇰🇷 국내 시장 지표</div>
     <div class="ma-grid">
         <!-- ① VKOSPI -->
@@ -614,7 +644,10 @@
             </table>
         </div>
     </div>
-    <div class="ma-section-title">🌍 해외 시장 지표</div>
+    </div><!-- /maViewKR -->
+
+    <div id="maViewUS" style="display:none;">
+    <div class="ma-section-title">🇺🇸 미국 시장 지표</div>
     <div class="ma-grid">
         <!-- ① CNN 공포탐욕지수 -->
         <div class="ma-card" id="maFGCard">
@@ -701,44 +734,9 @@
             </table>
             <div style="margin-top:8px; font-size:11px; color:var(--text-sub); background:var(--bg); border-radius:8px; padding:8px 10px;">💡 QQQ는 기술주 집중으로 SPY보다 항상 PER이 높음. SPY 22x = QQQ ~30x 수준이 역사적 중간값</div>
         </div>
-        <!-- ④ AAII 투자자심리 -->
-        <div class="ma-card" id="maAAIICard">
-            <div class="ma-card-top">
-                <div class="ma-card-name">🧠 AAII 투자자 심리</div>
-                <div class="ma-card-badge" id="maAAIIBadge">-</div>
-            </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:8px;">
-                <div style="text-align:center;">
-                    <div style="font-size:11px; color:#34C759; font-weight:700; margin-bottom:4px;">강세 📈</div>
-                    <div style="font-size:22px; font-weight:800; color:#34C759;" id="maAAIIBull">-</div>
-                    <div style="font-size:10px; color:var(--text-sub);">%</div>
-                </div>
-                <div style="text-align:center;">
-                    <div style="font-size:11px; color:var(--text-sub); font-weight:700; margin-bottom:4px;">중립 ➡️</div>
-                    <div style="font-size:22px; font-weight:800;" id="maAAIINeutral">-</div>
-                    <div style="font-size:10px; color:var(--text-sub);">%</div>
-                </div>
-                <div style="text-align:center;">
-                    <div style="font-size:11px; color:#FF3B30; font-weight:700; margin-bottom:4px;">약세 📉</div>
-                    <div style="font-size:22px; font-weight:800; color:#FF3B30;" id="maAAIIBear">-</div>
-                    <div style="font-size:10px; color:var(--text-sub);">%</div>
-                </div>
-            </div>
-            <div class="ma-card-updated" id="maAAIIUpdated" style="margin-top:8px;">GAS market 시트에서 가져오는 중...</div>
-            <div style="margin-top:10px; height:8px; background:var(--border-color); border-radius:4px; overflow:hidden;">
-                <div id="maAAIIBar" style="height:100%; width:38%; background: linear-gradient(to right, #FF3B30, #34C759); border-radius:4px; transition:width 0.5s ease;"></div>
-            </div>
-            <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-sub); margin-top:3px;"><span>약세 우세</span><span>강세 우세</span></div>
-            <table class="ma-range-table" style="margin-top:10px;" id="maAAIITable">
-                <tr><td><span class="ma-range-dot" style="background:#007AFF"></span>강세 &lt;25%</td><td>극도 비관</td><td>🎯 역발상 매수 신호</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>강세 25~35%</td><td>비관</td><td>좋은 매수 구간</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FFCC00"></span>강세 35~45%</td><td>중립</td><td>역사적 평균 수준</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>강세 45~55%</td><td>낙관</td><td>고점 주의 시작</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>강세 55%+</td><td>극도 낙관</td><td>⚠️ 역발상 매도 신호</td></tr>
-            </table>
-            <div style="margin-top:8px; font-size:11px; color:var(--text-sub); background:var(--bg); border-radius:8px; padding:8px 10px;">💡 AAII 심리는 역발상 지표 — 모두가 비관적일 때가 매수 기회, 낙관적일 때가 매도 시점</div>
-        </div>
     </div>
+
+    </div><!-- /maViewUS -->
 
     <div class="ma-update-notice">데이터는 GAS market 시트에 수동 입력 또는 트리거로 자동 업데이트됩니다<span class="ma-manual-badge">GAS 연동</span></div>
 </div>
@@ -769,7 +767,7 @@
             </div>
         </div>
         <div class="buy-warning-body">
-            <!-- ② PER -->
+            <!-- ① PER -->
             <div class="warn-card per-card">
                 <div class="warn-card-label">📈 밸류에이션 (PER)</div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:4px;">
@@ -1787,29 +1785,7 @@
     function closeBuyWarningDirect() { document.getElementById('buyWarningOverlay').classList.remove('show'); document.body.style.overflow = ''; }
     function confirmBuyAndSubmit() { closeBuyWarningDirect(); submitTransaction(); }
 
-    function fillFearGreedData(ticker) {
-        const scoreEl=document.getElementById('warnFGScore'), descEl=document.getElementById('warnFGDesc'), badgeEl=document.getElementById('warnFGBadge'), gaugeEl=document.getElementById('warnFGGauge'), thumbEl=document.getElementById('warnFGThumb'), cardEl=document.getElementById('warnFGCard');
-        const fg = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA) ? LAST_FETCHED_DATA.cnnFearGreed : null;
-        if (fg && fg.score) { renderFGUI(fg.score, fg.label||'', fg.updated||'', scoreEl, descEl, badgeEl, gaugeEl, thumbEl, cardEl); }
-        else {
-            const enc = encodeURIComponent('https://production.dataviz.cnn.io/index/fearandgreed/graphdata');
-            fetch('https://api.allorigins.win/get?url='+enc).then(r=>r.json()).then(data => { const json=JSON.parse(data.contents); const score=Math.round(json.fear_and_greed.score); renderFGUI(score,json.fear_and_greed.rating||'','live',scoreEl,descEl,badgeEl,gaugeEl,thumbEl,cardEl); }).catch(() => { scoreEl.innerHTML='<span style="font-size:13px;color:var(--text-sub);">데이터 없음</span>'; descEl.textContent='CNN 서버에 연결할 수 없습니다.'; });
-        }
-    }
-    function renderFGUI(score, rating, updated, scoreEl, descEl, badgeEl, gaugeEl, thumbEl, cardEl) {
-        let color, emoji, kor, desc;
-        if      (score<=25){color='#007AFF';emoji='😱';kor='극도 공포';desc='시장이 극도로 두려워하고 있습니다. 역사적으로 좋은 매수 기회가 되기도 합니다.';}
-        else if (score<=45){color='#34C759';emoji='😨';kor='공포';desc='투자자들이 공포 심리를 보이고 있습니다. 좋은 매수 구간일 수 있습니다.';}
-        else if (score<=55){color='#FFCC00';emoji='😐';kor='중립';desc='시장은 중립적입니다. 종목 펀더멘털을 중심으로 판단하세요.';}
-        else if (score<=75){color='#FF9500';emoji='🤑';kor='탐욕';desc='시장에 탐욕 심리가 높습니다. 고점 매수 주의가 필요합니다.';}
-        else               {color='#FF3B30';emoji='🔥';kor='극도 탐욕';desc='⚠️ 시장이 과열 상태입니다. 이 구간에서의 매수는 리스크가 높습니다.';}
-        if(cardEl) cardEl.style.setProperty('--warn-accent',color);
-        scoreEl.innerHTML='<span style="color:'+color+';">'+score+'</span> <span style="font-size:16px;">'+emoji+'</span>';
-        descEl.textContent=desc+(updated==='live'?' (실시간)':updated?' · 캐시: '+updated:'');
-        badgeEl.textContent=kor; badgeEl.style.background=color+'22'; badgeEl.style.color=color;
-        badgeEl.style.display='inline-flex'; badgeEl.style.alignItems='center'; badgeEl.style.padding='5px 12px'; badgeEl.style.borderRadius='20px'; badgeEl.style.fontSize='12px'; badgeEl.style.fontWeight='700';
-        gaugeEl.style.display='block'; thumbEl.style.left=score+'%';
-    }
+
     function fillPERData(ticker) {
         const ttmEl=document.getElementById('warnPERTTM'), fwdEl=document.getElementById('warnPERFwd'), descEl=document.getElementById('warnPERDesc');
         const isKorea = /^\d{6}$/.test(ticker);
@@ -1848,13 +1824,27 @@
     }
 
     // ====== 시장분석 탭 ======
+    // 국내/미국 탭 전환
+    function switchMarketView(view) {
+        const isKR = view === 'kr';
+        document.getElementById('maViewKR').style.display = isKR ? '' : 'none';
+        document.getElementById('maViewUS').style.display = isKR ? 'none' : '';
+        document.getElementById('maSignalBannerKR').style.display = isKR ? '' : 'none';
+        document.getElementById('maSignalBannerUS').style.display = isKR ? 'none' : '';
+        document.getElementById('maBtnKR').classList.toggle('active', isKR);
+        document.getElementById('maBtnUS').classList.toggle('active', !isKR);
+        if (!isKR) { renderFGIndex(); renderVIX(); renderSPYQQQPER(); renderSignalBannerUS(); }
+    }
+
     function renderMarketTab() {
         const ma = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA) ? (LAST_FETCHED_DATA.marketAnalysis || null) : null;
         renderVkospi(ma ? ma.vkospi : null); renderKospiPer(ma ? ma.kospiPer : null);
         renderCredit(ma ? ma.creditBalance : null); renderForeign(ma ? ma.foreign : null);
-        renderADRatio(ma ? ma.adRatio : null); renderSignalBanner();
-        // 해외 지표
-        renderFGIndex(); renderVIX(); renderSPYQQQPER(); renderAAII(ma ? ma.aaii : null);
+        renderADRatio(ma ? ma.adRatio : null);
+        renderSignalBannerKR();
+        // 기본은 국내 탭 표시 (상태 유지)
+        const isUS = document.getElementById('maBtnUS').classList.contains('active');
+        if (isUS) { renderFGIndex(); renderVIX(); renderSPYQQQPER(); renderSignalBannerUS(); }
     }
     function maSetCard(cardId, colorClass) { const card=document.getElementById(cardId); if(!card) return; card.className='ma-card '+colorClass; }
     function maSetBadge(badgeId, text, colorClass) {
@@ -1911,26 +1901,40 @@
         let label,colorClass,activeIdx; if(ratio<20){label='극도 공포 🎯';colorClass='ma-panic';activeIdx=0;} else if(ratio<35){label='공포 📉';colorClass='ma-fear';activeIdx=1;} else if(ratio<55){label='중립 ➡️';colorClass='ma-normal';activeIdx=2;} else if(ratio<70){label='상승세 📈';colorClass='ma-warn';activeIdx=3;} else{label='과열 🔴';colorClass='ma-hot';activeIdx=4;}
         maSetCard('maAdCard',colorClass); maSetBadge('maAdBadge',label,colorClass); maHighlightRange('maAdTable',activeIdx);
     }
-    function renderSignalBanner(){
+    function renderSignalBannerKR(){
         const ma=(typeof LAST_FETCHED_DATA!=='undefined'&&LAST_FETCHED_DATA)?(LAST_FETCHED_DATA.marketAnalysis||null):null;
-        if(!ma){document.getElementById('maSignalValue').textContent='데이터 없음';document.getElementById('maSignalDesc').textContent='GAS market 시트에 marketAnalysis 데이터를 추가해주세요';return;}
+        if(!ma){document.getElementById('maSignalValueKR').textContent='데이터 없음';document.getElementById('maSignalDescKR').textContent='GAS market 시트에 데이터를 추가해주세요';return;}
         let score=0,signals=[];
         if(ma.vkospi&&ma.vkospi.value!==null){const v=Number(ma.vkospi.value);let s=v>=60?20:v>=40?15:v>=30?10:v>=20?5:0;score+=s;if(s>=15)signals.push('VKOSPI 패닉('+v.toFixed(0)+')');else if(s>=10)signals.push('VKOSPI 불안('+v.toFixed(0)+')');}
         if(ma.kospiPer&&ma.kospiPer.value!==null){const v=Number(ma.kospiPer.value);let s=v<8?20:v<10?15:v<11?8:v<12?3:0;score+=s;if(s>=15)signals.push('PER 저평가('+v.toFixed(1)+'x)');}
         if(ma.creditBalance&&ma.creditBalance.value!==null){const v=Number(ma.creditBalance.value);let s=v<5?20:v<8?15:v<11?10:v<14?3:0;score+=s;if(s>=15)signals.push('신용잔고 침체('+v.toFixed(1)+'조)');}
-        if(ma.foreign){const ss=ma.foreign['005930'],sk=ma.foreign['000660'],bothBuy=ss&&Number(ss.net5d)>0&&sk&&Number(sk.net5d)>0,bothSell=ss&&Number(ss.net5d)<0&&sk&&Number(sk.net5d)<0;let s=bothBuy?20:bothSell?0:10;score+=s;if(bothBuy)signals.push('외국인 동반매수');}
+        if(ma.foreign){const ss=ma.foreign['005930'],sk=ma.foreign['000660'],bothBuy=ss&&Number(ss.net5d)>0&&sk&&Number(sk.net5d)>0;let s=bothBuy?20:10;score+=s;if(bothBuy)signals.push('외국인 동반매수');}
         if(ma.adRatio&&ma.adRatio.up!==undefined){const up=Number(ma.adRatio.up)||0,dn=Number(ma.adRatio.down)||0,ratio=(up+dn)>0?up/(up+dn)*100:50;let s=ratio<20?20:ratio<35?15:ratio<55?8:ratio<70?3:0;score+=s;if(s>=15)signals.push('A/D '+ratio.toFixed(0)+'% 공포');}
+        _applySignalBanner(score,signals,'KR','linear-gradient(135deg,#1C1C2E 0%,#2C2C4E 100%)');
+    }
+    function renderSignalBannerUS(){
+        let score=0,signals=[];
+        const fgVal=document.getElementById('maFGValue');
+        if(fgVal){const v=parseInt(fgVal.textContent);if(!isNaN(v)){let s=v<=25?20:v<=45?15:v<=55?8:v<=75?3:0;score+=s;if(s>=15)signals.push('공포탐욕('+v+')');}}
+        const vixVal=document.getElementById('maVixValue');
+        if(vixVal){const v=parseFloat(vixVal.textContent);if(!isNaN(v)){let s=v>=40?20:v>=30?15:v>=20?8:v>=15?3:0;score+=s;if(s>=15)signals.push('VIX('+v.toFixed(0)+')');}}
+        const spyVal=document.getElementById('maSPYPERValue');
+        if(spyVal){const v=parseFloat(spyVal.textContent);if(!isNaN(v)){let s=v<18?15:v<22?8:v<27?3:0;score+=s;if(s>=10)signals.push('SPY PER('+v.toFixed(0)+'x)');}}
+        _applySignalBanner(score,signals,'US','linear-gradient(135deg,#1C2E1C 0%,#2C4E2C 100%)');
+    }
+    function _applySignalBanner(score,signals,suffix,defaultGrad){
         let emoji,valueText,desc,bgGrad;
-        if(score>=75){emoji='🎯';valueText='강한 바닥 신호';desc='여러 지표가 동시에 극단적 공포를 가리키고 있습니다.';bgGrad='linear-gradient(135deg, #1a0050 0%, #2d0080 100%)';}
-        else if(score>=55){emoji='📉';valueText='바닥권 접근';desc='일부 지표에서 공포 신호가 감지됩니다.';bgGrad='linear-gradient(135deg, #001a40 0%, #003060 100%)';}
-        else if(score>=35){emoji='😐';valueText='중립 — 방향 탐색';desc='현재 시장은 뚜렷한 방향성이 없습니다.';bgGrad='linear-gradient(135deg, #1C2C1C 0%, #2C3C2C 100%)';}
-        else if(score>=15){emoji='⚠️';valueText='상승세 — 고점 주의';desc='시장이 과열 방향으로 움직이고 있습니다.';bgGrad='linear-gradient(135deg, #3C1C00 0%, #5C3000 100%)';}
-        else{emoji='🔴';valueText='과열 — 매수 자제';desc='대부분의 지표가 과열을 가리킵니다.';bgGrad='linear-gradient(135deg, #3C0000 0%, #600000 100%)';}
-        const banner=document.getElementById('maSignalBanner'); if(banner) banner.style.background=bgGrad;
-        document.getElementById('maSignalEmoji').textContent=emoji; document.getElementById('maSignalValue').textContent=valueText;
-        document.getElementById('maSignalDesc').textContent=desc+(signals.length?' ('+signals.slice(0,3).join(', ')+')':'');
-        const arc=document.getElementById('maScoreArc'),num=document.getElementById('maScoreNum');
-        if(arc) arc.style.strokeDashoffset=138.2-(score/100)*138.2; if(num) num.textContent=score;
+        if(score>=60){emoji='🎯';valueText='강한 바닥 신호';desc='여러 지표가 극단적 공포를 가리킵니다.';bgGrad='linear-gradient(135deg,#1a0050 0%,#2d0080 100%)';}
+        else if(score>=40){emoji='📉';valueText='바닥권 접근';desc='일부 지표에서 공포 신호가 감지됩니다.';bgGrad='linear-gradient(135deg,#001a40 0%,#003060 100%)';}
+        else if(score>=25){emoji='😐';valueText='중립 — 방향 탐색';desc='뚜렷한 방향성이 없는 구간입니다.';bgGrad=defaultGrad;}
+        else if(score>=10){emoji='⚠️';valueText='상승세 — 고점 주의';desc='시장이 과열 방향으로 움직이고 있습니다.';bgGrad='linear-gradient(135deg,#3C1C00 0%,#5C3000 100%)';}
+        else{emoji='🔴';valueText='과열 — 매수 자제';desc='대부분의 지표가 과열을 가리킵니다.';bgGrad='linear-gradient(135deg,#3C0000 0%,#600000 100%)';}
+        const banner=document.getElementById('maSignalBanner'+suffix); if(banner) banner.style.background=bgGrad;
+        const eEl=document.getElementById('maSignalEmoji'+suffix); if(eEl) eEl.textContent=emoji;
+        const vEl=document.getElementById('maSignalValue'+suffix); if(vEl) vEl.textContent=valueText;
+        const dEl=document.getElementById('maSignalDesc'+suffix); if(dEl) dEl.textContent=desc+(signals.length?' ('+signals.slice(0,3).join(', ')+')':'');
+        const arc=document.getElementById('maScoreArc'+suffix); if(arc) arc.style.strokeDashoffset=138.2-(score/100)*138.2;
+        const num=document.getElementById('maScoreNum'+suffix); if(num) num.textContent=score;
     }
 
     // ====== 해외 시장 지표 렌더링 ======
@@ -1952,10 +1956,27 @@
         fetch('https://api.allorigins.win/get?url=' + enc)
             .then(r=>r.json()).then(d=>{
                 const j=JSON.parse(d.contents);
-                _applyFG(Math.round(j.fear_and_greed.score), j.fear_and_greed.rating||'', '실시간',
-                         valEl, badgeEl, updEl, thumbEl, cardEl, tableEl);
+                const score = Math.round(j.fear_and_greed.score);
+                const label = j.fear_and_greed.rating||'';
+                _applyFG(score, label, '실시간', valEl, badgeEl, updEl, thumbEl, cardEl, tableEl);
+                // ★ 브라우저→GAS 역저장 (CNN 성공 시)
+                _saveCNNToGAS(score, label);
             }).catch(()=>{ valEl.textContent='N/A'; updEl.textContent='⚠️ CNN API 연결 실패'; });
     }
+    // CNN 값을 GAS cnn_cache 시트에 역저장
+    function _saveCNNToGAS(score, label) {
+        if (!GOOGLE_SCRIPT_URL || !score) return;
+        fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                authKey: FAMILY_PASSWORD,
+                type: 'saveCNN',
+                score: score,
+                label: label
+            })
+        }).catch(() => {}); // 실패해도 무시
+    }
+
     function _applyFG(score, label, updated, valEl, badgeEl, updEl, thumbEl, cardEl, tableEl) {
         let color,kor,idx;
         if(score<=25){color='#007AFF';kor='극도 공포';idx=0;}
@@ -1969,6 +1990,7 @@
         if(thumbEl) thumbEl.style.left = score+'%';
         if(cardEl) cardEl.style.borderColor = color+'55';
         maHighlightRange('maFGTable', idx);
+        setTimeout(renderSignalBannerUS, 0);
     }
 
     // ② VIX 실시간 (Yahoo Finance ^VIX, allorigins)
@@ -2022,32 +2044,6 @@
             updEl.textContent = '업데이트: 실시간 (Yahoo Finance)';
             maHighlightRange('maSPYPERTable', v<18?0:v<22?1:v<27?2:3);
         });
-    }
-
-    // ④ AAII 투자자심리 (GAS market 시트에서 aaii 데이터 사용)
-    function renderAAII(data) {
-        const bullEl=document.getElementById('maAAIIBull'), neutralEl=document.getElementById('maAAIINeutral');
-        const bearEl=document.getElementById('maAAIIBear'), updEl=document.getElementById('maAAIIUpdated');
-        const barEl=document.getElementById('maAAIIBar');
-        if(!data||data.bull===undefined){
-            updEl.textContent='⚠️ GAS market 시트에 aaii 데이터를 입력해주세요';
-            bullEl.textContent='-'; neutralEl.textContent='-'; bearEl.textContent='-';
-            return;
-        }
-        const bull=Number(data.bull)||0, neutral=Number(data.neutral)||0, bear=Number(data.bear)||0;
-        bullEl.textContent = bull.toFixed(1);
-        neutralEl.textContent = neutral.toFixed(1);
-        bearEl.textContent = bear.toFixed(1);
-        updEl.textContent = '업데이트: '+(data.updated||'-');
-        if(barEl) barEl.style.width = bull+'%';
-        let kor,clr,idx;
-        if(bull<25){kor='극도 비관 🎯';clr='ma-fear';idx=0;}
-        else if(bull<35){kor='비관';clr='ma-cool';idx=1;}
-        else if(bull<45){kor='중립';clr='ma-normal';idx=2;}
-        else if(bull<55){kor='낙관';clr='ma-warn';idx=3;}
-        else{kor='극도 낙관 ⚠️';clr='ma-hot';idx=4;}
-        maSetBadge('maAAIIBadge', kor, clr);
-        maHighlightRange('maAAIITable', idx);
     }
 
     window.onclick = function(event) { const cashModal=document.getElementById('cashEditModal'); if(event.target===cashModal) closeCashEditModal(); }
