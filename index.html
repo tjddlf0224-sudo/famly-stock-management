@@ -2026,11 +2026,20 @@
         const updEl=document.getElementById('maSPYPERUpdated'), badgeEl=document.getElementById('maSPYPERBadge');
         updEl.textContent = '실시간 조회 중...';
         function fetchPER(ticker) {
-            const enc=encodeURIComponent('https://query2.finance.yahoo.com/v10/finance/quoteSummary/'+ticker+'?modules=summaryDetail');
+            // summaryDetail + defaultKeyStatistics 두 모듈 동시 요청
+            const enc=encodeURIComponent('https://query2.finance.yahoo.com/v10/finance/quoteSummary/'+ticker+'?modules=summaryDetail,defaultKeyStatistics');
             return fetch('https://api.allorigins.win/get?url='+enc)
                 .then(r=>r.json()).then(d=>{
                     const j=JSON.parse(d.contents);
-                    return j.quoteSummary.result[0].summaryDetail.trailingPE?.raw || null;
+                    const res=j.quoteSummary.result[0];
+                    // ETF는 trailingPE 없는 경우 많음 → 여러 필드 순서대로 시도
+                    const per =
+                        res.summaryDetail?.trailingPE?.raw ||
+                        res.defaultKeyStatistics?.trailingEps?.raw ||
+                        res.summaryDetail?.forwardPE?.raw ||
+                        res.defaultKeyStatistics?.forwardEps?.raw ||
+                        null;
+                    return per ? Math.round(per*10)/10 : null;
                 }).catch(()=>null);
         }
         Promise.all([fetchPER('SPY'),fetchPER('QQQ')]).then(([spy,qqq])=>{
