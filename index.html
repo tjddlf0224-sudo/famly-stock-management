@@ -1718,7 +1718,7 @@
         ttmEl.innerHTML=(perTTM!==null&&perTTM!==undefined)?`<span style="color:${perColor(perTTM)};">${perTTM}x</span>`:'<span style="color:var(--text-sub);">N/A</span>';
         fwdEl.innerHTML=(perFwd!==null&&perFwd!==undefined)?`<span style="color:${perColor(perFwd)};">${perFwd}x</span>`:'<span style="color:var(--text-sub);">N/A</span>';
         const hints=[]; if(perTTM!==null&&perTTM!==undefined)hints.push('TTM: '+perLabel(perTTM)); if(perFwd!==null&&perFwd!==undefined)hints.push('12M예상: '+perLabel(perFwd));
-        descEl.textContent=(hints.join(' | ')+(updated==='live'?' (실시간)':updated?' (GAS캐시: '+updated+')'':'')).trim();
+        descEl.textContent=(hints.join(' | ')+(updated==='live'?' (실시간)':updated?' (GAS캐시: '+updated+')':'')).trim();
     }
     function fillCashData() {
         const pctEl=document.getElementById('warnCashPct'), amtEl=document.getElementById('warnCashAmt'), barEl=document.getElementById('warnCashBar'), badgeEl=document.getElementById('warnCashBadge'), qEl=document.getElementById('warnBasementQ');
