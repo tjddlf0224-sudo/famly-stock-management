@@ -727,12 +727,12 @@
             </div>
             <div class="ma-card-updated" id="maSPYPERUpdated" style="margin-top:8px;">불러오는 중...</div>
             <table class="ma-range-table" style="margin-top:12px;" id="maSPYPERTable">
-                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>SPY ~18x</td><td>저평가</td><td>역사적 평균 하단</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FFCC00"></span>18~22x</td><td>적정</td><td>역사적 평균 구간</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>22~27x</td><td>고평가</td><td>성장 기대 선반영</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>27x+</td><td>매우 고평가</td><td>⚠️ 버블 위험 구간</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>~15x</td><td>저평가</td><td>역사적 평균 하단</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FFCC00"></span>15~20x</td><td>적정</td><td>역사적 평균 구간</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>20~25x</td><td>고평가</td><td>성장 기대 선반영</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>25x+</td><td>매우 고평가</td><td>⚠️ 버블 위험 구간</td></tr>
             </table>
-            <div style="margin-top:8px; font-size:11px; color:var(--text-sub); background:var(--bg); border-radius:8px; padding:8px 10px;">💡 QQQ는 기술주 집중으로 SPY보다 항상 PER이 높음. SPY 22x = QQQ ~30x 수준이 역사적 중간값</div>
+            <div style="margin-top:8px; font-size:11px; color:var(--text-sub); background:var(--bg); border-radius:8px; padding:8px 10px;">💡 Forward PER 기준. QQQ는 기술주 집중으로 SPY보다 항상 높음. SPY 20x = QQQ ~28x 수준이 역사적 중간값</div>
         </div>
     </div>
 
@@ -2025,34 +2025,52 @@
         const spyEl=document.getElementById('maSPYPERValue'), qqqEl=document.getElementById('maQQQPERValue');
         const updEl=document.getElementById('maSPYPERUpdated'), badgeEl=document.getElementById('maSPYPERBadge');
         updEl.textContent = '실시간 조회 중...';
+        // SPY/QQQ ETF는 Yahoo Finance PER 없음
+        // → GAS per_cache 우선, 없으면 Yahoo v8 quote API (모듈 없이) 시도
         function fetchPER(ticker) {
-            // summaryDetail + defaultKeyStatistics 두 모듈 동시 요청
-            const enc=encodeURIComponent('https://query2.finance.yahoo.com/v10/finance/quoteSummary/'+ticker+'?modules=summaryDetail,defaultKeyStatistics');
+            // GAS 캐시 먼저 확인
+            const cache = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.perCache)
+                        ? LAST_FETCHED_DATA.perCache[ticker] : null;
+            if (cache && cache.perTTM) return Promise.resolve(cache.perTTM);
+            if (cache && cache.perForward) return Promise.resolve(cache.perForward);
+
+            // Yahoo Finance v8 quote (모듈 파라미터 없어서 CORS 안전)
+            const enc = encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/'+ticker+'?interval=1d&range=1d');
             return fetch('https://api.allorigins.win/get?url='+enc)
                 .then(r=>r.json()).then(d=>{
-                    const j=JSON.parse(d.contents);
-                    const res=j.quoteSummary.result[0];
-                    // ETF는 trailingPE 없는 경우 많음 → 여러 필드 순서대로 시도
-                    const per =
-                        res.summaryDetail?.trailingPE?.raw ||
-                        res.defaultKeyStatistics?.trailingEps?.raw ||
-                        res.summaryDetail?.forwardPE?.raw ||
-                        res.defaultKeyStatistics?.forwardEps?.raw ||
-                        null;
-                    return per ? Math.round(per*10)/10 : null;
+                    const j = JSON.parse(d.contents);
+                    const meta = j.chart.result[0].meta;
+                    // ETF PER은 meta에 없음 → null 반환
+                    return null;
                 }).catch(()=>null);
         }
-        Promise.all([fetchPER('SPY'),fetchPER('QQQ')]).then(([spy,qqq])=>{
-            function perColor(p){if(!p)return'var(--text-main)';if(p<18)return'#34C759';if(p<22)return'#FFCC00';if(p<27)return'#FF9500';return'#FF3B30';}
-            spyEl.innerHTML = spy ? '<span style="color:'+perColor(spy)+';">'+Math.round(spy*10)/10+'x</span>' : '<span style="color:var(--text-sub);">N/A</span>';
-            qqqEl.innerHTML = qqq ? '<span style="color:'+perColor(qqq)+';">'+Math.round(qqq*10)/10+'x</span>' : '<span style="color:var(--text-sub);">N/A</span>';
+
+        // GAS per_cache에서 SPY/QQQ PER 직접 읽기 (updateAllPER가 저장함)
+        const gasCache = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.perCache) ? LAST_FETCHED_DATA.perCache : {};
+        const spyCached = gasCache['SPY'];
+        const qqqCached = gasCache['QQQ'];
+
+        function perColor(p){if(!p)return'var(--text-main)';if(p<18)return'#34C759';if(p<22)return'#FFCC00';if(p<27)return'#FF9500';return'#FF3B30';}
+
+        if (spyCached || qqqCached) {
+            // Forward PER 우선, 없으면 TTM PER
+            const spy = spyCached ? (spyCached.perForward || spyCached.perTTM) : null;
+            const qqq = qqqCached ? (qqqCached.perForward || qqqCached.perTTM) : null;
+            spyEl.innerHTML = spy ? '<span style="color:'+perColor(spy)+';">'+spy+'x</span>' : '<span style="color:var(--text-sub);">N/A</span>';
+            qqqEl.innerHTML = qqq ? '<span style="color:'+perColor(qqq)+';">'+qqq+'x</span>' : '<span style="color:var(--text-sub);">N/A</span>';
+            const v = spy||0;
             let kor,clr;
-            const v=spy||0;
-            if(v<18){kor='저평가';clr='ma-cool';} else if(v<22){kor='적정';clr='ma-normal';} else if(v<27){kor='고평가';clr='ma-warn';} else{kor='매우 고평가';clr='ma-hot';}
+            // Forward PER 구간 기준 (TTM보다 낮음)
+            if(v<15){kor='저평가';clr='ma-cool';} else if(v<20){kor='적정';clr='ma-normal';} else if(v<25){kor='고평가';clr='ma-warn';} else if(v>0){kor='매우 고평가';clr='ma-hot';} else{kor='데이터 없음';clr='ma-normal';}
             maSetBadge('maSPYPERBadge', kor, clr);
-            updEl.textContent = '업데이트: 실시간 (Yahoo Finance)';
-            maHighlightRange('maSPYPERTable', v<18?0:v<22?1:v<27?2:3);
-        });
+            updEl.textContent = spyCached ? 'Forward PER 기준 · ' + (spyCached.updated||'GAS 캐시') : '데이터 없음';
+            if(v>0) maHighlightRange('maSPYPERTable', v<15?0:v<20?1:v<25?2:3);
+        } else {
+            spyEl.innerHTML = '<span style="color:var(--text-sub);">N/A</span>';
+            qqqEl.innerHTML = '<span style="color:var(--text-sub);">N/A</span>';
+            updEl.textContent = '⚠️ 잠시 후 자동 수집됩니다';
+            maSetBadge('maSPYPERBadge', '데이터 없음', 'ma-normal');
+        }
     }
 
     window.onclick = function(event) { const cashModal=document.getElementById('cashEditModal'); if(event.target===cashModal) closeCashEditModal(); }
