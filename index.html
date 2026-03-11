@@ -262,6 +262,47 @@
         .ma-ma-updated { font-size: 11px; color: var(--text-sub); margin-top: 10px; }
         .ma-ma-summary { margin-top: 12px; background: var(--bg); border-radius: 10px; padding: 10px 12px; font-size: 12px; color: var(--text-sub); line-height: 1.6; }
         .ma-chart-wrap { margin-top: 14px; height: 280px; position: relative; touch-action: none; }
+
+        /* ── 거래량 신뢰도 카드 ── */
+        .vol-confirm-wrap { margin-top: 10px; display: flex; flex-direction: column; gap: 7px; }
+        .vol-confirm-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 9px 12px; border-radius: 10px;
+            background: var(--bg); border: 1px solid var(--border-color);
+            font-size: 13px; gap: 8px;
+        }
+        .vol-confirm-label { font-weight: 600; color: var(--text-main); flex: 1; min-width: 0; }
+        .vol-confirm-badge {
+            font-size: 11px; font-weight: 700; padding: 3px 9px;
+            border-radius: 20px; white-space: nowrap; flex-shrink: 0;
+        }
+        .vol-confirm-badge.confirmed  { background: rgba(52,199,89,0.15);  color: #34C759; }
+        .vol-confirm-badge.weakened   { background: rgba(255,149,0,0.15);  color: #FF9500; }
+        .vol-confirm-badge.diverged   { background: rgba(255,59,48,0.15);  color: #FF3B30; }
+        .vol-confirm-badge.nodata     { background: rgba(142,142,147,0.1); color: #8E8E93; }
+        .vol-bar-wrap { margin: 10px 0 2px; position: relative; }
+        .vol-bar-track {
+            height: 8px; border-radius: 4px;
+            background: linear-gradient(to right,
+                #5856D6 0%, #007AFF 20%, #34C759 45%, #FFCC00 65%, #FF9500 82%, #FF3B30 100%);
+            position: relative; overflow: visible;
+        }
+        .vol-bar-thumb {
+            position: absolute; top: 50%; transform: translate(-50%, -50%);
+            width: 14px; height: 14px; background: white; border-radius: 50%;
+            border: 2.5px solid #555; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            transition: left 0.5s cubic-bezier(.34,1.56,.64,1);
+        }
+        .vol-ratio-row {
+            display: flex; justify-content: space-between;
+            font-size: 11px; color: var(--text-sub); margin-top: 5px;
+        }
+        .vol-multiplier-note {
+            margin-top: 12px; font-size: 11px; color: var(--text-sub);
+            background: var(--bg); border-radius: 8px; padding: 8px 10px;
+            line-height: 1.6; border: 1px solid var(--border-color);
+        }
+        .vol-multiplier-note b { color: var(--text-main); }
     </style>
 </head>
 <body>
@@ -532,7 +573,37 @@
     <div id="maViewKR">
     <div class="ma-section-title">🇰🇷 국내 시장 지표</div>
     <div class="ma-grid">
-        <!-- ① 코스피 이동평균선 분석 (가중치 25) -->
+        <!-- ① VKOSPI -->
+        <div class="ma-card" id="maVkospiCard">
+            <div class="ma-card-top">
+                <div class="ma-card-name">📉 VKOSPI — 코스피200 변동성지수</div>
+                <div class="ma-card-badge" id="maVkospiBadge">-</div>
+            </div>
+            <div class="ma-card-value-row">
+                <div class="ma-card-value" id="maVkospiValue">-</div>
+                <div class="ma-card-unit">pt</div>
+            </div>
+            <div class="ma-card-updated" id="maVkospiUpdated">GAS market 시트에서 가져오는 중...</div>
+            <div class="ma-spectrum">
+                <div class="ma-spectrum-track" style="background: linear-gradient(to right, #5856D6 0%, #007AFF 20%, #34C759 40%, #FFCC00 60%, #FF9500 80%, #FF3B30 100%);">
+                    <div class="ma-spectrum-thumb" id="maVkospiThumb" style="left:0%"></div>
+                </div>
+                <div class="ma-spectrum-labels">
+                    <span class="ma-spectrum-label">0</span><span class="ma-spectrum-label">20</span>
+                    <span class="ma-spectrum-label">30</span><span class="ma-spectrum-label">40</span>
+                    <span class="ma-spectrum-label">60</span><span class="ma-spectrum-label">80+</span>
+                </div>
+            </div>
+            <table class="ma-range-table" id="maVkospiTable">
+                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>~20</td><td>안정</td><td>과열 가능성 점검</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FFCC00"></span>20~30</td><td>주의</td><td>시장 불안 감지</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>30~40</td><td>불안</td><td>변동성 확대 구간</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>40~60</td><td>공포</td><td>바닥 탐색 가능성</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>60+</td><td>패닉</td><td>🎯 역사적 바닥 근처</td></tr>
+            </table>
+        </div>
+
+        <!-- ② 코스피 이동평균선 분석 -->
         <div class="ma-card" id="maKospiMACard">
             <div class="ma-card-top">
                 <div class="ma-card-name">📈 코스피 이동평균선 분석</div>
@@ -560,7 +631,89 @@
             <div class="ma-chart-wrap"><canvas id="maKospiMAChart"></canvas></div>
         </div>
 
-        <!-- ② 코스피 RSI(14) (가중치 20) -->
+        <!-- ③ 신용융자잔고 -->
+        <div class="ma-card" id="maCreditCard">
+            <div class="ma-card-top">
+                <div class="ma-card-name">💳 코스피 신용융자잔고</div>
+                <div class="ma-card-badge" id="maCreditBadge">-</div>
+            </div>
+            <div class="ma-card-value-row">
+                <div class="ma-card-value" id="maCreditValue">-</div>
+                <div class="ma-card-unit">조원</div>
+            </div>
+            <div class="ma-card-updated" id="maCreditUpdated">GAS market 시트에서 가져오는 중...</div>
+            <div class="ma-spectrum">
+                <div class="ma-spectrum-track" style="background: linear-gradient(to right, #5856D6 0%, #007AFF 15%, #34C759 35%, #FFCC00 60%, #FF9500 80%, #FF3B30 100%);">
+                    <div class="ma-spectrum-thumb" id="maCreditThumb" style="left:0%"></div>
+                </div>
+                <div class="ma-spectrum-labels">
+                    <span class="ma-spectrum-label">0</span><span class="ma-spectrum-label">5조</span>
+                    <span class="ma-spectrum-label">8조</span><span class="ma-spectrum-label">11조</span>
+                    <span class="ma-spectrum-label">14조+</span>
+                </div>
+            </div>
+            <table class="ma-range-table" id="maCreditTable">
+                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>~5조</td><td>극도침체</td><td>🎯 바닥권 신호</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#007AFF"></span>5~8조</td><td>침체</td><td>투자심리 위축</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>8~11조</td><td>정상</td><td>코스피 역사적 평균</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>11~14조</td><td>과열주의</td><td>빚투 증가, 조정 리스크</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>14조+</td><td>과열</td><td>⚠️ 역대 최고치 수준</td></tr>
+            </table>
+        </div>
+        <!-- ④ 외국인 수급 -->
+        <div class="ma-card" id="maForeignCard">
+            <div class="ma-card-top">
+                <div class="ma-card-name">🌏 외국인 핵심 종목 수급</div>
+                <div class="ma-card-badge" id="maForeignBadge">-</div>
+            </div>
+            <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;" id="maForeignUpdated">GAS market 시트에서 가져오는 중...</div>
+            <div id="maForeignList">
+                <div class="ma-foreigner-row">
+                    <div><div class="ma-foreigner-name">삼성전자 <span style="font-size:11px;color:var(--text-sub);">005930</span></div><div style="font-size:11px;color:var(--text-sub);">최근 5일 누적</div></div>
+                    <div class="ma-foreigner-val" id="maForeign005930">-</div>
+                </div>
+                <div class="ma-foreigner-row">
+                    <div><div class="ma-foreigner-name">SK하이닉스 <span style="font-size:11px;color:var(--text-sub);">000660</span></div><div style="font-size:11px;color:var(--text-sub);">최근 5일 누적</div></div>
+                    <div class="ma-foreigner-val" id="maForeign000660">-</div>
+                </div>
+                <div class="ma-foreigner-row" style="border-top:1.5px solid var(--border-color); margin-top:6px; padding-top:10px;">
+                    <div style="font-weight:700; font-size:13px;">동반 순매수 신호</div>
+                    <div id="maForeignSignal" style="font-size:13px; font-weight:700;">-</div>
+                </div>
+            </div>
+            <div style="margin-top:10px; font-size:11px; color:var(--text-sub); background:var(--bg); border-radius:8px; padding:8px 10px;">💡 삼성전자·SK하이닉스 동반 순매수 → 외국인이 한국 반도체를 사기 시작했다는 강한 바닥 신호</div>
+        </div>
+        <!-- ⑤ A/D Ratio -->
+        <div class="ma-card" id="maAdCard">
+            <div class="ma-card-top">
+                <div class="ma-card-name">📈 등락비율 (A/D Ratio)</div>
+                <div class="ma-card-badge" id="maAdBadge">-</div>
+            </div>
+            <div class="ma-card-value-row">
+                <div class="ma-card-value" id="maAdValue">-</div>
+                <div class="ma-card-unit">% 상승</div>
+            </div>
+            <div class="ma-card-updated" id="maAdUpdated">GAS market 시트에서 가져오는 중...</div>
+            <div style="margin-top:10px;">
+                <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-sub); margin-bottom:4px;"><span>하락 종목</span><span>상승 종목</span></div>
+                <div class="ma-ad-gauge">
+                    <div class="ma-ad-fill" id="maAdBar" style="width:50%; background: linear-gradient(to right, #FF3B30, #FF9500, #34C759);"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:11px; margin-top:3px;">
+                    <span id="maAdDown" style="color:var(--down);">하락 -</span>
+                    <span id="maAdUp" style="color:var(--up);">상승 -</span>
+                </div>
+            </div>
+            <table class="ma-range-table" style="margin-top:12px;" id="maAdTable">
+                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>~20%</td><td>극도공포</td><td>🎯 바닥권</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#007AFF"></span>20~35%</td><td>공포</td><td>하락 압력 우세</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FFCC00"></span>35~55%</td><td>중립</td><td>방향성 탐색 중</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>55~70%</td><td>상승세</td><td>강세, 고점 주의</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>70%+</td><td>과열</td><td>⚠️ 단기 조정 가능성</td></tr>
+            </table>
+        </div>
+
+        <!-- ⑥ 코스피 RSI(14) -->
         <div class="ma-card" id="maKospiRSICard">
             <div class="ma-card-top">
                 <div class="ma-card-name">📊 코스피 RSI (14일)</div>
@@ -588,7 +741,7 @@
             </table>
         </div>
 
-        <!-- ③ 코스피 52주 고저 위치 (가중치 20) -->
+        <!-- ⑦ 코스피 52주 고저 위치 -->
         <div class="ma-card" id="maKospi52Card">
             <div class="ma-card-top">
                 <div class="ma-card-name">📐 코스피 52주 고저 위치</div>
@@ -619,118 +772,57 @@
                 <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>80~100%</td><td>52주 고점</td><td>⚠️ 강한 매도 참고</td></tr>
             </table>
         </div>
-        <!-- ④ VKOSPI (가중치 15) -->
-        <div class="ma-card" id="maVkospiCard">
-            <div class="ma-card-top">
-                <div class="ma-card-name">📉 VKOSPI — 코스피200 변동성지수</div>
-                <div class="ma-card-badge" id="maVkospiBadge">-</div>
-            </div>
-            <div class="ma-card-value-row">
-                <div class="ma-card-value" id="maVkospiValue">-</div>
-                <div class="ma-card-unit">pt</div>
-            </div>
-            <div class="ma-card-updated" id="maVkospiUpdated">GAS market 시트에서 가져오는 중...</div>
-            <div class="ma-spectrum">
-                <div class="ma-spectrum-track" style="background: linear-gradient(to right, #5856D6 0%, #007AFF 20%, #34C759 40%, #FFCC00 60%, #FF9500 80%, #FF3B30 100%);">
-                    <div class="ma-spectrum-thumb" id="maVkospiThumb" style="left:0%"></div>
-                </div>
-                <div class="ma-spectrum-labels">
-                    <span class="ma-spectrum-label">0</span><span class="ma-spectrum-label">20</span>
-                    <span class="ma-spectrum-label">30</span><span class="ma-spectrum-label">40</span>
-                    <span class="ma-spectrum-label">60</span><span class="ma-spectrum-label">80+</span>
-                </div>
-            </div>
-            <table class="ma-range-table" id="maVkospiTable">
-                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>~20</td><td>안정</td><td>과열 가능성 점검</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FFCC00"></span>20~30</td><td>주의</td><td>시장 불안 감지</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>30~40</td><td>불안</td><td>변동성 확대 구간</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>40~60</td><td>공포</td><td>바닥 탐색 가능성</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>60+</td><td>패닉</td><td>🎯 역사적 바닥 근처</td></tr>
-            </table>
-        </div>
 
-        <!-- ⑤ 외국인 수급 (가중치 12) -->
-        <div class="ma-card" id="maForeignCard">
-            <div class="ma-card-top">
-                <div class="ma-card-name">🌏 외국인 핵심 종목 수급</div>
-                <div class="ma-card-badge" id="maForeignBadge">-</div>
-            </div>
-            <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;" id="maForeignUpdated">GAS market 시트에서 가져오는 중...</div>
-            <div id="maForeignList">
-                <div class="ma-foreigner-row">
-                    <div><div class="ma-foreigner-name">삼성전자 <span style="font-size:11px;color:var(--text-sub);">005930</span></div><div style="font-size:11px;color:var(--text-sub);">최근 5일 누적</div></div>
-                    <div class="ma-foreigner-val" id="maForeign005930">-</div>
-                </div>
-                <div class="ma-foreigner-row">
-                    <div><div class="ma-foreigner-name">SK하이닉스 <span style="font-size:11px;color:var(--text-sub);">000660</span></div><div style="font-size:11px;color:var(--text-sub);">최근 5일 누적</div></div>
-                    <div class="ma-foreigner-val" id="maForeign000660">-</div>
-                </div>
-                <div class="ma-foreigner-row" style="border-top:1.5px solid var(--border-color); margin-top:6px; padding-top:10px;">
-                    <div style="font-weight:700; font-size:13px;">동반 순매수 신호</div>
-                    <div id="maForeignSignal" style="font-size:13px; font-weight:700;">-</div>
-                </div>
-            </div>
-            <div style="margin-top:10px; font-size:11px; color:var(--text-sub); background:var(--bg); border-radius:8px; padding:8px 10px;">💡 삼성전자·SK하이닉스 동반 순매수 → 외국인이 한국 반도체를 사기 시작했다는 강한 바닥 신호</div>
-        </div>
-        <!-- ⑥ 신용융자잔고 (가중치 8) -->
-        <div class="ma-card" id="maCreditCard">
-            <div class="ma-card-top">
-                <div class="ma-card-name">💳 코스피 신용융자잔고</div>
-                <div class="ma-card-badge" id="maCreditBadge">-</div>
-            </div>
-            <div class="ma-card-value-row">
-                <div class="ma-card-value" id="maCreditValue">-</div>
-                <div class="ma-card-unit">조원</div>
-            </div>
-            <div class="ma-card-updated" id="maCreditUpdated">GAS market 시트에서 가져오는 중...</div>
-            <div class="ma-spectrum">
-                <div class="ma-spectrum-track" style="background: linear-gradient(to right, #5856D6 0%, #007AFF 15%, #34C759 35%, #FFCC00 60%, #FF9500 80%, #FF3B30 100%);">
-                    <div class="ma-spectrum-thumb" id="maCreditThumb" style="left:0%"></div>
-                </div>
-                <div class="ma-spectrum-labels">
-                    <span class="ma-spectrum-label">0</span><span class="ma-spectrum-label">5조</span>
-                    <span class="ma-spectrum-label">8조</span><span class="ma-spectrum-label">11조</span>
-                    <span class="ma-spectrum-label">14조+</span>
-                </div>
-            </div>
-            <table class="ma-range-table" id="maCreditTable">
-                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>~5조</td><td>극도침체</td><td>🎯 바닥권 신호</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#007AFF"></span>5~8조</td><td>침체</td><td>투자심리 위축</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>8~11조</td><td>정상</td><td>코스피 역사적 평균</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>11~14조</td><td>과열주의</td><td>빚투 증가, 조정 리스크</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>14조+</td><td>과열</td><td>⚠️ 역대 최고치 수준</td></tr>
-            </table>
-        </div>
-        <!-- ⑦ A/D Ratio (참고지표) -->
-        <div class="ma-card" id="maAdCard">
-            <div class="ma-card-top">
-                <div class="ma-card-name">📈 등락비율 (A/D Ratio)</div>
-                <div class="ma-card-badge" id="maAdBadge">-</div>
-            </div>
-            <div class="ma-card-value-row">
-                <div class="ma-card-value" id="maAdValue">-</div>
-                <div class="ma-card-unit">% 상승</div>
-            </div>
-            <div class="ma-card-updated" id="maAdUpdated">GAS market 시트에서 가져오는 중...</div>
-            <div style="margin-top:10px;">
-                <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-sub); margin-bottom:4px;"><span>하락 종목</span><span>상승 종목</span></div>
-                <div class="ma-ad-gauge">
-                    <div class="ma-ad-fill" id="maAdBar" style="width:50%; background: linear-gradient(to right, #FF3B30, #FF9500, #34C759);"></div>
-                </div>
-                <div style="display:flex; justify-content:space-between; font-size:11px; margin-top:3px;">
-                    <span id="maAdDown" style="color:var(--down);">하락 -</span>
-                    <span id="maAdUp" style="color:var(--up);">상승 -</span>
-                </div>
-            </div>
-            <table class="ma-range-table" style="margin-top:12px;" id="maAdTable">
-                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>~20%</td><td>극도공포</td><td>🎯 바닥권</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#007AFF"></span>20~35%</td><td>공포</td><td>하락 압력 우세</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FFCC00"></span>35~55%</td><td>중립</td><td>방향성 탐색 중</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>55~70%</td><td>상승세</td><td>강세, 고점 주의</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>70%+</td><td>과열</td><td>⚠️ 단기 조정 가능성</td></tr>
-            </table>
-        </div>
+    </div>
 
+        <!-- ⑧ 코스피 거래량 신뢰도 — 다른 지표를 검증하는 보조 지표 -->
+        <div class="ma-card" id="maVolCard" style="grid-column: 1 / -1;">
+            <div class="ma-card-top">
+                <div class="ma-card-name">📊 거래량 신뢰도 — 지표 검증</div>
+                <div class="ma-card-badge" id="maVolBadge">-</div>
+            </div>
+            <div class="ma-card-value-row">
+                <div class="ma-card-value" id="maVolRatio">-</div>
+                <div class="ma-card-unit">% <span style="font-size:13px; font-weight:500; color:var(--text-sub);">/ 20일 평균</span></div>
+            </div>
+            <div class="ma-card-updated" id="maVolUpdated">MarketData F컬럼에서 계산 중...</div>
+
+            <!-- 거래량 비율 게이지 -->
+            <div class="vol-bar-wrap">
+                <div class="vol-bar-track">
+                    <div class="vol-bar-thumb" id="maVolThumb" style="left:50%"></div>
+                </div>
+            </div>
+            <div class="vol-ratio-row">
+                <span>침체 (50%)</span><span>정상 (100%)</span><span>활발 (150%+)</span>
+            </div>
+
+            <!-- 핵심: 각 지표에 대한 거래량 검증 결과 -->
+            <div style="margin-top:14px; font-size:12px; font-weight:700; color:var(--text-sub); letter-spacing:0.5px; margin-bottom:6px;">거래량이 검증하는 지표들</div>
+            <div class="vol-confirm-wrap" id="maVolConfirmList">
+                <div class="vol-confirm-row">
+                    <span class="vol-confirm-label">이동평균선</span>
+                    <span class="vol-confirm-badge nodata" id="maVolConfirmMA">데이터 없음</span>
+                </div>
+                <div class="vol-confirm-row">
+                    <span class="vol-confirm-label">RSI 모멘텀</span>
+                    <span class="vol-confirm-badge nodata" id="maVolConfirmRSI">데이터 없음</span>
+                </div>
+                <div class="vol-confirm-row">
+                    <span class="vol-confirm-label">52주 위치</span>
+                    <span class="vol-confirm-badge nodata" id="maVolConfirmW52">데이터 없음</span>
+                </div>
+                <div class="vol-confirm-row">
+                    <span class="vol-confirm-label">외국인 수급</span>
+                    <span class="vol-confirm-badge nodata" id="maVolConfirmForeign">데이터 없음</span>
+                </div>
+            </div>
+
+            <div class="vol-multiplier-note" id="maVolNote">
+                💡 거래량은 다른 지표의 <b>신뢰도를 높이거나 낮추는</b> 검증 도구입니다.<br>
+                거래량이 가격 방향을 지지하면 신호가 강해지고, 반대이면 신호가 약해집니다.
+            </div>
+        </div>
 
     </div>
     </div><!-- /maViewKR -->
@@ -1018,11 +1110,15 @@
     }
 
     function processMarketData(data) {
+        // MarketData 시트 컬럼: [Date=0, SP500=1, NASDAQ=2, KOSPI=3, USD/KRW=4, KOSPI_VOL=5]
         if (!data || data.length === 0) return [];
         let mappedData = data.map(row => ({
-            date: row[0], sp500: Number(row[1]) || 0,
-            nasdaq: Number(row[2]) || 0, kospi: Number(row[3]) || 0,
-            usd: Number(row[5]) || 0, price: Number(row[6]) || 0
+            date:     row[0],
+            sp500:    Number(row[1]) || 0,
+            nasdaq:   Number(row[2]) || 0,
+            kospi:    Number(row[3]) || 0,
+            usd:      Number(row[4]) || 0,   // ★ 버그수정: row[4] = USD/KRW
+            kospiVol: Number(row[5]) || 0    // ★ 신규: row[5] = KOSPI_VOL (억주)
         }));
         if (mappedData.length > 0) {
             let lastData = mappedData[mappedData.length - 1];
@@ -2003,7 +2099,8 @@
         renderForeign(ma ? ma.foreign : null);
         renderADRatio(ma ? ma.adRatio : null);
         renderKospiMA();
-        renderSignalBannerKR();
+        renderVolume();          // ★ 거래량 신뢰도 카드
+        renderSignalBannerKR();  // ★ 거래량 반영된 종합신호 (renderVolume 이후 호출)
         updateLastUpdated(ma);
         const isUS = document.getElementById('maBtnUS').classList.contains('active');
         if (isUS) { renderUSMA(); renderSignalBannerUS(); }
@@ -2602,11 +2699,228 @@
         return { score, belowCount, total, crossDownCount };
     }
 
-    function renderSignalBannerKR() {
-        // ★ v61: 6개 지표 가중 평균 종합 신호
-        // 점수 0~100: 높을수록 강세/과열, 낮을수록 약세/바닥권
-        // 가중치: 20일선25% | RSI20% | 52주위치20% | VKOSPI15% | 외국인수급12% | 신용잔고8%
+    // ====================================================================
+    // 거래량 신뢰도 — 계산 유틸 + 카드 렌더
+    // ====================================================================
 
+    // 코스피 거래량 배열 추출 (market raw 데이터 r[5] = KOSPI_VOL)
+    // 0인 행(미수집)은 제외하고 유효값만 반환
+    function _getKospiVolumes() {
+        const market = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.market)
+                       ? LAST_FETCHED_DATA.market : [];
+        return market
+            .map(r => Number(r[5]) || 0)
+            .filter(v => v > 0);
+    }
+
+    // 거래량 20일 평균 대비 비율 계산 (%)
+    // 반환: { ratio, todayVol, avg20, volArr } 또는 null
+    function _calcVolRatio() {
+        const vols = _getKospiVolumes();
+        if (vols.length < 5) return null;
+        const todayVol = vols[vols.length - 1];
+        const window   = Math.min(20, vols.length - 1);
+        const past     = vols.slice(vols.length - 1 - window, vols.length - 1);
+        if (past.length === 0) return null;
+        const avg20 = past.reduce((a, b) => a + b, 0) / past.length;
+        if (avg20 === 0) return null;
+        return {
+            ratio:    Math.round((todayVol / avg20) * 100),
+            todayVol: todayVol,
+            avg20:    avg20,
+            volArr:   vols
+        };
+    }
+
+    // 거래량 신뢰도 승수 계산
+    // ratio → 0.7(저거래량 신호 약화) ~ 1.0(보통) ~ 1.15(고거래량 신호 강화)
+    // 방향 일치(isAligned): 거래량이 해당 지표 방향과 같은지 여부
+    //   - isAligned=true  → 정방향: 고거래량이면 신호 강화, 저거래량이면 약화
+    //   - isAligned=false → 역방향: 고거래량이면 오히려 경고 (신호 약화)
+    function _volMultiplier(ratio, isAligned) {
+        if (ratio === null) return 1.0; // 데이터 없으면 중립
+
+        let mult;
+        if (ratio >= 150)      mult = 1.15;  // 거래 폭증
+        else if (ratio >= 120) mult = 1.08;  // 거래 활발
+        else if (ratio >= 85)  mult = 1.0;   // 정상
+        else if (ratio >= 60)  mult = 0.90;  // 거래 저조
+        else                   mult = 0.78;  // 거래 침체
+
+        // 역방향이면 승수 반전 (강화→약화, 약화→강화)
+        if (!isAligned) {
+            mult = 1.0 + (1.0 - mult); // 1.15→0.85, 0.78→1.22 (역방향 고거래량은 추가 경고)
+            mult = Math.min(mult, 1.15); // 상한 제한
+        }
+        return mult;
+    }
+
+    // 검증 배지 텍스트·클래스 결정
+    function _volConfirmBadge(ratio, isAligned, signalLabel) {
+        if (ratio === null) return { text: '데이터 없음', cls: 'nodata' };
+
+        if (ratio >= 120 && isAligned)
+            return { text: '✅ 거래량 지지 — 신호 강화', cls: 'confirmed' };
+        if (ratio >= 120 && !isAligned)
+            return { text: '⚠️ 고거래량 역방향 — 신호 주의', cls: 'diverged' };
+        if (ratio < 70 && isAligned)
+            return { text: '⚠️ 저거래량 — 신호 약화', cls: 'weakened' };
+        if (ratio < 70 && !isAligned)
+            return { text: '➡️ 저거래량 역방향 — 관망', cls: 'weakened' };
+        // 보통 구간
+        if (isAligned) return { text: '➡️ 보통 — 중립 확인', cls: 'nodata' };
+        return { text: '➡️ 방향 불일치 — 보통', cls: 'nodata' };
+    }
+
+    // 거래량 카드 렌더
+    function renderVolume() {
+        const vol = _calcVolRatio();
+        const badgeEl   = document.getElementById('maVolBadge');
+        const ratioEl   = document.getElementById('maVolRatio');
+        const updatedEl = document.getElementById('maVolUpdated');
+        const thumbEl   = document.getElementById('maVolThumb');
+        const noteEl    = document.getElementById('maVolNote');
+
+        if (!vol) {
+            if (badgeEl)   maSetBadge('maVolBadge', '데이터 없음', '');
+            if (ratioEl)   ratioEl.textContent = '-';
+            if (updatedEl) updatedEl.textContent = '⚠️ MarketData F컬럼(KOSPI_VOL)에 데이터가 없습니다';
+            // 검증 배지 전부 데이터없음
+            ['MA','RSI','W52','Foreign'].forEach(k => {
+                const el = document.getElementById('maVolConfirm' + k);
+                if (el) { el.textContent = '데이터 없음'; el.className = 'vol-confirm-badge nodata'; }
+            });
+            return;
+        }
+
+        const r = vol.ratio;
+
+        // 메인 값
+        if (ratioEl) ratioEl.textContent = r;
+
+        // 배지
+        let badgeLabel, badgeCls;
+        if (r >= 150)      { badgeLabel = '거래 폭증 🔥';  badgeCls = 'ma-hot'; }
+        else if (r >= 120) { badgeLabel = '거래 활발 📈';  badgeCls = 'ma-cool'; }
+        else if (r >= 85)  { badgeLabel = '거래 정상 ✅';  badgeCls = 'ma-normal'; }
+        else if (r >= 60)  { badgeLabel = '거래 저조 ➡️'; badgeCls = 'ma-warn'; }
+        else               { badgeLabel = '거래 침체 📉';  badgeCls = 'ma-fear'; }
+        if (badgeEl) maSetBadge('maVolBadge', badgeLabel, badgeCls);
+        maSetCard('maVolCard', badgeCls);
+
+        // 업데이트 텍스트
+        if (updatedEl) updatedEl.textContent =
+            '오늘 ' + vol.todayVol.toFixed(2) + '억주 · 20일 평균 ' + vol.avg20.toFixed(2) + '억주';
+
+        // 게이지 thumb 위치 (50%=100, 범위 30~200%)
+        if (thumbEl) {
+            const pct = Math.min(100, Math.max(0, ((r - 30) / 170) * 100));
+            thumbEl.style.left = pct + '%';
+        }
+
+        // ── 각 지표별 검증 배지 ──
+        const market = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.market)
+                       ? LAST_FETCHED_DATA.market : [];
+        const maData = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA)
+                       ? (LAST_FETCHED_DATA.marketAnalysis || null) : null;
+        const kRows  = market.filter(row => Number(row[3]) > 0);
+        const kClose = kRows.map(row => Number(row[3]));
+
+        // ① 이동평균선 방향: 현재가 > MA20 이면 강세(aligned = 고거래량 긍정)
+        if (kClose.length >= 20) {
+            const ma20 = calcMA(kClose, 20);
+            const cur  = kClose[kClose.length - 1];
+            const isAbove = ma20 !== null && cur >= ma20;
+            // 강세(isAbove=true): 고거래량이면 상승 지지 → aligned
+            // 약세(isAbove=false): 고거래량이면 하락 가속 경고 → 하락장에선 고거래량이 오히려 패닉셀 신호
+            //   → 약세 + 고거래량 = 바닥 탐색 중(역방향 아님) → 둘 다 aligned=true로 처리해 신호 명확히
+            const b = _volConfirmBadge(r, true, 'MA');
+            const el = document.getElementById('maVolConfirmMA');
+            if (el) {
+                if (isAbove && r >= 120)      { el.textContent = '✅ 상승 + 고거래량 — 강한 상승 지지'; el.className = 'vol-confirm-badge confirmed'; }
+                else if (isAbove && r < 70)   { el.textContent = '⚠️ 상승 + 저거래량 — 힘 없는 상승'; el.className = 'vol-confirm-badge weakened'; }
+                else if (!isAbove && r >= 120){ el.textContent = '🎯 하락 + 고거래량 — 패닉셀/바닥 가능'; el.className = 'vol-confirm-badge confirmed'; }
+                else if (!isAbove && r < 70)  { el.textContent = '➡️ 하락 + 저거래량 — 무기력한 하락'; el.className = 'vol-confirm-badge nodata'; }
+                else                           { el.textContent = '➡️ 거래량 보통 — 중립'; el.className = 'vol-confirm-badge nodata'; }
+            }
+        }
+
+        // ② RSI 방향: RSI > 50 이면 강세 모멘텀
+        if (kClose.length >= 15) {
+            const rsiObj = calcRSI(kClose, 14);
+            if (rsiObj && rsiObj.rsi !== null) {
+                const rsi = rsiObj.rsi;
+                const el = document.getElementById('maVolConfirmRSI');
+                if (el) {
+                    if (rsi >= 70 && r >= 120)     { el.textContent = '⚠️ RSI 과매수 + 고거래량 — 강한 과열 경고'; el.className = 'vol-confirm-badge diverged'; }
+                    else if (rsi <= 30 && r >= 120) { el.textContent = '🎯 RSI 과매도 + 고거래량 — 바닥 신호 강화'; el.className = 'vol-confirm-badge confirmed'; }
+                    else if (rsi > 50 && r >= 120)  { el.textContent = '✅ RSI 강세 + 고거래량 — 모멘텀 확인'; el.className = 'vol-confirm-badge confirmed'; }
+                    else if (rsi > 50 && r < 70)    { el.textContent = '⚠️ RSI 강세 + 저거래량 — 모멘텀 약화'; el.className = 'vol-confirm-badge weakened'; }
+                    else if (rsi < 50 && r < 70)    { el.textContent = '➡️ RSI 약세 + 저거래량 — 방향성 탐색'; el.className = 'vol-confirm-badge nodata'; }
+                    else                             { el.textContent = '➡️ 거래량 보통 — 중립'; el.className = 'vol-confirm-badge nodata'; }
+                }
+            }
+        }
+
+        // ③ 52주 위치
+        if (kClose.length >= 50) {
+            const w52 = calc52Week(kClose);
+            if (w52 && w52.pct !== null) {
+                const pct = w52.pct;
+                const el = document.getElementById('maVolConfirmW52');
+                if (el) {
+                    if (pct <= 15 && r >= 120)  { el.textContent = '🎯 52주저점 + 고거래량 — 강한 바닥 신호'; el.className = 'vol-confirm-badge confirmed'; }
+                    else if (pct >= 80 && r >= 120){ el.textContent = '⚠️ 52주고점 + 고거래량 — 고점 경고 강화'; el.className = 'vol-confirm-badge diverged'; }
+                    else if (pct <= 30 && r < 70) { el.textContent = '➡️ 저점권 + 저거래량 — 아직 바닥 미확인'; el.className = 'vol-confirm-badge weakened'; }
+                    else if (pct >= 70 && r < 70) { el.textContent = '⚠️ 고점권 + 저거래량 — 상승 동력 소진'; el.className = 'vol-confirm-badge weakened'; }
+                    else                           { el.textContent = '➡️ 거래량 보통 — 중립'; el.className = 'vol-confirm-badge nodata'; }
+                }
+            }
+        }
+
+        // ④ 외국인 수급
+        if (maData && maData.foreign) {
+            const ss = maData.foreign['005930'], sk = maData.foreign['000660'];
+            const ssV = ss && ss.net5d !== null ? Number(ss.net5d) : null;
+            const skV = sk && sk.net5d !== null ? Number(sk.net5d) : null;
+            if (ssV !== null || skV !== null) {
+                const bothBuy  = ssV !== null && ssV > 0 && skV !== null && skV > 0;
+                const bothSell = ssV !== null && ssV < 0 && skV !== null && skV < 0;
+                const el = document.getElementById('maVolConfirmForeign');
+                if (el) {
+                    if (bothBuy && r >= 120)       { el.textContent = '✅ 외국인 매수 + 고거래량 — 강한 매집 신호'; el.className = 'vol-confirm-badge confirmed'; }
+                    else if (bothBuy && r < 70)    { el.textContent = '⚠️ 외국인 매수 + 저거래량 — 소극적 매수'; el.className = 'vol-confirm-badge weakened'; }
+                    else if (bothSell && r >= 120) { el.textContent = '🔴 외국인 매도 + 고거래량 — 강한 이탈 신호'; el.className = 'vol-confirm-badge diverged'; }
+                    else if (bothSell && r < 70)   { el.textContent = '➡️ 외국인 매도 + 저거래량 — 점진적 이탈'; el.className = 'vol-confirm-badge nodata'; }
+                    else                            { el.textContent = '➡️ 혼조 — 방향성 불명확'; el.className = 'vol-confirm-badge nodata'; }
+                }
+            }
+        }
+
+        // 하단 설명 노트 업데이트
+        if (noteEl) {
+            let noteMsg = '💡 거래량은 다른 지표의 <b>신뢰도를 높이거나 낮추는</b> 검증 도구입니다. ';
+            if (r >= 120)     noteMsg += `현재 <b>거래 활발(${r}%)</b> — 각 지표 신호의 신뢰도가 <b>높아진</b> 상태입니다.`;
+            else if (r < 70)  noteMsg += `현재 <b>거래 저조(${r}%)</b> — 각 지표 신호의 신뢰도가 <b>낮아진</b> 상태입니다. 추세 확인 전 관망 권장.`;
+            else               noteMsg += `현재 <b>거래 보통(${r}%)</b> — 지표 신호를 그대로 참고하세요.`;
+            noteEl.innerHTML = noteMsg;
+        }
+    }
+
+    // ====================================================================
+    // 종합 신호 배너 — 거래량 신뢰도 승수 적용
+    // ★ v65: 6개 지표 각각에 거래량 승수(0.78~1.15) 적용
+    //
+    // 설계 원칙:
+    //   · 거래량은 독립 가중치(0%)로 직접 점수에 기여하지 않음
+    //   · 대신 각 지표의 유효 가중치를 ±15% 범위에서 조절하는 승수로 작동
+    //   · 데이터 없는 지표는 분모에서 제외 (기존 동작 유지)
+    //
+    // 가중치: MA25% | RSI20% | 52주20% | VKOSPI15% | 외국인수급12% | 신용잔고8%
+    //         (거래량은 각 지표의 실효 가중치를 0.78~1.15배 조절)
+    // ====================================================================
+
+    function renderSignalBannerKR() {
         const maData = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA)
                        ? (LAST_FETCHED_DATA.marketAnalysis || null) : null;
         const market = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.market)
@@ -2614,55 +2928,96 @@
         const kRows  = market.filter(r => Number(r[3]) > 0);
         const kClose = kRows.map(r => Number(r[3]));
 
+        // 거래량 비율 (승수 계산용)
+        const volData = _calcVolRatio();
+        const volRatio = volData ? volData.ratio : null;
+
         let weightedSum = 0, weightTotal = 0, signals = [];
 
-        // ① 20일선 위/아래 (가중치 25) — 위=강세(100), 아래=약세(0)
+        // ─────────────────────────────────────────────────
+        // ① 20일선 위/아래 (기본 가중치 25)
+        // 거래량 승수: 상승+고거래량 → 강화 / 상승+저거래량 → 약화
+        // ─────────────────────────────────────────────────
         if (kClose.length >= 20) {
             const ma20 = calcMA(kClose, 20);
             const cur  = kClose[kClose.length - 1];
             if (ma20 !== null) {
-                const s = cur >= ma20 ? 100 : 0;
-                weightedSum += s * 25; weightTotal += 25;
-                signals.push(cur >= ma20 ? '20일선 위✅' : '20일선 아래🔴');
+                const isAbove  = cur >= ma20;
+                const s        = isAbove ? 100 : 0;
+                // 거래량 방향 일치 여부:
+                //   상승장(isAbove=true) + 고거래량 → 강세 지지 → aligned
+                //   하락장(isAbove=false) + 고거래량 → 패닉셀(바닥 신호) → 반대로 aligned
+                //   두 경우 모두 거래량 방향은 신호를 강화함 → isAligned = true
+                const mult     = _volMultiplier(volRatio, true);
+                const adjW     = 25 * mult;
+                weightedSum   += s * adjW;
+                weightTotal   += adjW;
+                signals.push(isAbove ? '20일선 위✅' : '20일선 아래🔴');
             }
         }
 
-        // ② RSI(14) (가중치 20) — 선형 매핑: RSI 그대로 0~100점
+        // ─────────────────────────────────────────────────
+        // ② RSI(14) (기본 가중치 20)
+        // 거래량 승수: RSI 방향(>50 강세/<50 약세)이 거래량과 같은 방향이면 aligned
+        // ─────────────────────────────────────────────────
         if (kClose.length >= 15) {
             const rsiObj = calcRSI(kClose, 14);
             if (rsiObj && rsiObj.rsi !== null) {
-                const rsi = rsiObj.rsi;
-                // RSI 50 기준 중립, 70+ 과열, 30- 과매도
-                // 점수 = RSI 값 그대로 (0~100)
-                weightedSum += rsi * 20; weightTotal += 20;
+                const rsi     = rsiObj.rsi;
+                const isBull  = rsi >= 50; // RSI 50 기준 강세/약세
+                // 강세(RSI>50) + 고거래량 → 모멘텀 확인 → aligned
+                // 약세(RSI<50) + 고거래량 → 하락 가속 또는 패닉셀 → 양쪽 다 신호 강화
+                const mult    = _volMultiplier(volRatio, true);
+                const adjW    = 20 * mult;
+                weightedSum  += rsi * adjW;
+                weightTotal  += adjW;
                 if (rsi >= 70) signals.push('RSI 과매수⚠️');
                 else if (rsi <= 30) signals.push('RSI 과매도🎯');
             }
         }
 
-        // ③ 52주 위치 (가중치 20) — 위치% 그대로 점수화
+        // ─────────────────────────────────────────────────
+        // ③ 52주 위치 (기본 가중치 20)
+        // 거래량 승수: 저점권+고거래량→바닥 확인 강화 / 고점권+고거래량→고점 경고 강화
+        //             저점권+저거래량→아직 바닥 미확인 약화
+        // ─────────────────────────────────────────────────
         if (kClose.length >= 50) {
             const w52 = calc52Week(kClose);
             if (w52 && w52.pct !== null) {
-                weightedSum += w52.pct * 20; weightTotal += 20;
-                if (w52.pct >= 80) signals.push('52주고점권⚠️');
-                else if (w52.pct <= 15) signals.push('52주저점권🎯');
+                const pct    = w52.pct;
+                // 저점(pct 낮음) + 고거래량 = 바닥 신호 aligned
+                // 고점(pct 높음) + 고거래량 = 고점 경고 aligned
+                // → 양방향 모두 거래량이 신호를 강화함 → aligned = true
+                const mult   = _volMultiplier(volRatio, true);
+                const adjW   = 20 * mult;
+                weightedSum += pct * adjW;
+                weightTotal += adjW;
+                if (pct >= 80) signals.push('52주고점권⚠️');
+                else if (pct <= 15) signals.push('52주저점권🎯');
             }
         }
 
-        // ④ VKOSPI (가중치 15) — 높을수록 공포 → 점수 반전 (100 - 정규화)
+        // ─────────────────────────────────────────────────
+        // ④ VKOSPI (기본 가중치 15)
+        // VKOSPI는 거래량과 독립적인 파생상품 지표
+        // 거래량 승수 미적용 (중립 1.0 고정)
+        // ─────────────────────────────────────────────────
         if (maData && maData.vkospi && maData.vkospi.value !== null) {
-            const v = Number(maData.vkospi.value);
-            // VKOSPI 정상범위 10~40, 극단 60+
-            // 낮을수록 안정(강세), 높을수록 공포(약세) → 점수 반전
+            const v          = Number(maData.vkospi.value);
             const normalized = Math.min(100, Math.max(0, (v - 10) / 55 * 100));
-            const s = 100 - normalized;
-            weightedSum += s * 15; weightTotal += 15;
+            const s          = 100 - normalized;
+            // VKOSPI는 파생상품 기반 → 거래량 승수 미적용
+            weightedSum += s * 15;
+            weightTotal += 15;
             if (v >= 60) signals.push('VKOSPI 패닉🔴(' + v.toFixed(0) + ')');
             else if (v >= 40) signals.push('VKOSPI 공포(' + v.toFixed(0) + ')');
         }
 
-        // ⑤ 외국인 수급 — 삼성+하이닉스 (가중치 12)
+        // ─────────────────────────────────────────────────
+        // ⑤ 외국인 수급 (기본 가중치 12)
+        // 거래량 승수: 외국인 동반매수+고거래량 → 매집 신호 강화
+        //             외국인 동반매수+저거래량 → 소극적 매수, 신호 약화
+        // ─────────────────────────────────────────────────
         if (maData && maData.foreign) {
             const ss = maData.foreign['005930'], sk = maData.foreign['000660'];
             const ssVal = ss && ss.net5d !== null ? Number(ss.net5d) : null;
@@ -2670,24 +3025,37 @@
             if (ssVal !== null || skVal !== null) {
                 const bothBuy  = ssVal !== null && ssVal > 0 && skVal !== null && skVal > 0;
                 const bothSell = ssVal !== null && ssVal < 0 && skVal !== null && skVal < 0;
-                // 동반매수=100, 혼조=50, 동반매도=0
-                const s = bothBuy ? 100 : bothSell ? 0 : 50;
-                weightedSum += s * 12; weightTotal += 12;
+                const s        = bothBuy ? 100 : bothSell ? 0 : 50;
+                // 외국인 방향과 거래량이 같은 방향이면 신호 강화
+                const isAligned = (bothBuy || bothSell); // 혼조면 거래량 무관
+                const mult     = _volMultiplier(volRatio, isAligned);
+                const adjW     = 12 * mult;
+                weightedSum   += s * adjW;
+                weightTotal   += adjW;
                 if (bothBuy)  signals.push('외국인 동반매수📈');
                 else if (bothSell) signals.push('외국인 동반매도📉');
             }
         }
 
-        // ⑥ 신용융자잔고 (가중치 8) — 높을수록 과열(약세), 낮을수록 안전
+        // ─────────────────────────────────────────────────
+        // ⑥ 신용융자잔고 (기본 가중치 8)
+        // 신용잔고는 주간 단위 변화 → 거래량 승수 미적용
+        // ─────────────────────────────────────────────────
         if (maData && maData.creditBalance && maData.creditBalance.value !== null) {
-            const v = Number(maData.creditBalance.value);
-            // 정상 8~14조, 과열 18조+, 바닥 5조 이하
-            // 높을수록 약세 → 반전
+            const v          = Number(maData.creditBalance.value);
             const normalized = Math.min(100, Math.max(0, (v - 5) / 20 * 100));
-            const s = 100 - normalized;
-            weightedSum += s * 8; weightTotal += 8;
+            const s          = 100 - normalized;
+            weightedSum += s * 8;
+            weightTotal += 8;
             if (v >= 18) signals.push('신용잔고 과열🔴(' + v.toFixed(1) + '조)');
             else if (v <= 7) signals.push('신용잔고 낮음✅');
+        }
+
+        // 거래량 신뢰도 표시 신호 추가
+        if (volRatio !== null) {
+            if (volRatio >= 150)     signals.push('거래 폭증🔥(' + volRatio + '%)');
+            else if (volRatio >= 120) signals.push('거래 활발📊(' + volRatio + '%)');
+            else if (volRatio < 70)   signals.push('거래 침체⬇️(' + volRatio + '%)');
         }
 
         const score = weightTotal > 0 ? Math.round(weightedSum / weightTotal) : 50;
