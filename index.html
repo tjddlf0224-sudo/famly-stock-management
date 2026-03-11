@@ -233,6 +233,19 @@
         .ma-fear   { --ma-accent: #007AFF; color: #007AFF; }
         .ma-panic  { --ma-accent: #5856D6; color: #5856D6; }
         .ma-update-notice { text-align: center; font-size: 11px; color: var(--text-sub); padding: 12px 0 4px; }
+        /* RSI + 52주 카드 */
+        .rsi-bar-wrap { margin: 10px 0 4px; height: 8px; border-radius: 4px; background: linear-gradient(to right, #007AFF 0%, #34C759 30%, #FFCC00 50%, #FF9500 70%, #FF3B30 100%); position: relative; }
+        .rsi-bar-thumb { position: absolute; top: 50%; transform: translate(-50%,-50%); width: 14px; height: 14px; background: white; border-radius: 50%; border: 2.5px solid #555; box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: left 0.5s cubic-bezier(.34,1.56,.64,1); }
+        .rsi-labels { display: flex; justify-content: space-between; font-size: 9px; color: var(--text-sub); font-weight: 600; margin-top: 4px; }
+        .rsi-detail-row { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--divider-color); font-size: 12px; color: var(--text-sub); }
+        .rsi-detail-val { font-size: 13px; font-weight: 800; color: var(--text-main); }
+        /* 52주 카드 */
+        .week52-bar-wrap { margin: 10px 0 4px; height: 8px; border-radius: 4px; background: var(--border-color); position: relative; overflow: visible; }
+        .week52-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(to right, #007AFF, #34C759, #FFCC00, #FF9500, #FF3B30); transition: width 0.6s ease; }
+        .week52-bar-thumb { position: absolute; top: 50%; transform: translate(-50%,-50%); width: 14px; height: 14px; background: white; border-radius: 50%; border: 2.5px solid #555; box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: left 0.5s cubic-bezier(.34,1.56,.64,1); }
+        .week52-price-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-sub); margin-top: 4px; }
+        .week52-detail-row { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--divider-color); font-size: 12px; color: var(--text-sub); }
+        .week52-detail-val { font-size: 13px; font-weight: 800; color: var(--text-main); }
         .ma-manual-badge { display: inline-block; background: rgba(0,122,255,0.1); color: var(--primary); font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin-left: 4px; }
         /* 이동평균선 카드 */
         .ma-ma-list { display: flex; flex-direction: column; gap: 0; margin-top: 4px; }
@@ -658,6 +671,67 @@
                 <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>70%+</td><td>과열</td><td>⚠️ 단기 조정 가능성</td></tr>
             </table>
         </div>
+
+        <!-- ⑥ 코스피 RSI(14) -->
+        <div class="ma-card" id="maKospiRSICard">
+            <div class="ma-card-top">
+                <div class="ma-card-name">📊 코스피 RSI (14일)</div>
+                <div class="ma-card-badge" id="maKospiRSIBadge">-</div>
+            </div>
+            <div class="ma-card-value-row">
+                <div class="ma-card-value" id="maKospiRSIValue">-</div>
+                <div class="ma-card-unit"></div>
+            </div>
+            <div class="ma-card-updated" id="maKospiRSIUpdated">MarketData에서 계산 중...</div>
+            <div class="rsi-bar-wrap"><div class="rsi-bar-thumb" id="maKospiRSIThumb" style="left:50%"></div></div>
+            <div class="rsi-labels"><span>과매도 (30)</span><span>중립 (50)</span><span>과매수 (70)</span></div>
+            <div class="rsi-detail-row">
+                <span>전일 RSI</span><span class="rsi-detail-val" id="maKospiRSIPrev">-</span>
+                <span>14일 평균상승</span><span class="rsi-detail-val" id="maKospiRSIAvgU">-</span>
+                <span>14일 평균하락</span><span class="rsi-detail-val" id="maKospiRSIAvgD">-</span>
+            </div>
+            <table class="ma-range-table" style="margin-top:12px;">
+                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>~20</td><td>극도 과매도</td><td>🎯 강한 매수 신호</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#007AFF"></span>20~30</td><td>과매도</td><td>매수 참고</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>30~50</td><td>약세 중립</td><td>방향성 탐색</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FFCC00"></span>50~70</td><td>강세 중립</td><td>추세 유지</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>70~80</td><td>과매수</td><td>매도 참고</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>80+</td><td>극도 과매수</td><td>⚠️ 강한 매도 신호</td></tr>
+            </table>
+        </div>
+
+        <!-- ⑦ 코스피 52주 고저 위치 -->
+        <div class="ma-card" id="maKospi52Card">
+            <div class="ma-card-top">
+                <div class="ma-card-name">📐 코스피 52주 고저 위치</div>
+                <div class="ma-card-badge" id="maKospi52Badge">-</div>
+            </div>
+            <div class="ma-card-value-row">
+                <div class="ma-card-value" id="maKospi52Value">-</div>
+                <div class="ma-card-unit">%</div>
+            </div>
+            <div class="ma-card-updated" id="maKospi52Updated">MarketData에서 계산 중...</div>
+            <div class="week52-bar-wrap">
+                <div class="week52-bar-thumb" id="maKospi52Thumb" style="left:50%"></div>
+            </div>
+            <div class="week52-price-row">
+                <span>52주 저점 <b id="maKospi52Low">-</b></span>
+                <span>현재 <b id="maKospi52Cur">-</b></span>
+                <span>52주 고점 <b id="maKospi52High">-</b></span>
+            </div>
+            <div class="week52-detail-row">
+                <span>고점 대비</span><span class="week52-detail-val" id="maKospi52FromHigh">-</span>
+                <span>저점 대비</span><span class="week52-detail-val" id="maKospi52FromLow">-</span>
+            </div>
+            <table class="ma-range-table" style="margin-top:12px;">
+                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>0~15%</td><td>바닥권</td><td>🎯 역사적 저점 근처</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#007AFF"></span>15~30%</td><td>저점권</td><td>매수 참고 구간</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>30~55%</td><td>중립</td><td>추세 탐색</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>55~80%</td><td>고점권</td><td>고점 주의</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>80~100%</td><td>52주 고점</td><td>⚠️ 강한 매도 참고</td></tr>
+            </table>
+        </div>
+
     </div>
     </div><!-- /maViewKR -->
 
@@ -738,6 +812,67 @@
             <div class="ma-ma-summary" id="maNDXMASummary">💡 나스닥100 지수의 이동평균선 돌파 여부를 분석합니다</div>
             <div class="ma-chart-wrap"><canvas id="maNDXMAChart"></canvas></div>
         </div>
+
+        <!-- ③ S&P500 RSI(14) -->
+        <div class="ma-card" id="maSPXRSICard">
+            <div class="ma-card-top">
+                <div class="ma-card-name">📊 S&amp;P500 RSI (14일)</div>
+                <div class="ma-card-badge" id="maSPXRSIBadge">-</div>
+            </div>
+            <div class="ma-card-value-row">
+                <div class="ma-card-value" id="maSPXRSIValue">-</div>
+                <div class="ma-card-unit"></div>
+            </div>
+            <div class="ma-card-updated" id="maSPXRSIUpdated">MarketData에서 계산 중...</div>
+            <div class="rsi-bar-wrap"><div class="rsi-bar-thumb" id="maSPXRSIThumb" style="left:50%"></div></div>
+            <div class="rsi-labels"><span>과매도 (30)</span><span>중립 (50)</span><span>과매수 (70)</span></div>
+            <div class="rsi-detail-row">
+                <span>전일 RSI</span><span class="rsi-detail-val" id="maSPXRSIPrev">-</span>
+                <span>14일 평균상승</span><span class="rsi-detail-val" id="maSPXRSIAvgU">-</span>
+                <span>14일 평균하락</span><span class="rsi-detail-val" id="maSPXRSIAvgD">-</span>
+            </div>
+            <table class="ma-range-table" style="margin-top:12px;">
+                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>~20</td><td>극도 과매도</td><td>🎯 강한 매수 신호</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#007AFF"></span>20~30</td><td>과매도</td><td>매수 참고</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>30~50</td><td>약세 중립</td><td>방향성 탐색</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FFCC00"></span>50~70</td><td>강세 중립</td><td>추세 유지</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>70~80</td><td>과매수</td><td>매도 참고</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>80+</td><td>극도 과매수</td><td>⚠️ 강한 매도 신호</td></tr>
+            </table>
+        </div>
+
+        <!-- ④ S&P500 52주 고저 위치 -->
+        <div class="ma-card" id="maSPX52Card">
+            <div class="ma-card-top">
+                <div class="ma-card-name">📐 S&amp;P500 52주 고저 위치</div>
+                <div class="ma-card-badge" id="maSPX52Badge">-</div>
+            </div>
+            <div class="ma-card-value-row">
+                <div class="ma-card-value" id="maSPX52Value">-</div>
+                <div class="ma-card-unit">%</div>
+            </div>
+            <div class="ma-card-updated" id="maSPX52Updated">MarketData에서 계산 중...</div>
+            <div class="week52-bar-wrap">
+                <div class="week52-bar-thumb" id="maSPX52Thumb" style="left:50%"></div>
+            </div>
+            <div class="week52-price-row">
+                <span>52주 저점 <b id="maSPX52Low">-</b></span>
+                <span>현재 <b id="maSPX52Cur">-</b></span>
+                <span>52주 고점 <b id="maSPX52High">-</b></span>
+            </div>
+            <div class="week52-detail-row">
+                <span>고점 대비</span><span class="week52-detail-val" id="maSPX52FromHigh">-</span>
+                <span>저점 대비</span><span class="week52-detail-val" id="maSPX52FromLow">-</span>
+            </div>
+            <table class="ma-range-table" style="margin-top:12px;">
+                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>0~15%</td><td>바닥권</td><td>🎯 역사적 저점 근처</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#007AFF"></span>15~30%</td><td>저점권</td><td>매수 참고 구간</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>30~55%</td><td>중립</td><td>추세 탐색</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>55~80%</td><td>고점권</td><td>고점 주의</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>80~100%</td><td>52주 고점</td><td>⚠️ 강한 매도 참고</td></tr>
+            </table>
+        </div>
+
     </div>
 
     </div><!-- /maViewUS -->
@@ -1902,6 +2037,100 @@
         const thumb=document.getElementById('maVkospiThumb'); if(thumb) thumb.style.left=maThumbPos(v,0,80);
     }
 
+    // ====== RSI(14) 계산 ======
+    function calcRSI(closes, period = 14) {
+        if (!closes || closes.length < period + 1) return null;
+        let gains = 0, losses = 0;
+        for (let i = closes.length - period; i < closes.length; i++) {
+            const diff = closes[i] - closes[i - 1];
+            if (diff > 0) gains += diff; else losses += Math.abs(diff);
+        }
+        const avgGain = gains / period;
+        const avgLoss = losses / period;
+        if (avgLoss === 0) return { rsi: 100, avgGain, avgLoss };
+        const rs = avgGain / avgLoss;
+        return { rsi: Math.round((100 - 100 / (1 + rs)) * 10) / 10, avgGain: Math.round(avgGain * 100) / 100, avgLoss: Math.round(avgLoss * 100) / 100 };
+    }
+
+    // ====== 52주 고저 계산 ======
+    function calc52Week(closes) {
+        if (!closes || closes.length < 2) return null;
+        const window = closes.slice(Math.max(0, closes.length - 252));
+        const high = Math.max(...window);
+        const low  = Math.min(...window);
+        const cur  = closes[closes.length - 1];
+        const range = high - low;
+        const pct = range > 0 ? Math.round((cur - low) / range * 1000) / 10 : 0;
+        const fromHigh = Math.round((cur / high - 1) * 1000) / 10;
+        const fromLow  = Math.round((cur / low  - 1) * 1000) / 10;
+        return { high, low, cur, pct, fromHigh, fromLow };
+    }
+
+    // ====== RSI 렌더링 공통 ======
+    function renderRSICard(ids, closes, label, dateStr) {
+        const { cardId, badgeId, valueId, updatedId, thumbId, prevId, avgUId, avgDId } = ids;
+        const result = calcRSI(closes);
+        const prev   = calcRSI(closes.slice(0, -1));
+        if (!result) {
+            document.getElementById(updatedId).textContent = '⚠️ 데이터 부족 (최소 15일 필요)';
+            maSetBadge(badgeId, '데이터 없음', '');
+            return;
+        }
+        const rsi = result.rsi;
+        document.getElementById(valueId).textContent = rsi.toFixed(1);
+        document.getElementById(updatedId).textContent = '기준일: ' + dateStr;
+        if (prev) document.getElementById(prevId).textContent = prev.rsi.toFixed(1);
+        document.getElementById(avgUId).textContent = '+' + result.avgGain;
+        document.getElementById(avgDId).textContent = '-' + result.avgLoss;
+
+        // 게이지 thumb (0~100 → 0~100%)
+        const thumb = document.getElementById(thumbId);
+        if (thumb) thumb.style.left = Math.min(100, Math.max(0, rsi)) + '%';
+
+        let label2, cls;
+        if      (rsi < 20) { label2 = '극도 과매도 🎯'; cls = 'ma-panic'; }
+        else if (rsi < 30) { label2 = '과매도 📉';      cls = 'ma-fear';  }
+        else if (rsi < 50) { label2 = '약세 중립';       cls = 'ma-cool';  }
+        else if (rsi < 70) { label2 = '강세 중립 ➡️';   cls = 'ma-normal';}
+        else if (rsi < 80) { label2 = '과매수 ⚠️';      cls = 'ma-warn';  }
+        else               { label2 = '극도 과매수 🔴';  cls = 'ma-hot';   }
+
+        maSetCard(cardId, cls);
+        maSetBadge(badgeId, label2, cls);
+    }
+
+    // ====== 52주 렌더링 공통 ======
+    function render52WeekCard(ids, closes, fmt, dateStr) {
+        const { cardId, badgeId, valueId, updatedId, thumbId, lowId, highId, curId, fromHighId, fromLowId } = ids;
+        const result = calc52Week(closes);
+        if (!result) {
+            document.getElementById(updatedId).textContent = '⚠️ 데이터 부족';
+            maSetBadge(badgeId, '데이터 없음', '');
+            return;
+        }
+        const { high, low, cur, pct, fromHigh, fromLow } = result;
+        document.getElementById(valueId).textContent = pct.toFixed(1);
+        document.getElementById(updatedId).textContent = '기준일: ' + dateStr;
+        document.getElementById(lowId).textContent  = fmt(low);
+        document.getElementById(highId).textContent = fmt(high);
+        document.getElementById(curId).textContent  = fmt(cur);
+        document.getElementById(fromHighId).textContent = fromHigh + '%';
+        document.getElementById(fromLowId).textContent  = '+' + fromLow + '%';
+
+        const thumb = document.getElementById(thumbId);
+        if (thumb) thumb.style.left = Math.min(100, Math.max(0, pct)) + '%';
+
+        let label2, cls;
+        if      (pct < 15) { label2 = '바닥권 🎯';     cls = 'ma-panic';  }
+        else if (pct < 30) { label2 = '저점권 📉';      cls = 'ma-fear';   }
+        else if (pct < 55) { label2 = '중립 ➡️';        cls = 'ma-cool';   }
+        else if (pct < 80) { label2 = '고점권 ⚠️';      cls = 'ma-warn';   }
+        else               { label2 = '52주 고점 🔴';   cls = 'ma-hot';    }
+
+        maSetCard(cardId, cls);
+        maSetBadge(badgeId, label2, cls);
+    }
+
     // ====== 이동평균선 계산 공통 함수 ======
     function calcMA(closes, period) {
         if (!closes || closes.length < period) return null;
@@ -2204,6 +2433,21 @@
         const lastDate = lastDateRaw ? String(lastDateRaw).substring(5, 10) : '-';
         renderMACard('maKospiMACard', 'maKospiMABadge', 'maKospiMA', 'maKospiMAUpdated', 'maKospiMASummary',
             closes, [20, 60, 120], currentPrice, prevPrice, '코스피', lastDate, market);
+
+        // RSI
+        renderRSICard({
+            cardId: 'maKospiRSICard', badgeId: 'maKospiRSIBadge', valueId: 'maKospiRSIValue',
+            updatedId: 'maKospiRSIUpdated', thumbId: 'maKospiRSIThumb',
+            prevId: 'maKospiRSIPrev', avgUId: 'maKospiRSIAvgU', avgDId: 'maKospiRSIAvgD'
+        }, closes, '코스피', lastDate);
+
+        // 52주
+        render52WeekCard({
+            cardId: 'maKospi52Card', badgeId: 'maKospi52Badge', valueId: 'maKospi52Value',
+            updatedId: 'maKospi52Updated', thumbId: 'maKospi52Thumb',
+            lowId: 'maKospi52Low', highId: 'maKospi52High', curId: 'maKospi52Cur',
+            fromHighId: 'maKospi52FromHigh', fromLowId: 'maKospi52FromLow'
+        }, closes, v => Math.round(v).toLocaleString(), lastDate);
     }
 
     // ====== 미국 이동평균선 (MarketData 시트 활용) ======
@@ -2237,6 +2481,21 @@
             spCloses,  [20, 50, 100, 125, 200], spCur,  spPrev,  'S&P500',   lastDate, market);
         renderMACard('maNDXMACard', 'maNDXMABadge', 'maNDXMA', 'maNDXMAUpdated', 'maNDXMASummary',
             ndxCloses, [20, 50, 100, 125, 200], ndxCur, ndxPrev, '나스닥100', lastDate, market);
+
+        // S&P500 RSI
+        renderRSICard({
+            cardId: 'maSPXRSICard', badgeId: 'maSPXRSIBadge', valueId: 'maSPXRSIValue',
+            updatedId: 'maSPXRSIUpdated', thumbId: 'maSPXRSIThumb',
+            prevId: 'maSPXRSIPrev', avgUId: 'maSPXRSIAvgU', avgDId: 'maSPXRSIAvgD'
+        }, spCloses, 'S&P500', lastDate);
+
+        // S&P500 52주
+        render52WeekCard({
+            cardId: 'maSPX52Card', badgeId: 'maSPX52Badge', valueId: 'maSPX52Value',
+            updatedId: 'maSPX52Updated', thumbId: 'maSPX52Thumb',
+            lowId: 'maSPX52Low', highId: 'maSPX52High', curId: 'maSPX52Cur',
+            fromHighId: 'maSPX52FromHigh', fromLowId: 'maSPX52FromLow'
+        }, spCloses, v => v.toLocaleString(undefined, {maximumFractionDigits: 0}), lastDate);
     }
     function renderCredit(data){
         if(!data||data.value===undefined||data.value===null){maNoData('maCreditValue','maCreditUpdated');maSetBadge('maCreditBadge','데이터없음','');return;}
