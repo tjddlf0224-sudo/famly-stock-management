@@ -1095,6 +1095,11 @@
                         typeof chartCurrentTicker !== 'undefined' && chartCurrentTicker) {
                         loadCandleData(chartCurrentTicker);
                     }
+                    // ★ v61: 백그라운드 갱신 후 시장분석 탭도 최신 데이터로 재렌더링
+                    if (document.getElementById('tab-market') &&
+                        document.getElementById('tab-market').classList.contains('active')) {
+                        if (typeof renderMarketTab === 'function') renderMarketTab();
+                    }
                 }
             })
             .catch(err => { if (!isBackground) hideLoading(); console.error("데이터 로드 실패:", err); });
