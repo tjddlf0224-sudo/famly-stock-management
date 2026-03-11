@@ -829,6 +829,42 @@
             </table>
         </div>
 
+        <!-- ⑧ 코스피 거래량 신뢰도 -->
+        <div class="ma-card" id="maKospiVolCard">
+            <div class="ma-card-top">
+                <div class="ma-card-name">📊 코스피 거래량 신뢰도</div>
+                <div class="ma-card-badge" id="maKospiVolBadge">-</div>
+            </div>
+            <div class="ma-card-value-row">
+                <div class="ma-card-value" id="maKospiVolValue">-</div>
+                <div class="ma-card-unit">%</div>
+                <div style="margin-left:12px; font-size:12px; color:var(--text-sub);">vs 20일 평균</div>
+            </div>
+            <div class="ma-card-updated" id="maKospiVolUpdated">MarketData에서 계산 중...</div>
+            <div class="ma-spectrum" style="margin-top:10px;">
+                <div class="ma-spectrum-track" style="background: linear-gradient(to right, #5856D6 0%, #007AFF 20%, #34C759 40%, #FFCC00 65%, #FF9500 80%, #FF3B30 100%);">
+                    <div class="ma-spectrum-thumb" id="maKospiVolThumb" style="left:50%"></div>
+                </div>
+                <div class="ma-spectrum-labels">
+                    <span class="ma-spectrum-label">~60%</span>
+                    <span class="ma-spectrum-label">85%</span>
+                    <span class="ma-spectrum-label">120%</span>
+                    <span class="ma-spectrum-label">150%+</span>
+                </div>
+            </div>
+            <div style="margin-top:10px; font-size:12px; color:var(--text-sub); background:var(--bg); border-radius:8px; padding:8px 10px; line-height:1.6;">
+                💡 거래량은 직접 점수에 반영되지 않고 <b style="color:var(--primary);">각 지표의 신뢰도 승수</b>로 작동합니다.<br>
+                <span id="maKospiVolMult" style="font-weight:700; color:var(--text-main);">-</span>
+            </div>
+            <table class="ma-range-table" style="margin-top:10px;">
+                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>150%+</td><td>거래 폭증</td><td>신호 ×1.15 강화</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>120~150%</td><td>거래 활발</td><td>신호 ×1.08 강화</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>85~120%</td><td>거래 정상</td><td>신호 ×1.00 유지</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#007AFF"></span>60~85%</td><td>거래 저조</td><td>신호 ×0.90 약화</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>60% 미만</td><td>거래 침체</td><td>신호 ×0.78 약화</td></tr>
+            </table>
+        </div>
+
     </div>
     </div><!-- /maViewKR -->
 
@@ -2100,6 +2136,7 @@
         renderForeign(ma ? ma.foreign : null);
         renderADRatio(ma ? ma.adRatio : null);
         renderKospiMA();
+        renderKospiVol();
         renderSignalBannerKR();
         updateLastUpdated(ma);
         const isUS = document.getElementById('maBtnUS').classList.contains('active');
@@ -2559,6 +2596,70 @@
             lowId: 'maKospi52Low', highId: 'maKospi52High', curId: 'maKospi52Cur',
             fromHighId: 'maKospi52FromHigh', fromLowId: 'maKospi52FromLow'
         }, closes, v => Math.round(v).toLocaleString(), lastDate);
+    }
+
+    // ====== 코스피 거래량 신뢰도 카드 ======
+    function renderKospiVol() {
+        const market = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.market)
+                       ? LAST_FETCHED_DATA.market : [];
+        // KOSPI_VOL = row[5], 유효값만 추출
+        const volRows = market.filter(r => Number(r[5]) > 0);
+        const vols = volRows.map(r => Number(r[5]));
+
+        const updEl = document.getElementById('maKospiVolUpdated');
+        const valEl = document.getElementById('maKospiVolValue');
+        const badgeEl = document.getElementById('maKospiVolBadge');
+        const thumbEl = document.getElementById('maKospiVolThumb');
+        const multEl = document.getElementById('maKospiVolMult');
+
+        if (vols.length < 2) {
+            if (updEl) updEl.textContent = '⚠️ MarketData F열(KOSPI_VOL) 데이터가 없습니다';
+            if (valEl) valEl.textContent = '-';
+            maSetBadge('maKospiVolBadge', '데이터 없음', '');
+            return;
+        }
+
+        const cur = vols[vols.length - 1];
+        // 20일 평균 (최대 20개, 당일 제외)
+        const window = vols.slice(Math.max(0, vols.length - 21), vols.length - 1);
+        const avg20 = window.length > 0 ? window.reduce((a,b)=>a+b,0) / window.length : cur;
+        const ratio = avg20 > 0 ? Math.round((cur / avg20) * 1000) / 10 : 100;
+
+        const _toMD = (v) => {
+            if (!v) return '-';
+            const d = (v instanceof Date) ? v : new Date(v);
+            if (isNaN(d.getTime())) return '-';
+            const kst = new Date(d.getTime() + 9*60*60*1000);
+            return (kst.getUTCMonth()+1) + '/' + kst.getUTCDate();
+        };
+        const lastDate = _toMD(volRows[volRows.length-1][0]);
+        const dataCount = window.length;
+
+        if (valEl) valEl.textContent = ratio.toFixed(1);
+        if (updEl) updEl.textContent = `기준일: ${lastDate} · 평균 산출 ${dataCount}일치 (20일 목표)`;
+
+        // 승수 결정
+        let mult, label, colorClass, thumbPct;
+        if (ratio >= 150) {
+            mult='×1.15'; label='거래 폭증 — 신호 15% 강화'; colorClass='ma-hot'; thumbPct=95;
+        } else if (ratio >= 120) {
+            mult='×1.08'; label='거래 활발 — 신호 8% 강화'; colorClass='ma-warn'; thumbPct=75;
+        } else if (ratio >= 85) {
+            mult='×1.00'; label='거래 정상 — 신호 변화 없음'; colorClass='ma-cool'; thumbPct=50;
+        } else if (ratio >= 60) {
+            mult='×0.90'; label='거래 저조 — 신호 10% 약화'; colorClass='ma-fear'; thumbPct=25;
+        } else {
+            mult='×0.78'; label='거래 침체 — 신호 22% 약화'; colorClass='ma-panic'; thumbPct=5;
+        }
+
+        maSetCard('maKospiVolCard', colorClass);
+        maSetBadge('maKospiVolBadge', `승수 ${mult}`, colorClass);
+        if (thumbEl) thumbEl.style.left = thumbPct + '%';
+        if (multEl) multEl.textContent = `현재 거래량 신뢰도 승수: ${mult} (${label})`;
+
+        if (dataCount < 5) {
+            if (updEl) updEl.textContent += ' — 데이터 누적 중, 신뢰도 낮음';
+        }
     }
 
     // ====== 미국 이동평균선 (MarketData 시트 활용) ======
