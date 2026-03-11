@@ -248,8 +248,7 @@
         .ma-ma-signal.nodata { background: rgba(0,0,0,0.05); color: var(--text-sub); }
         .ma-ma-updated { font-size: 11px; color: var(--text-sub); margin-top: 10px; }
         .ma-ma-summary { margin-top: 12px; background: var(--bg); border-radius: 10px; padding: 10px 12px; font-size: 12px; color: var(--text-sub); line-height: 1.6; }
-        .ma-chart-wrap { margin-top: 14px; height: 130px; position: relative; }
-        .ma-chart-wrap { margin-top: 14px; height: 130px; position: relative; }
+        .ma-chart-wrap { margin-top: 14px; height: 280px; position: relative; touch-action: none; }
     </style>
 </head>
 <body>
@@ -1921,7 +1920,7 @@
         return { text: maPeriod + '일선 아래 📉', cls: 'below' };
     }
 
-    function renderMACard(cardId, badgeId, listPrefix, updatedId, summaryId, closes, periods, currentPrice, prevPrice, label, updated) {
+    function renderMACard(cardId, badgeId, listPrefix, updatedId, summaryId, closes, periods, currentPrice, prevPrice, label, updated, market) {
         const upEl = document.getElementById(updatedId);
         const sumEl = document.getElementById(summaryId);
         if (!closes || closes.length < 20) {
@@ -1962,113 +1961,223 @@
         const chartCanvasId = cardId.replace('Card', 'Chart');
         const canvas = document.getElementById(chartCanvasId);
         if (canvas && closes.length >= 20) {
-            drawMAChart(canvas, closes, periods, currentPrice, label);
+            initMALineChart(canvas, closes, periods, market);
         }
     }
 
-    // MA 미니 차트 - 최근 120일 종가 + 이동평균선
-    const _maChartInstances = {};
-    function drawMAChart(canvas, closes, periods, currentPrice, label) {
-        const canvasId = canvas.id;
-        // 기존 차트 파괴
-        if (_maChartInstances[canvasId]) {
-            _maChartInstances[canvasId].destroy();
-            delete _maChartInstances[canvasId];
-        }
+    // =====================================================================
+    // MA 라인 차트 — Canvas 직접 드로잉 (종목차트와 동일한 방식)
+    // 드래그 이동 / 두손가락 핀치 줌 / x축 날짜 / 연도 구분 점선
+    // =====================================================================
+    const _maChartState = {}; // canvasId → { closes, periods, dates, viewMin, viewMax, W, H }
 
-        const displayDays = Math.min(120, closes.length);
-        const recentCloses = closes.slice(closes.length - displayDays);
+    const MA_COLORS = { 20:'#FF9500', 50:'#007AFF', 60:'#FF9500', 100:'#34C759', 120:'#AF52DE', 125:'#34C759', 200:'#FF3B30' };
 
-        // 이동평균선 색상 팔레트
-        const maColors = {
-            20:  '#FF9500',
-            50:  '#007AFF',
-            60:  '#FF9500',
-            100: '#34C759',
-            120: '#5856D6',
-            125: '#34C759',
-            200: '#FF3B30'
+    function initMALineChart(canvas, closes, periods, market) {
+        const id = canvas.id;
+        // 날짜 배열 추출 (market 배열 r[0])
+        const allDates = market.map(r => String(r[0])).filter(d => d && d !== 'Date');
+        // closes와 dates 길이 맞추기
+        const len = Math.min(closes.length, allDates.length);
+        const dates  = allDates.slice(allDates.length - len);
+        const cls    = closes.slice(closes.length - len);
+
+        _maChartState[id] = {
+            closes: cls, periods, dates,
+            viewMin: Math.max(0, len - 180), // 기본 180일 보여주기
+            viewMax: len - 1,
+            totalLen: len
         };
 
-        // 종가 라인
-        const datasets = [{
-            label: '종가',
-            data: recentCloses,
-            borderColor: 'rgba(255,255,255,0.85)',
-            borderWidth: 1.5,
-            pointRadius: 0,
-            tension: 0.3,
-            fill: false,
-            order: 0
-        }];
+        // 사이즈 설정
+        const wrap = canvas.parentElement;
+        const W = wrap ? wrap.offsetWidth : (window.innerWidth - 32);
+        const H = 280, dpr = window.devicePixelRatio || 1;
+        canvas.style.width  = W + 'px';
+        canvas.style.height = H + 'px';
+        canvas.width  = W * dpr;
+        canvas.height = H * dpr;
+        _maChartState[id].W = W;
+        _maChartState[id].H = H;
 
-        // 각 이동평균선 — 전체 closes로 계산 후 마지막 displayDays 개만 추출
-        periods.forEach(function(p) {
+        drawMALineChart(id);
+        attachMAChartTouch(canvas);
+    }
+
+    function drawMALineChart(id) {
+        const s = _maChartState[id]; if (!s) return;
+        const canvas = document.getElementById(id); if (!canvas) return;
+        const { closes, periods, dates, viewMin, viewMax, W, H } = s;
+        const dpr = window.devicePixelRatio || 1;
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const isDark = document.body.classList.contains('dark-mode');
+        const bgColor    = isDark ? '#1C1C1E' : '#fff';
+        const gridColor  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
+        const textColor  = isDark ? '#888' : '#999';
+        const closeColor = isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)';
+
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, W, H);
+
+        const PAD_L = 8, PAD_R = 58, PAD_T = 24, PAD_B = 28;
+        const chartW = W - PAD_L - PAD_R, chartH = H - PAD_T - PAD_B;
+
+        const vMin = Math.round(viewMin), vMax = Math.round(viewMax);
+        const visibleCloses = closes.slice(vMin, vMax + 1);
+        if (visibleCloses.length < 2) return;
+
+        // Y 범위: 보이는 구간의 모든 라인(종가 + MA) min/max
+        let yMin = Math.min(...visibleCloses), yMax = Math.max(...visibleCloses);
+        periods.forEach(p => {
+            for (let i = vMin; i <= vMax; i++) {
+                if (i < p - 1) continue;
+                const ma = closes.slice(i - p + 1, i + 1).reduce((a,b)=>a+b,0)/p;
+                if (ma < yMin) yMin = ma;
+                if (ma > yMax) yMax = ma;
+            }
+        });
+        const yPad = (yMax - yMin) * 0.06 || yMin * 0.02;
+        yMin -= yPad; yMax += yPad;
+        const yRange = yMax - yMin;
+
+        function toX(i) { return PAD_L + (i - vMin) / (vMax - vMin) * chartW; }
+        function toY(v) { return PAD_T + (1 - (v - yMin) / yRange) * chartH; }
+        function fmtV(v) { return v >= 1000 ? v.toLocaleString(undefined,{maximumFractionDigits:0}) : v.toFixed(2); }
+
+        // 수평 그리드 + Y 레이블
+        ctx.font = '10px -apple-system, sans-serif';
+        for (let i = 0; i <= 4; i++) {
+            const v = yMin + (yRange / 4) * i;
+            const y = toY(v);
+            ctx.strokeStyle = gridColor; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(PAD_L, y); ctx.lineTo(W - PAD_R, y); ctx.stroke();
+            ctx.fillStyle = textColor; ctx.textAlign = 'left';
+            ctx.fillText(fmtV(v), W - PAD_R + 4, y + 4);
+        }
+
+        // 연도 구분 세로 점선
+        let prevYear = null;
+        for (let i = vMin; i <= vMax; i++) {
+            const d = dates[i]; if (!d) continue;
+            const yr = parseInt(d.substring(0,4));
+            if (prevYear !== null && yr !== prevYear) {
+                const x = toX(i);
+                ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.18)';
+                ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+                ctx.beginPath(); ctx.moveTo(x, PAD_T); ctx.lineTo(x, H - PAD_B); ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillStyle = isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.45)';
+                ctx.font = 'bold 10px -apple-system, sans-serif'; ctx.textAlign = 'center';
+                ctx.fillText(yr + '년', x, PAD_T - 4);
+                ctx.font = '10px -apple-system, sans-serif';
+            }
+            prevYear = yr;
+        }
+
+        // X축 날짜 레이블 (최대 6개)
+        const xTicks = Math.min(6, visibleCloses.length);
+        ctx.fillStyle = textColor; ctx.textAlign = 'center';
+        for (let t = 0; t < xTicks; t++) {
+            const idx = vMin + Math.round(t / (xTicks - 1) * (vMax - vMin));
+            if (!dates[idx]) continue;
+            const d = dates[idx];
+            const label = d.substring(5,7).replace(/^0/,'') + '/' + d.substring(8,10).replace(/^0/,'');
+            ctx.fillText(label, toX(idx), H - 6);
+        }
+
+        // 이동평균선
+        periods.forEach(p => {
             if (closes.length < p) return;
-            const maLine = [];
-            for (let i = closes.length - displayDays; i < closes.length; i++) {
-                if (i < p - 1) { maLine.push(null); continue; }
-                const slice = closes.slice(i - p + 1, i + 1);
-                maLine.push(slice.reduce((a, b) => a + b, 0) / p);
+            const color = MA_COLORS[p] || '#888';
+            ctx.strokeStyle = color;
+            ctx.lineWidth = p >= 100 ? 1.2 : 1.5;
+            if (p >= 100) ctx.setLineDash([5,4]); else ctx.setLineDash([]);
+            ctx.beginPath();
+            let started = false;
+            for (let i = vMin; i <= vMax; i++) {
+                if (i < p - 1) continue;
+                const ma = closes.slice(i - p + 1, i + 1).reduce((a,b)=>a+b,0)/p;
+                const x = toX(i), y = toY(ma);
+                if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
             }
-            datasets.push({
-                label: p + '일선',
-                data: maLine,
-                borderColor: maColors[p] || '#888',
-                borderWidth: 1.2,
-                borderDash: p >= 100 ? [4, 3] : [],
-                pointRadius: 0,
-                tension: 0,
-                fill: false,
-                order: 1,
-                spanGaps: true
-            });
+            ctx.stroke(); ctx.setLineDash([]);
         });
 
-        const isDark = document.body.classList.contains('dark') ||
-                       window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
-        const tickColor = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)';
+        // 종가 라인 (맨 위)
+        ctx.strokeStyle = closeColor; ctx.lineWidth = 2; ctx.setLineDash([]);
+        ctx.beginPath();
+        for (let i = vMin; i <= vMax; i++) {
+            const x = toX(i), y = toY(closes[i]);
+            i === vMin ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
 
-        _maChartInstances[canvasId] = new Chart(canvas, {
-            type: 'line',
-            data: { labels: Array.from({length: displayDays}, (_, i) => i), datasets },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: { duration: 400 },
-                interaction: { mode: 'index', intersect: false },
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top',
-                        labels: {
-                            boxWidth: 12, boxHeight: 2,
-                            font: { size: 10 },
-                            color: tickColor,
-                            padding: 6,
-                            usePointStyle: true, pointStyle: 'line'
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            title: () => '',
-                            label: ctx => ctx.dataset.label + ': ' + (ctx.parsed.y ? ctx.parsed.y.toLocaleString(undefined, {maximumFractionDigits: 2}) : '-')
-                        }
-                    }
-                },
-                scales: {
-                    x: { display: false },
-                    y: {
-                        grid: { color: gridColor },
-                        ticks: {
-                            color: tickColor, font: { size: 9 }, maxTicksLimit: 4,
-                            callback: v => v >= 1000 ? (v/1000).toFixed(1)+'k' : v.toFixed(0)
-                        }
-                    }
-                }
-            }
+        // 범례 (우상단)
+        const legendItems = [{ label:'종가', color: closeColor }, ...periods.map(p=>({ label:p+'일선', color: MA_COLORS[p]||'#888', dash: p>=100 }))];
+        let lx = PAD_L + 4;
+        ctx.font = '10px -apple-system, sans-serif'; ctx.textAlign = 'left';
+        legendItems.forEach(item => {
+            ctx.strokeStyle = item.color; ctx.lineWidth = 1.5;
+            if (item.dash) ctx.setLineDash([4,3]); else ctx.setLineDash([]);
+            ctx.beginPath(); ctx.moveTo(lx, PAD_T - 10); ctx.lineTo(lx + 16, PAD_T - 10); ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = textColor;
+            ctx.fillText(item.label, lx + 19, PAD_T - 6);
+            lx += ctx.measureText(item.label).width + 32;
         });
+    }
+
+    function attachMAChartTouch(canvas) {
+        if (canvas._maTouchBound) return;
+        canvas._maTouchBound = true;
+        const id = canvas.id;
+
+        let isDragging = false, isPinching = false, lastTouchX = 0;
+        let pinchStartDist = 0, pinchStartMin = 0, pinchStartMax = 0;
+
+        function pinchDist(t) { const dx=t[0].clientX-t[1].clientX, dy=t[0].clientY-t[1].clientY; return Math.sqrt(dx*dx+dy*dy); }
+
+        function clamp(min, max) {
+            const s = _maChartState[id]; if (!s) return { min, max };
+            const n = s.totalLen, minSpan = Math.max(10, Math.floor(n * 0.03));
+            let span = max - min;
+            if (span < minSpan) { const c = (min + max) / 2; min = c - minSpan/2; max = c + minSpan/2; }
+            if (min < 0) { max -= min; min = 0; }
+            if (max >= n) { min -= (max - n + 1); max = n - 1; }
+            return { min: Math.max(0, min), max: Math.min(n - 1, max) };
+        }
+
+        function applyRange(min, max) {
+            const r = clamp(min, max);
+            const s = _maChartState[id]; if (!s) return;
+            s.viewMin = r.min; s.viewMax = r.max;
+            drawMALineChart(id);
+        }
+
+        canvas.addEventListener('touchstart', e => {
+            if (e.touches.length === 1) { isDragging=true; isPinching=false; lastTouchX=e.touches[0].clientX; }
+            else if (e.touches.length === 2) { isDragging=false; isPinching=true; pinchStartDist=pinchDist(e.touches); const s=_maChartState[id]; pinchStartMin=s.viewMin; pinchStartMax=s.viewMax; }
+        }, { passive: true });
+
+        canvas.addEventListener('touchmove', e => {
+            e.preventDefault();
+            const s = _maChartState[id]; if (!s) return;
+            if (isDragging && e.touches.length === 1) {
+                const dx = e.touches[0].clientX - lastTouchX; lastTouchX = e.touches[0].clientX;
+                const span = s.viewMax - s.viewMin;
+                const delta = -(dx / canvas.offsetWidth) * span;
+                applyRange(s.viewMin + delta, s.viewMax + delta);
+            } else if (isPinching && e.touches.length === 2) {
+                const ratio = pinchStartDist / pinchDist(e.touches);
+                const center = (pinchStartMin + pinchStartMax) / 2;
+                const half = (pinchStartMax - pinchStartMin) / 2 * ratio;
+                applyRange(center - half, center + half);
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', () => { isDragging=false; isPinching=false; });
     }
 
     // ====== 코스피 이동평균선 ======
@@ -2088,7 +2197,7 @@
         const lastDateRaw = market.length > 0 ? market[market.length - 1][0] : '';
         const lastDate = lastDateRaw ? String(lastDateRaw).substring(5, 10) : '-';
         renderMACard('maKospiMACard', 'maKospiMABadge', 'maKospiMA', 'maKospiMAUpdated', 'maKospiMASummary',
-            closes, [20, 60, 120], currentPrice, prevPrice, '코스피', lastDate);
+            closes, [20, 60, 120], currentPrice, prevPrice, '코스피', lastDate, market);
     }
 
     // ====== 미국 이동평균선 (MarketData 시트 활용) ======
@@ -2115,9 +2224,9 @@
         const ndxCur = ndxCloses[ndxCloses.length - 1], ndxPrev = ndxCloses.length >= 2 ? ndxCloses[ndxCloses.length - 2] : null;
 
         renderMACard('maSPXMACard', 'maSPXMABadge', 'maSPXMA', 'maSPXMAUpdated', 'maSPXMASummary',
-            spCloses,  [20, 50, 100, 125, 200], spCur,  spPrev,  'S&P500',   lastDate);
+            spCloses,  [20, 50, 100, 125, 200], spCur,  spPrev,  'S&P500',   lastDate, market);
         renderMACard('maNDXMACard', 'maNDXMABadge', 'maNDXMA', 'maNDXMAUpdated', 'maNDXMASummary',
-            ndxCloses, [20, 50, 100, 125, 200], ndxCur, ndxPrev, '나스닥100', lastDate);
+            ndxCloses, [20, 50, 100, 125, 200], ndxCur, ndxPrev, '나스닥100', lastDate, market);
     }
     function renderCredit(data){
         if(!data||data.value===undefined||data.value===null){maNoData('maCreditValue','maCreditUpdated');maSetBadge('maCreditBadge','데이터없음','');return;}
