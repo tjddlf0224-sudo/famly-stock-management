@@ -1976,8 +1976,12 @@
     function initMALineChart(canvas, closes, periods, market) {
         const id = canvas.id;
         // 날짜 배열 추출 (market 배열 r[0])
-        const allDates = market.map(r => String(r[0])).filter(d => d && d !== 'Date');
-        // closes와 dates 길이 맞추기
+        // closes는 이미 filter(v>0) 적용된 배열 — market에서 날짜도 동일하게 필터링
+        // closes가 어떤 컬럼인지 판단: 첫 번째 유효값으로 컬럼 역추적
+        // 단순하게: market 행 중 Date가 있고 첫번째 숫자 컬럼이 0이 아닌 행의 날짜만 추출
+        // → closes.length와 맞추기 위해 market에서 Date만 추출 후 뒤에서 closes.length개 사용
+        const allDates = market.map(r => String(r[0])).filter(d => d && d !== 'Date' && !/^\s*$/.test(d));
+        // closes와 dates 길이 맞추기 (closes가 filter로 줄었을 수 있으므로 뒤에서 맞춤)
         const len = Math.min(closes.length, allDates.length);
         const dates  = allDates.slice(allDates.length - len);
         const cls    = closes.slice(closes.length - len);
@@ -2185,7 +2189,9 @@
         const chartData = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA) ? LAST_FETCHED_DATA : null;
         // MarketData 시트에서 코스피 종가 배열 구성
         const market = chartData && chartData.market ? chartData.market : [];
-        const closes = market.map(r => Number(r[3])).filter(v => v > 0); // r[3] = KOSPI
+        // closes와 날짜를 함께 필터링 (값이 0인 행 제외하여 인덱스 일치)
+        const kospiRows = market.filter(r => Number(r[3]) > 0);
+        const closes = kospiRows.map(r => Number(r[3]));
         if (closes.length < 5) {
             document.getElementById('maKospiMAUpdated').textContent = '⚠️ MarketData 시트에 코스피 데이터가 없습니다';
             maSetBadge('maKospiMABadge', '데이터 없음', '');
@@ -2193,8 +2199,8 @@
         }
         const currentPrice = closes[closes.length - 1];
         const prevPrice = closes.length >= 2 ? closes[closes.length - 2] : null;
-        // 최근 업데이트 날짜
-        const lastDateRaw = market.length > 0 ? market[market.length - 1][0] : '';
+        // closes의 마지막 행에서 날짜 추출 (filter 적용 후 인덱스 일치)
+        const lastDateRaw = kospiRows[kospiRows.length - 1][0];
         const lastDate = lastDateRaw ? String(lastDateRaw).substring(5, 10) : '-';
         renderMACard('maKospiMACard', 'maKospiMABadge', 'maKospiMA', 'maKospiMAUpdated', 'maKospiMASummary',
             closes, [20, 60, 120], currentPrice, prevPrice, '코스피', lastDate, market);
@@ -2205,9 +2211,13 @@
         const market = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.market)
                        ? LAST_FETCHED_DATA.market : [];
         // raw market 컬럼: [Date=0, ticker=1, SP500=2, NASDAQ=3, KOSPI=4, USD=5]
-        const spCloses  = market.map(r => Number(r[1])).filter(v => v > 0); // r[1] = SP500
-        const ndxCloses = market.map(r => Number(r[2])).filter(v => v > 0); // r[2] = NASDAQ
-        const lastDateRaw = market.length > 0 ? market[market.length - 1][0] : '';
+        // SP500/NASDAQ 각각 유효한 행만 필터링
+        const spRows  = market.filter(r => Number(r[1]) > 0);
+        const ndxRows = market.filter(r => Number(r[2]) > 0);
+        const spCloses  = spRows.map(r => Number(r[1]));
+        const ndxCloses = ndxRows.map(r => Number(r[2]));
+        // 날짜는 SP500 기준 마지막 유효 행에서 추출
+        const lastDateRaw = spRows.length > 0 ? spRows[spRows.length - 1][0] : '';
         const lastDate = lastDateRaw ? String(lastDateRaw).substring(5, 10) : '-';
 
         if (spCloses.length < 5) {
