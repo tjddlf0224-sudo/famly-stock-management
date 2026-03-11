@@ -1119,7 +1119,7 @@
         let mappedData = data.map(row => ({
             date: row[0], sp500: Number(row[1]) || 0,
             nasdaq: Number(row[2]) || 0, kospi: Number(row[3]) || 0,
-            usd: Number(row[5]) || 0, price: Number(row[6]) || 0
+            usd: Number(row[4]) || 0, kospiVol: Number(row[5]) || 0
         }));
         if (mappedData.length > 0) {
             let lastData = mappedData[mappedData.length - 1];
