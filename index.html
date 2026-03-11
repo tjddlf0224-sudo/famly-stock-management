@@ -649,36 +649,7 @@
     <div id="maViewUS" style="display:none;">
     <div class="ma-section-title">🇺🇸 미국 시장 지표</div>
     <div class="ma-grid">
-        <!-- ① CNN 공포탐욕지수 -->
-        <div class="ma-card" id="maFGCard">
-            <div class="ma-card-top">
-                <div class="ma-card-name">📊 CNN 공포탐욕지수</div>
-                <div class="ma-card-badge" id="maFGBadge">-</div>
-            </div>
-            <div class="ma-card-value-row">
-                <div class="ma-card-value" id="maFGValue">-</div>
-                <div class="ma-card-unit">/ 100</div>
-            </div>
-            <div class="ma-card-updated" id="maFGUpdated">불러오는 중...</div>
-            <div class="ma-spectrum">
-                <div class="ma-spectrum-track" style="background: linear-gradient(to right, #007AFF 0%, #34C759 25%, #FFCC00 50%, #FF9500 75%, #FF3B30 100%);">
-                    <div class="ma-spectrum-thumb" id="maFGThumb" style="left:0%"></div>
-                </div>
-                <div class="ma-spectrum-labels">
-                    <span class="ma-spectrum-label">0</span><span class="ma-spectrum-label">25</span>
-                    <span class="ma-spectrum-label">50</span><span class="ma-spectrum-label">75</span>
-                    <span class="ma-spectrum-label">100</span>
-                </div>
-            </div>
-            <table class="ma-range-table" id="maFGTable">
-                <tr><td><span class="ma-range-dot" style="background:#007AFF"></span>0~25</td><td>극도 공포</td><td>🎯 역사적 바닥 신호</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>25~45</td><td>공포</td><td>좋은 매수 구간</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FFCC00"></span>45~55</td><td>중립</td><td>방향성 탐색 중</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>55~75</td><td>탐욕</td><td>고점 매수 주의</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>75~100</td><td>극도 탐욕</td><td>⚠️ 조정 위험 높음</td></tr>
-            </table>
-        </div>
-        <!-- ② VIX 변동성지수 -->
+        <!-- ① VIX 변동성지수 -->
         <div class="ma-card" id="maVixCard">
             <div class="ma-card-top">
                 <div class="ma-card-name">🌪️ VIX — 미국 변동성지수</div>
@@ -1833,7 +1804,7 @@
         document.getElementById('maSignalBannerUS').style.display = isKR ? 'none' : '';
         document.getElementById('maBtnKR').classList.toggle('active', isKR);
         document.getElementById('maBtnUS').classList.toggle('active', !isKR);
-        if (!isKR) { renderFGIndex(); renderVIX(); renderSPYQQQPER(); renderSignalBannerUS(); }
+        if (!isKR) { renderVIX(); renderSPYQQQPER(); renderSignalBannerUS(); }
     }
 
     function renderMarketTab() {
@@ -1844,7 +1815,7 @@
         renderSignalBannerKR();
         // 기본은 국내 탭 표시 (상태 유지)
         const isUS = document.getElementById('maBtnUS').classList.contains('active');
-        if (isUS) { renderFGIndex(); renderVIX(); renderSPYQQQPER(); renderSignalBannerUS(); }
+        if (isUS) { renderVIX(); renderSPYQQQPER(); renderSignalBannerUS(); }
     }
     function maSetCard(cardId, colorClass) { const card=document.getElementById(cardId); if(!card) return; card.className='ma-card '+colorClass; }
     function maSetBadge(badgeId, text, colorClass) {
@@ -1914,8 +1885,6 @@
     }
     function renderSignalBannerUS(){
         let score=0,signals=[],dataCount=0;
-        const fgVal=document.getElementById('maFGValue');
-        if(fgVal){const v=parseInt(fgVal.textContent);if(!isNaN(v)&&fgVal.textContent!=='-'){dataCount++;let s=v<=25?20:v<=45?15:v<=55?8:v<=75?3:0;score+=s;if(s>=15)signals.push('공포탐욕('+v+')');}}
         const vixVal=document.getElementById('maVixValue');
         if(vixVal){const v=parseFloat(vixVal.textContent);if(!isNaN(v)&&vixVal.textContent!=='-'){dataCount++;let s=v>=40?20:v>=30?15:v>=20?8:v>=15?3:0;score+=s;if(s>=15)signals.push('VIX('+v.toFixed(0)+')');}}
         const spyVal=document.getElementById('maSPYPERValue');
@@ -1926,7 +1895,7 @@
     }
     function _applySignalBanner(score,signals,suffix,defaultGrad){
         let emoji,valueText,desc,bgGrad;
-        // score 최대 55점 (CNN 20 + VIX 20 + SPY PER 15)
+        // score 최대 35점 (VIX 20 + SPY PER 15)
         if(score>=38){emoji='🎯';valueText='강한 바닥 신호';desc='여러 지표가 극단적 공포를 가리킵니다.';bgGrad='linear-gradient(135deg,#1a0050 0%,#2d0080 100%)';}
         else if(score>=25){emoji='📉';valueText='바닥권 접근';desc='일부 지표에서 공포 신호가 감지됩니다.';bgGrad='linear-gradient(135deg,#001a40 0%,#003060 100%)';}
         else if(score>=14){emoji='😐';valueText='중립 — 방향 탐색';desc='뚜렷한 방향성이 없는 구간입니다.';bgGrad=defaultGrad;}
@@ -1942,61 +1911,7 @@
 
     // ====== 해외 시장 지표 렌더링 ======
 
-    // ① CNN 공포탐욕지수 (allorigins 프록시 실시간, GAS 캐시 우선)
-    function renderFGIndex() {
-        const valEl=document.getElementById('maFGValue'), badgeEl=document.getElementById('maFGBadge');
-        const updEl=document.getElementById('maFGUpdated'), thumbEl=document.getElementById('maFGThumb');
-        const cardEl=document.getElementById('maFGCard'), tableEl=document.getElementById('maFGTable');
-
-        // GAS 캐시 우선
-        const fg = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA) ? LAST_FETCHED_DATA.cnnFearGreed : null;
-        if (fg && fg.score) {
-            _applyFG(fg.score, fg.label||'', fg.updated||'캐시', valEl, badgeEl, updEl, thumbEl, cardEl, tableEl); return;
-        }
-        // 실시간 fallback
-        updEl.textContent = '실시간 조회 중...';
-        const enc = encodeURIComponent('https://production.dataviz.cnn.io/index/fearandgreed/graphdata');
-        fetch('https://corsproxy.io/?' + enc)
-            .then(r=>r.json()).then(d=>{
-                const j=d;
-                const score = Math.round(j.fear_and_greed.score);
-                const label = j.fear_and_greed.rating||'';
-                _applyFG(score, label, '실시간', valEl, badgeEl, updEl, thumbEl, cardEl, tableEl);
-                // ★ 브라우저→GAS 역저장 (CNN 성공 시)
-                _saveCNNToGAS(score, label);
-            }).catch(()=>{ valEl.textContent='N/A'; updEl.textContent='⚠️ CNN API 연결 실패'; });
-    }
-    // CNN 값을 GAS cnn_cache 시트에 역저장
-    function _saveCNNToGAS(score, label) {
-        if (!GOOGLE_SCRIPT_URL || !score) return;
-        fetch(GOOGLE_SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify({
-                authKey: FAMILY_PASSWORD,
-                type: 'saveCNN',
-                score: score,
-                label: label
-            })
-        }).catch(() => {}); // 실패해도 무시
-    }
-
-    function _applyFG(score, label, updated, valEl, badgeEl, updEl, thumbEl, cardEl, tableEl) {
-        let color,kor,idx;
-        if(score<=25){color='#007AFF';kor='극도 공포';idx=0;}
-        else if(score<=45){color='#34C759';kor='공포';idx=1;}
-        else if(score<=55){color='#FFCC00';kor='중립';idx=2;}
-        else if(score<=75){color='#FF9500';kor='탐욕';idx=3;}
-        else{color='#FF3B30';kor='극도 탐욕';idx=4;}
-        valEl.innerHTML='<span style="color:'+color+';">'+score+'</span>';
-        maSetBadge('maFGBadge', kor, color==='#007AFF'?'ma-fear':color==='#34C759'?'ma-cool':color==='#FFCC00'?'ma-normal':color==='#FF9500'?'ma-warn':'ma-hot');
-        updEl.textContent = '업데이트: '+updated+(label?' ('+label+')':'');
-        if(thumbEl) thumbEl.style.left = score+'%';
-        if(cardEl) cardEl.style.borderColor = color+'55';
-        maHighlightRange('maFGTable', idx);
-        setTimeout(renderSignalBannerUS, 0);
-    }
-
-    // ② VIX 실시간 (Yahoo Finance ^VIX, allorigins)
+    // ① VIX 실시간 (Yahoo Finance ^VIX, allorigins)
     function renderVIX() {
         const valEl=document.getElementById('maVixValue'), badgeEl=document.getElementById('maVixBadge');
         const updEl=document.getElementById('maVixUpdated'), thumbEl=document.getElementById('maVixThumb');
