@@ -2428,9 +2428,15 @@
         }
         const currentPrice = closes[closes.length - 1];
         const prevPrice = closes.length >= 2 ? closes[closes.length - 2] : null;
-        // closes의 마지막 행에서 날짜 추출 (filter 적용 후 인덱스 일치)
-        const lastDateRaw = kospiRows[kospiRows.length - 1][0];
-        const lastDate = lastDateRaw ? String(lastDateRaw).substring(5, 10) : '-';
+        // ★ 날짜: kospiRows 마지막 유효 행 기준 (Date 객체/문자열 모두 안전 처리)
+        const _toMD = (v) => {
+            if (!v) return '-';
+            const s = (v instanceof Date)
+                ? v.getFullYear() + '-' + String(v.getMonth()+1).padStart(2,'0') + '-' + String(v.getDate()).padStart(2,'0')
+                : String(v);
+            return s.slice(5, 10); // "MM-DD"
+        };
+        const lastDate = _toMD(kospiRows[kospiRows.length - 1][0]);
         renderMACard('maKospiMACard', 'maKospiMABadge', 'maKospiMA', 'maKospiMAUpdated', 'maKospiMASummary',
             closes, [20, 60, 120], currentPrice, prevPrice, '코스피', lastDate, market);
 
@@ -2461,8 +2467,15 @@
         const spCloses  = spRows.map(r => Number(r[1]));
         const ndxCloses = ndxRows.map(r => Number(r[2]));
         // 날짜는 SP500 기준 마지막 유효 행에서 추출
-        const lastDateRaw = spRows.length > 0 ? spRows[spRows.length - 1][0] : '';
-        const lastDate = lastDateRaw ? String(lastDateRaw).substring(5, 10) : '-';
+        // ★ 날짜: SP500 유효 행 마지막 기준 (Date 객체/문자열 모두 안전 처리)
+        const _toMD_us = (v) => {
+            if (!v) return '-';
+            const s = (v instanceof Date)
+                ? v.getFullYear() + '-' + String(v.getMonth()+1).padStart(2,'0') + '-' + String(v.getDate()).padStart(2,'0')
+                : String(v);
+            return s.slice(5, 10);
+        };
+        const lastDate = spRows.length > 0 ? _toMD_us(spRows[spRows.length - 1][0]) : '-';
 
         if (spCloses.length < 5) {
             ['maSPXMAUpdated','maNDXMAUpdated'].forEach(id => {
