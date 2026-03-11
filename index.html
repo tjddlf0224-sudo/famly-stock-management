@@ -188,6 +188,101 @@
         .ma-section-title { font-size: 13px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-sub); margin: 20px 0 10px; display: flex; align-items: center; gap: 6px; }
         .ma-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
         .ma-signal-banner { border-radius: 18px; padding: 20px; margin-bottom: 16px; display: flex; align-items: center; gap: 16px; position: relative; overflow: hidden; }
+
+        /* ── 종합신호 ? 버튼 ── */
+        .signal-help-btn {
+            position: absolute; top: 10px; right: 10px;
+            width: 22px; height: 22px;
+            background: rgba(255,255,255,0.18); color: #fff;
+            border: 1.5px solid rgba(255,255,255,0.35);
+            border-radius: 50%; font-size: 12px; font-weight: 800;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; z-index: 2; line-height: 1;
+            transition: background 0.15s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .signal-help-btn:active { background: rgba(255,255,255,0.32); }
+
+        /* ── 가중치 설명 모달 ── */
+        .weight-modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.55); z-index: 9000;
+            align-items: flex-end; justify-content: center;
+            backdrop-filter: blur(3px);
+        }
+        .weight-modal-overlay.open { display: flex; }
+        .weight-modal {
+            background: var(--card-bg); border-radius: 24px 24px 0 0;
+            padding: 0 0 env(safe-area-inset-bottom, 16px);
+            width: 100%; max-width: 480px;
+            max-height: 82vh; overflow-y: auto;
+            animation: slideUpModal 0.28s cubic-bezier(.34,1.2,.64,1);
+        }
+        @keyframes slideUpModal {
+            from { transform: translateY(100%); opacity: 0; }
+            to   { transform: translateY(0);    opacity: 1; }
+        }
+        .weight-modal-header {
+            position: sticky; top: 0; background: var(--card-bg);
+            padding: 18px 20px 12px;
+            display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid var(--border-color); z-index: 1;
+        }
+        .weight-modal-title { font-size: 16px; font-weight: 800; color: var(--text-main); }
+        .weight-modal-close {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: var(--bg); border: none; cursor: pointer;
+            font-size: 16px; color: var(--text-sub);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .weight-modal-body { padding: 16px 20px 20px; }
+        .weight-modal-subtitle {
+            font-size: 11px; font-weight: 700; letter-spacing: 0.8px;
+            text-transform: uppercase; color: var(--text-sub);
+            margin: 16px 0 8px;
+        }
+        .weight-modal-subtitle:first-child { margin-top: 0; }
+        .weight-row {
+            display: flex; align-items: center;
+            padding: 10px 12px; border-radius: 12px;
+            background: var(--bg); margin-bottom: 6px; gap: 10px;
+        }
+        .weight-row-icon { font-size: 18px; flex-shrink: 0; width: 24px; text-align: center; }
+        .weight-row-info { flex: 1; min-width: 0; }
+        .weight-row-name { font-size: 13px; font-weight: 700; color: var(--text-main); }
+        .weight-row-desc { font-size: 11px; color: var(--text-sub); margin-top: 2px; line-height: 1.4; }
+        .weight-row-pct {
+            font-size: 15px; font-weight: 900; color: var(--primary);
+            flex-shrink: 0; min-width: 36px; text-align: right;
+        }
+        .weight-bar-wrap { margin-top: 5px; }
+        .weight-bar-track {
+            height: 5px; background: var(--border-color); border-radius: 3px; overflow: hidden;
+        }
+        .weight-bar-fill {
+            height: 100%; border-radius: 3px;
+            background: linear-gradient(to right, var(--primary), #5AC8FA);
+            transition: width 0.5s ease;
+        }
+        .weight-vol-note {
+            margin-top: 14px; padding: 12px 14px;
+            background: rgba(0,122,255,0.08); border-radius: 12px;
+            border-left: 3px solid var(--primary);
+            font-size: 12px; color: var(--text-main); line-height: 1.6;
+        }
+        .weight-vol-note b { color: var(--primary); }
+        .weight-score-guide { margin-top: 4px; }
+        .weight-score-row {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 0; border-bottom: 1px solid var(--border-color);
+            font-size: 12px;
+        }
+        .weight-score-row:last-child { border-bottom: none; }
+        .weight-score-dot {
+            width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+        }
+        .weight-score-range { font-weight: 700; color: var(--text-main); min-width: 60px; }
+        .weight-score-label { color: var(--text-sub); }
         .ma-signal-emoji { font-size: 44px; line-height: 1; flex-shrink: 0; }
         .ma-signal-content { flex: 1; min-width: 0; }
         .ma-signal-label { font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; opacity: 0.75; margin-bottom: 3px; }
@@ -262,47 +357,6 @@
         .ma-ma-updated { font-size: 11px; color: var(--text-sub); margin-top: 10px; }
         .ma-ma-summary { margin-top: 12px; background: var(--bg); border-radius: 10px; padding: 10px 12px; font-size: 12px; color: var(--text-sub); line-height: 1.6; }
         .ma-chart-wrap { margin-top: 14px; height: 280px; position: relative; touch-action: none; }
-
-        /* ── 거래량 신뢰도 카드 ── */
-        .vol-confirm-wrap { margin-top: 10px; display: flex; flex-direction: column; gap: 7px; }
-        .vol-confirm-row {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 9px 12px; border-radius: 10px;
-            background: var(--bg); border: 1px solid var(--border-color);
-            font-size: 13px; gap: 8px;
-        }
-        .vol-confirm-label { font-weight: 600; color: var(--text-main); flex: 1; min-width: 0; }
-        .vol-confirm-badge {
-            font-size: 11px; font-weight: 700; padding: 3px 9px;
-            border-radius: 20px; white-space: nowrap; flex-shrink: 0;
-        }
-        .vol-confirm-badge.confirmed  { background: rgba(52,199,89,0.15);  color: #34C759; }
-        .vol-confirm-badge.weakened   { background: rgba(255,149,0,0.15);  color: #FF9500; }
-        .vol-confirm-badge.diverged   { background: rgba(255,59,48,0.15);  color: #FF3B30; }
-        .vol-confirm-badge.nodata     { background: rgba(142,142,147,0.1); color: #8E8E93; }
-        .vol-bar-wrap { margin: 10px 0 2px; position: relative; }
-        .vol-bar-track {
-            height: 8px; border-radius: 4px;
-            background: linear-gradient(to right,
-                #5856D6 0%, #007AFF 20%, #34C759 45%, #FFCC00 65%, #FF9500 82%, #FF3B30 100%);
-            position: relative; overflow: visible;
-        }
-        .vol-bar-thumb {
-            position: absolute; top: 50%; transform: translate(-50%, -50%);
-            width: 14px; height: 14px; background: white; border-radius: 50%;
-            border: 2.5px solid #555; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            transition: left 0.5s cubic-bezier(.34,1.56,.64,1);
-        }
-        .vol-ratio-row {
-            display: flex; justify-content: space-between;
-            font-size: 11px; color: var(--text-sub); margin-top: 5px;
-        }
-        .vol-multiplier-note {
-            margin-top: 12px; font-size: 11px; color: var(--text-sub);
-            background: var(--bg); border-radius: 8px; padding: 8px 10px;
-            line-height: 1.6; border: 1px solid var(--border-color);
-        }
-        .vol-multiplier-note b { color: var(--text-main); }
     </style>
 </head>
 <body>
@@ -538,6 +592,7 @@
 
     <!-- 국내 배너 -->
     <div class="ma-signal-banner card" id="maSignalBannerKR" style="background: linear-gradient(135deg, #1C1C2E 0%, #2C2C4E 100%); color:#fff;">
+        <button class="signal-help-btn" onclick="openWeightModal('KR')" aria-label="가중치 설명">?</button>
         <div class="ma-signal-emoji" id="maSignalEmojiKR">📊</div>
         <div class="ma-signal-content">
             <div class="ma-signal-label">🇰🇷 국내 시장 종합 신호</div>
@@ -555,6 +610,7 @@
 
     <!-- 미국 배너 -->
     <div class="ma-signal-banner card" id="maSignalBannerUS" style="background: linear-gradient(135deg, #1C2E1C 0%, #2C4E2C 100%); color:#fff; display:none;">
+        <button class="signal-help-btn" onclick="openWeightModal('US')" aria-label="가중치 설명">?</button>
         <div class="ma-signal-emoji" id="maSignalEmojiUS">📊</div>
         <div class="ma-signal-content">
             <div class="ma-signal-label">🇺🇸 미국 시장 종합 신호</div>
@@ -771,57 +827,6 @@
                 <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>55~80%</td><td>고점권</td><td>고점 주의</td></tr>
                 <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>80~100%</td><td>52주 고점</td><td>⚠️ 강한 매도 참고</td></tr>
             </table>
-        </div>
-
-    </div>
-
-        <!-- ⑧ 코스피 거래량 신뢰도 — 다른 지표를 검증하는 보조 지표 -->
-        <div class="ma-card" id="maVolCard" style="grid-column: 1 / -1;">
-            <div class="ma-card-top">
-                <div class="ma-card-name">📊 거래량 신뢰도 — 지표 검증</div>
-                <div class="ma-card-badge" id="maVolBadge">-</div>
-            </div>
-            <div class="ma-card-value-row">
-                <div class="ma-card-value" id="maVolRatio">-</div>
-                <div class="ma-card-unit">% <span style="font-size:13px; font-weight:500; color:var(--text-sub);">/ 20일 평균</span></div>
-            </div>
-            <div class="ma-card-updated" id="maVolUpdated">MarketData F컬럼에서 계산 중...</div>
-
-            <!-- 거래량 비율 게이지 -->
-            <div class="vol-bar-wrap">
-                <div class="vol-bar-track">
-                    <div class="vol-bar-thumb" id="maVolThumb" style="left:50%"></div>
-                </div>
-            </div>
-            <div class="vol-ratio-row">
-                <span>침체 (50%)</span><span>정상 (100%)</span><span>활발 (150%+)</span>
-            </div>
-
-            <!-- 핵심: 각 지표에 대한 거래량 검증 결과 -->
-            <div style="margin-top:14px; font-size:12px; font-weight:700; color:var(--text-sub); letter-spacing:0.5px; margin-bottom:6px;">거래량이 검증하는 지표들</div>
-            <div class="vol-confirm-wrap" id="maVolConfirmList">
-                <div class="vol-confirm-row">
-                    <span class="vol-confirm-label">이동평균선</span>
-                    <span class="vol-confirm-badge nodata" id="maVolConfirmMA">데이터 없음</span>
-                </div>
-                <div class="vol-confirm-row">
-                    <span class="vol-confirm-label">RSI 모멘텀</span>
-                    <span class="vol-confirm-badge nodata" id="maVolConfirmRSI">데이터 없음</span>
-                </div>
-                <div class="vol-confirm-row">
-                    <span class="vol-confirm-label">52주 위치</span>
-                    <span class="vol-confirm-badge nodata" id="maVolConfirmW52">데이터 없음</span>
-                </div>
-                <div class="vol-confirm-row">
-                    <span class="vol-confirm-label">외국인 수급</span>
-                    <span class="vol-confirm-badge nodata" id="maVolConfirmForeign">데이터 없음</span>
-                </div>
-            </div>
-
-            <div class="vol-multiplier-note" id="maVolNote">
-                💡 거래량은 다른 지표의 <b>신뢰도를 높이거나 낮추는</b> 검증 도구입니다.<br>
-                거래량이 가격 방향을 지지하면 신호가 강해지고, 반대이면 신호가 약해집니다.
-            </div>
         </div>
 
     </div>
@@ -1110,15 +1115,11 @@
     }
 
     function processMarketData(data) {
-        // MarketData 시트 컬럼: [Date=0, SP500=1, NASDAQ=2, KOSPI=3, USD/KRW=4, KOSPI_VOL=5]
         if (!data || data.length === 0) return [];
         let mappedData = data.map(row => ({
-            date:     row[0],
-            sp500:    Number(row[1]) || 0,
-            nasdaq:   Number(row[2]) || 0,
-            kospi:    Number(row[3]) || 0,
-            usd:      Number(row[4]) || 0,   // ★ 버그수정: row[4] = USD/KRW
-            kospiVol: Number(row[5]) || 0    // ★ 신규: row[5] = KOSPI_VOL (억주)
+            date: row[0], sp500: Number(row[1]) || 0,
+            nasdaq: Number(row[2]) || 0, kospi: Number(row[3]) || 0,
+            usd: Number(row[5]) || 0, price: Number(row[6]) || 0
         }));
         if (mappedData.length > 0) {
             let lastData = mappedData[mappedData.length - 1];
@@ -2099,8 +2100,7 @@
         renderForeign(ma ? ma.foreign : null);
         renderADRatio(ma ? ma.adRatio : null);
         renderKospiMA();
-        renderVolume();          // ★ 거래량 신뢰도 카드
-        renderSignalBannerKR();  // ★ 거래량 반영된 종합신호 (renderVolume 이후 호출)
+        renderSignalBannerKR();
         updateLastUpdated(ma);
         const isUS = document.getElementById('maBtnUS').classList.contains('active');
         if (isUS) { renderUSMA(); renderSignalBannerUS(); }
@@ -2699,228 +2699,11 @@
         return { score, belowCount, total, crossDownCount };
     }
 
-    // ====================================================================
-    // 거래량 신뢰도 — 계산 유틸 + 카드 렌더
-    // ====================================================================
-
-    // 코스피 거래량 배열 추출 (market raw 데이터 r[5] = KOSPI_VOL)
-    // 0인 행(미수집)은 제외하고 유효값만 반환
-    function _getKospiVolumes() {
-        const market = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.market)
-                       ? LAST_FETCHED_DATA.market : [];
-        return market
-            .map(r => Number(r[5]) || 0)
-            .filter(v => v > 0);
-    }
-
-    // 거래량 20일 평균 대비 비율 계산 (%)
-    // 반환: { ratio, todayVol, avg20, volArr } 또는 null
-    function _calcVolRatio() {
-        const vols = _getKospiVolumes();
-        if (vols.length < 5) return null;
-        const todayVol = vols[vols.length - 1];
-        const window   = Math.min(20, vols.length - 1);
-        const past     = vols.slice(vols.length - 1 - window, vols.length - 1);
-        if (past.length === 0) return null;
-        const avg20 = past.reduce((a, b) => a + b, 0) / past.length;
-        if (avg20 === 0) return null;
-        return {
-            ratio:    Math.round((todayVol / avg20) * 100),
-            todayVol: todayVol,
-            avg20:    avg20,
-            volArr:   vols
-        };
-    }
-
-    // 거래량 신뢰도 승수 계산
-    // ratio → 0.7(저거래량 신호 약화) ~ 1.0(보통) ~ 1.15(고거래량 신호 강화)
-    // 방향 일치(isAligned): 거래량이 해당 지표 방향과 같은지 여부
-    //   - isAligned=true  → 정방향: 고거래량이면 신호 강화, 저거래량이면 약화
-    //   - isAligned=false → 역방향: 고거래량이면 오히려 경고 (신호 약화)
-    function _volMultiplier(ratio, isAligned) {
-        if (ratio === null) return 1.0; // 데이터 없으면 중립
-
-        let mult;
-        if (ratio >= 150)      mult = 1.15;  // 거래 폭증
-        else if (ratio >= 120) mult = 1.08;  // 거래 활발
-        else if (ratio >= 85)  mult = 1.0;   // 정상
-        else if (ratio >= 60)  mult = 0.90;  // 거래 저조
-        else                   mult = 0.78;  // 거래 침체
-
-        // 역방향이면 승수 반전 (강화→약화, 약화→강화)
-        if (!isAligned) {
-            mult = 1.0 + (1.0 - mult); // 1.15→0.85, 0.78→1.22 (역방향 고거래량은 추가 경고)
-            mult = Math.min(mult, 1.15); // 상한 제한
-        }
-        return mult;
-    }
-
-    // 검증 배지 텍스트·클래스 결정
-    function _volConfirmBadge(ratio, isAligned, signalLabel) {
-        if (ratio === null) return { text: '데이터 없음', cls: 'nodata' };
-
-        if (ratio >= 120 && isAligned)
-            return { text: '✅ 거래량 지지 — 신호 강화', cls: 'confirmed' };
-        if (ratio >= 120 && !isAligned)
-            return { text: '⚠️ 고거래량 역방향 — 신호 주의', cls: 'diverged' };
-        if (ratio < 70 && isAligned)
-            return { text: '⚠️ 저거래량 — 신호 약화', cls: 'weakened' };
-        if (ratio < 70 && !isAligned)
-            return { text: '➡️ 저거래량 역방향 — 관망', cls: 'weakened' };
-        // 보통 구간
-        if (isAligned) return { text: '➡️ 보통 — 중립 확인', cls: 'nodata' };
-        return { text: '➡️ 방향 불일치 — 보통', cls: 'nodata' };
-    }
-
-    // 거래량 카드 렌더
-    function renderVolume() {
-        const vol = _calcVolRatio();
-        const badgeEl   = document.getElementById('maVolBadge');
-        const ratioEl   = document.getElementById('maVolRatio');
-        const updatedEl = document.getElementById('maVolUpdated');
-        const thumbEl   = document.getElementById('maVolThumb');
-        const noteEl    = document.getElementById('maVolNote');
-
-        if (!vol) {
-            if (badgeEl)   maSetBadge('maVolBadge', '데이터 없음', '');
-            if (ratioEl)   ratioEl.textContent = '-';
-            if (updatedEl) updatedEl.textContent = '⚠️ MarketData F컬럼(KOSPI_VOL)에 데이터가 없습니다';
-            // 검증 배지 전부 데이터없음
-            ['MA','RSI','W52','Foreign'].forEach(k => {
-                const el = document.getElementById('maVolConfirm' + k);
-                if (el) { el.textContent = '데이터 없음'; el.className = 'vol-confirm-badge nodata'; }
-            });
-            return;
-        }
-
-        const r = vol.ratio;
-
-        // 메인 값
-        if (ratioEl) ratioEl.textContent = r;
-
-        // 배지
-        let badgeLabel, badgeCls;
-        if (r >= 150)      { badgeLabel = '거래 폭증 🔥';  badgeCls = 'ma-hot'; }
-        else if (r >= 120) { badgeLabel = '거래 활발 📈';  badgeCls = 'ma-cool'; }
-        else if (r >= 85)  { badgeLabel = '거래 정상 ✅';  badgeCls = 'ma-normal'; }
-        else if (r >= 60)  { badgeLabel = '거래 저조 ➡️'; badgeCls = 'ma-warn'; }
-        else               { badgeLabel = '거래 침체 📉';  badgeCls = 'ma-fear'; }
-        if (badgeEl) maSetBadge('maVolBadge', badgeLabel, badgeCls);
-        maSetCard('maVolCard', badgeCls);
-
-        // 업데이트 텍스트
-        if (updatedEl) updatedEl.textContent =
-            '오늘 ' + vol.todayVol.toFixed(2) + '억주 · 20일 평균 ' + vol.avg20.toFixed(2) + '억주';
-
-        // 게이지 thumb 위치 (50%=100, 범위 30~200%)
-        if (thumbEl) {
-            const pct = Math.min(100, Math.max(0, ((r - 30) / 170) * 100));
-            thumbEl.style.left = pct + '%';
-        }
-
-        // ── 각 지표별 검증 배지 ──
-        const market = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.market)
-                       ? LAST_FETCHED_DATA.market : [];
-        const maData = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA)
-                       ? (LAST_FETCHED_DATA.marketAnalysis || null) : null;
-        const kRows  = market.filter(row => Number(row[3]) > 0);
-        const kClose = kRows.map(row => Number(row[3]));
-
-        // ① 이동평균선 방향: 현재가 > MA20 이면 강세(aligned = 고거래량 긍정)
-        if (kClose.length >= 20) {
-            const ma20 = calcMA(kClose, 20);
-            const cur  = kClose[kClose.length - 1];
-            const isAbove = ma20 !== null && cur >= ma20;
-            // 강세(isAbove=true): 고거래량이면 상승 지지 → aligned
-            // 약세(isAbove=false): 고거래량이면 하락 가속 경고 → 하락장에선 고거래량이 오히려 패닉셀 신호
-            //   → 약세 + 고거래량 = 바닥 탐색 중(역방향 아님) → 둘 다 aligned=true로 처리해 신호 명확히
-            const b = _volConfirmBadge(r, true, 'MA');
-            const el = document.getElementById('maVolConfirmMA');
-            if (el) {
-                if (isAbove && r >= 120)      { el.textContent = '✅ 상승 + 고거래량 — 강한 상승 지지'; el.className = 'vol-confirm-badge confirmed'; }
-                else if (isAbove && r < 70)   { el.textContent = '⚠️ 상승 + 저거래량 — 힘 없는 상승'; el.className = 'vol-confirm-badge weakened'; }
-                else if (!isAbove && r >= 120){ el.textContent = '🎯 하락 + 고거래량 — 패닉셀/바닥 가능'; el.className = 'vol-confirm-badge confirmed'; }
-                else if (!isAbove && r < 70)  { el.textContent = '➡️ 하락 + 저거래량 — 무기력한 하락'; el.className = 'vol-confirm-badge nodata'; }
-                else                           { el.textContent = '➡️ 거래량 보통 — 중립'; el.className = 'vol-confirm-badge nodata'; }
-            }
-        }
-
-        // ② RSI 방향: RSI > 50 이면 강세 모멘텀
-        if (kClose.length >= 15) {
-            const rsiObj = calcRSI(kClose, 14);
-            if (rsiObj && rsiObj.rsi !== null) {
-                const rsi = rsiObj.rsi;
-                const el = document.getElementById('maVolConfirmRSI');
-                if (el) {
-                    if (rsi >= 70 && r >= 120)     { el.textContent = '⚠️ RSI 과매수 + 고거래량 — 강한 과열 경고'; el.className = 'vol-confirm-badge diverged'; }
-                    else if (rsi <= 30 && r >= 120) { el.textContent = '🎯 RSI 과매도 + 고거래량 — 바닥 신호 강화'; el.className = 'vol-confirm-badge confirmed'; }
-                    else if (rsi > 50 && r >= 120)  { el.textContent = '✅ RSI 강세 + 고거래량 — 모멘텀 확인'; el.className = 'vol-confirm-badge confirmed'; }
-                    else if (rsi > 50 && r < 70)    { el.textContent = '⚠️ RSI 강세 + 저거래량 — 모멘텀 약화'; el.className = 'vol-confirm-badge weakened'; }
-                    else if (rsi < 50 && r < 70)    { el.textContent = '➡️ RSI 약세 + 저거래량 — 방향성 탐색'; el.className = 'vol-confirm-badge nodata'; }
-                    else                             { el.textContent = '➡️ 거래량 보통 — 중립'; el.className = 'vol-confirm-badge nodata'; }
-                }
-            }
-        }
-
-        // ③ 52주 위치
-        if (kClose.length >= 50) {
-            const w52 = calc52Week(kClose);
-            if (w52 && w52.pct !== null) {
-                const pct = w52.pct;
-                const el = document.getElementById('maVolConfirmW52');
-                if (el) {
-                    if (pct <= 15 && r >= 120)  { el.textContent = '🎯 52주저점 + 고거래량 — 강한 바닥 신호'; el.className = 'vol-confirm-badge confirmed'; }
-                    else if (pct >= 80 && r >= 120){ el.textContent = '⚠️ 52주고점 + 고거래량 — 고점 경고 강화'; el.className = 'vol-confirm-badge diverged'; }
-                    else if (pct <= 30 && r < 70) { el.textContent = '➡️ 저점권 + 저거래량 — 아직 바닥 미확인'; el.className = 'vol-confirm-badge weakened'; }
-                    else if (pct >= 70 && r < 70) { el.textContent = '⚠️ 고점권 + 저거래량 — 상승 동력 소진'; el.className = 'vol-confirm-badge weakened'; }
-                    else                           { el.textContent = '➡️ 거래량 보통 — 중립'; el.className = 'vol-confirm-badge nodata'; }
-                }
-            }
-        }
-
-        // ④ 외국인 수급
-        if (maData && maData.foreign) {
-            const ss = maData.foreign['005930'], sk = maData.foreign['000660'];
-            const ssV = ss && ss.net5d !== null ? Number(ss.net5d) : null;
-            const skV = sk && sk.net5d !== null ? Number(sk.net5d) : null;
-            if (ssV !== null || skV !== null) {
-                const bothBuy  = ssV !== null && ssV > 0 && skV !== null && skV > 0;
-                const bothSell = ssV !== null && ssV < 0 && skV !== null && skV < 0;
-                const el = document.getElementById('maVolConfirmForeign');
-                if (el) {
-                    if (bothBuy && r >= 120)       { el.textContent = '✅ 외국인 매수 + 고거래량 — 강한 매집 신호'; el.className = 'vol-confirm-badge confirmed'; }
-                    else if (bothBuy && r < 70)    { el.textContent = '⚠️ 외국인 매수 + 저거래량 — 소극적 매수'; el.className = 'vol-confirm-badge weakened'; }
-                    else if (bothSell && r >= 120) { el.textContent = '🔴 외국인 매도 + 고거래량 — 강한 이탈 신호'; el.className = 'vol-confirm-badge diverged'; }
-                    else if (bothSell && r < 70)   { el.textContent = '➡️ 외국인 매도 + 저거래량 — 점진적 이탈'; el.className = 'vol-confirm-badge nodata'; }
-                    else                            { el.textContent = '➡️ 혼조 — 방향성 불명확'; el.className = 'vol-confirm-badge nodata'; }
-                }
-            }
-        }
-
-        // 하단 설명 노트 업데이트
-        if (noteEl) {
-            let noteMsg = '💡 거래량은 다른 지표의 <b>신뢰도를 높이거나 낮추는</b> 검증 도구입니다. ';
-            if (r >= 120)     noteMsg += `현재 <b>거래 활발(${r}%)</b> — 각 지표 신호의 신뢰도가 <b>높아진</b> 상태입니다.`;
-            else if (r < 70)  noteMsg += `현재 <b>거래 저조(${r}%)</b> — 각 지표 신호의 신뢰도가 <b>낮아진</b> 상태입니다. 추세 확인 전 관망 권장.`;
-            else               noteMsg += `현재 <b>거래 보통(${r}%)</b> — 지표 신호를 그대로 참고하세요.`;
-            noteEl.innerHTML = noteMsg;
-        }
-    }
-
-    // ====================================================================
-    // 종합 신호 배너 — 거래량 신뢰도 승수 적용
-    // ★ v65: 6개 지표 각각에 거래량 승수(0.78~1.15) 적용
-    //
-    // 설계 원칙:
-    //   · 거래량은 독립 가중치(0%)로 직접 점수에 기여하지 않음
-    //   · 대신 각 지표의 유효 가중치를 ±15% 범위에서 조절하는 승수로 작동
-    //   · 데이터 없는 지표는 분모에서 제외 (기존 동작 유지)
-    //
-    // 가중치: MA25% | RSI20% | 52주20% | VKOSPI15% | 외국인수급12% | 신용잔고8%
-    //         (거래량은 각 지표의 실효 가중치를 0.78~1.15배 조절)
-    // ====================================================================
-
     function renderSignalBannerKR() {
+        // ★ v61: 6개 지표 가중 평균 종합 신호
+        // 점수 0~100: 높을수록 강세/과열, 낮을수록 약세/바닥권
+        // 가중치: 20일선25% | RSI20% | 52주위치20% | VKOSPI15% | 외국인수급12% | 신용잔고8%
+
         const maData = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA)
                        ? (LAST_FETCHED_DATA.marketAnalysis || null) : null;
         const market = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.market)
@@ -2928,96 +2711,55 @@
         const kRows  = market.filter(r => Number(r[3]) > 0);
         const kClose = kRows.map(r => Number(r[3]));
 
-        // 거래량 비율 (승수 계산용)
-        const volData = _calcVolRatio();
-        const volRatio = volData ? volData.ratio : null;
-
         let weightedSum = 0, weightTotal = 0, signals = [];
 
-        // ─────────────────────────────────────────────────
-        // ① 20일선 위/아래 (기본 가중치 25)
-        // 거래량 승수: 상승+고거래량 → 강화 / 상승+저거래량 → 약화
-        // ─────────────────────────────────────────────────
+        // ① 20일선 위/아래 (가중치 25) — 위=강세(100), 아래=약세(0)
         if (kClose.length >= 20) {
             const ma20 = calcMA(kClose, 20);
             const cur  = kClose[kClose.length - 1];
             if (ma20 !== null) {
-                const isAbove  = cur >= ma20;
-                const s        = isAbove ? 100 : 0;
-                // 거래량 방향 일치 여부:
-                //   상승장(isAbove=true) + 고거래량 → 강세 지지 → aligned
-                //   하락장(isAbove=false) + 고거래량 → 패닉셀(바닥 신호) → 반대로 aligned
-                //   두 경우 모두 거래량 방향은 신호를 강화함 → isAligned = true
-                const mult     = _volMultiplier(volRatio, true);
-                const adjW     = 25 * mult;
-                weightedSum   += s * adjW;
-                weightTotal   += adjW;
-                signals.push(isAbove ? '20일선 위✅' : '20일선 아래🔴');
+                const s = cur >= ma20 ? 100 : 0;
+                weightedSum += s * 25; weightTotal += 25;
+                signals.push(cur >= ma20 ? '20일선 위✅' : '20일선 아래🔴');
             }
         }
 
-        // ─────────────────────────────────────────────────
-        // ② RSI(14) (기본 가중치 20)
-        // 거래량 승수: RSI 방향(>50 강세/<50 약세)이 거래량과 같은 방향이면 aligned
-        // ─────────────────────────────────────────────────
+        // ② RSI(14) (가중치 20) — 선형 매핑: RSI 그대로 0~100점
         if (kClose.length >= 15) {
             const rsiObj = calcRSI(kClose, 14);
             if (rsiObj && rsiObj.rsi !== null) {
-                const rsi     = rsiObj.rsi;
-                const isBull  = rsi >= 50; // RSI 50 기준 강세/약세
-                // 강세(RSI>50) + 고거래량 → 모멘텀 확인 → aligned
-                // 약세(RSI<50) + 고거래량 → 하락 가속 또는 패닉셀 → 양쪽 다 신호 강화
-                const mult    = _volMultiplier(volRatio, true);
-                const adjW    = 20 * mult;
-                weightedSum  += rsi * adjW;
-                weightTotal  += adjW;
+                const rsi = rsiObj.rsi;
+                // RSI 50 기준 중립, 70+ 과열, 30- 과매도
+                // 점수 = RSI 값 그대로 (0~100)
+                weightedSum += rsi * 20; weightTotal += 20;
                 if (rsi >= 70) signals.push('RSI 과매수⚠️');
                 else if (rsi <= 30) signals.push('RSI 과매도🎯');
             }
         }
 
-        // ─────────────────────────────────────────────────
-        // ③ 52주 위치 (기본 가중치 20)
-        // 거래량 승수: 저점권+고거래량→바닥 확인 강화 / 고점권+고거래량→고점 경고 강화
-        //             저점권+저거래량→아직 바닥 미확인 약화
-        // ─────────────────────────────────────────────────
+        // ③ 52주 위치 (가중치 20) — 위치% 그대로 점수화
         if (kClose.length >= 50) {
             const w52 = calc52Week(kClose);
             if (w52 && w52.pct !== null) {
-                const pct    = w52.pct;
-                // 저점(pct 낮음) + 고거래량 = 바닥 신호 aligned
-                // 고점(pct 높음) + 고거래량 = 고점 경고 aligned
-                // → 양방향 모두 거래량이 신호를 강화함 → aligned = true
-                const mult   = _volMultiplier(volRatio, true);
-                const adjW   = 20 * mult;
-                weightedSum += pct * adjW;
-                weightTotal += adjW;
-                if (pct >= 80) signals.push('52주고점권⚠️');
-                else if (pct <= 15) signals.push('52주저점권🎯');
+                weightedSum += w52.pct * 20; weightTotal += 20;
+                if (w52.pct >= 80) signals.push('52주고점권⚠️');
+                else if (w52.pct <= 15) signals.push('52주저점권🎯');
             }
         }
 
-        // ─────────────────────────────────────────────────
-        // ④ VKOSPI (기본 가중치 15)
-        // VKOSPI는 거래량과 독립적인 파생상품 지표
-        // 거래량 승수 미적용 (중립 1.0 고정)
-        // ─────────────────────────────────────────────────
+        // ④ VKOSPI (가중치 15) — 높을수록 공포 → 점수 반전 (100 - 정규화)
         if (maData && maData.vkospi && maData.vkospi.value !== null) {
-            const v          = Number(maData.vkospi.value);
+            const v = Number(maData.vkospi.value);
+            // VKOSPI 정상범위 10~40, 극단 60+
+            // 낮을수록 안정(강세), 높을수록 공포(약세) → 점수 반전
             const normalized = Math.min(100, Math.max(0, (v - 10) / 55 * 100));
-            const s          = 100 - normalized;
-            // VKOSPI는 파생상품 기반 → 거래량 승수 미적용
-            weightedSum += s * 15;
-            weightTotal += 15;
+            const s = 100 - normalized;
+            weightedSum += s * 15; weightTotal += 15;
             if (v >= 60) signals.push('VKOSPI 패닉🔴(' + v.toFixed(0) + ')');
             else if (v >= 40) signals.push('VKOSPI 공포(' + v.toFixed(0) + ')');
         }
 
-        // ─────────────────────────────────────────────────
-        // ⑤ 외국인 수급 (기본 가중치 12)
-        // 거래량 승수: 외국인 동반매수+고거래량 → 매집 신호 강화
-        //             외국인 동반매수+저거래량 → 소극적 매수, 신호 약화
-        // ─────────────────────────────────────────────────
+        // ⑤ 외국인 수급 — 삼성+하이닉스 (가중치 12)
         if (maData && maData.foreign) {
             const ss = maData.foreign['005930'], sk = maData.foreign['000660'];
             const ssVal = ss && ss.net5d !== null ? Number(ss.net5d) : null;
@@ -3025,37 +2767,24 @@
             if (ssVal !== null || skVal !== null) {
                 const bothBuy  = ssVal !== null && ssVal > 0 && skVal !== null && skVal > 0;
                 const bothSell = ssVal !== null && ssVal < 0 && skVal !== null && skVal < 0;
-                const s        = bothBuy ? 100 : bothSell ? 0 : 50;
-                // 외국인 방향과 거래량이 같은 방향이면 신호 강화
-                const isAligned = (bothBuy || bothSell); // 혼조면 거래량 무관
-                const mult     = _volMultiplier(volRatio, isAligned);
-                const adjW     = 12 * mult;
-                weightedSum   += s * adjW;
-                weightTotal   += adjW;
+                // 동반매수=100, 혼조=50, 동반매도=0
+                const s = bothBuy ? 100 : bothSell ? 0 : 50;
+                weightedSum += s * 12; weightTotal += 12;
                 if (bothBuy)  signals.push('외국인 동반매수📈');
                 else if (bothSell) signals.push('외국인 동반매도📉');
             }
         }
 
-        // ─────────────────────────────────────────────────
-        // ⑥ 신용융자잔고 (기본 가중치 8)
-        // 신용잔고는 주간 단위 변화 → 거래량 승수 미적용
-        // ─────────────────────────────────────────────────
+        // ⑥ 신용융자잔고 (가중치 8) — 높을수록 과열(약세), 낮을수록 안전
         if (maData && maData.creditBalance && maData.creditBalance.value !== null) {
-            const v          = Number(maData.creditBalance.value);
+            const v = Number(maData.creditBalance.value);
+            // 정상 8~14조, 과열 18조+, 바닥 5조 이하
+            // 높을수록 약세 → 반전
             const normalized = Math.min(100, Math.max(0, (v - 5) / 20 * 100));
-            const s          = 100 - normalized;
-            weightedSum += s * 8;
-            weightTotal += 8;
+            const s = 100 - normalized;
+            weightedSum += s * 8; weightTotal += 8;
             if (v >= 18) signals.push('신용잔고 과열🔴(' + v.toFixed(1) + '조)');
             else if (v <= 7) signals.push('신용잔고 낮음✅');
-        }
-
-        // 거래량 신뢰도 표시 신호 추가
-        if (volRatio !== null) {
-            if (volRatio >= 150)     signals.push('거래 폭증🔥(' + volRatio + '%)');
-            else if (volRatio >= 120) signals.push('거래 활발📊(' + volRatio + '%)');
-            else if (volRatio < 70)   signals.push('거래 침체⬇️(' + volRatio + '%)');
         }
 
         const score = weightTotal > 0 ? Math.round(weightedSum / weightTotal) : 50;
@@ -3134,6 +2863,147 @@
 
 
     window.onclick = function(event) { const cashModal=document.getElementById('cashEditModal'); if(event.target===cashModal) closeCashEditModal(); }
+
+    // ====================================================================
+    // 종합신호 가중치 설명 모달
+    // ====================================================================
+    const WEIGHT_INFO = {
+        KR: {
+            title: '🇰🇷 국내 시장 종합신호 — 가중치',
+            items: [
+                { icon: '📈', name: '코스피 이동평균선', pct: 25, max: 25,
+                  desc: '20일선 기준 위/아래. 거래량 승수 적용 — 고거래량 시 신호 강화', volApplied: true },
+                { icon: '💹', name: 'RSI (14일)', pct: 20, max: 25,
+                  desc: 'RSI 0~100을 점수로 직접 반영. 30↓ 과매도, 70↑ 과매수. 거래량 승수 적용', volApplied: true },
+                { icon: '📊', name: '52주 고저 위치', pct: 20, max: 25,
+                  desc: '52주 최고가~최저가 사이 현재 위치(%). 거래량 승수 적용', volApplied: true },
+                { icon: '😰', name: 'VKOSPI', pct: 15, max: 25,
+                  desc: '변동성지수. 높을수록 공포→점수 반전. 파생상품 기반으로 거래량 승수 미적용', volApplied: false },
+                { icon: '🏦', name: '외국인 핵심 수급', pct: 12, max: 25,
+                  desc: '삼성전자+SK하이닉스 5일 순매수. 동반매수=100점. 거래량 승수 적용', volApplied: true },
+                { icon: '💳', name: '신용융자잔고', pct: 8, max: 25,
+                  desc: '높을수록 과열→점수 반전. 주간 단위 지표로 거래량 승수 미적용', volApplied: false },
+            ]
+        },
+        US: {
+            title: '🇺🇸 미국 시장 종합신호 — 가중치',
+            items: [
+                { icon: '📈', name: 'S&P500 이동평균선', pct: 50, max: 50,
+                  desc: '20/50/100/125/200일선 기준. 위에 있는 선 개수로 점수화', volApplied: false },
+                { icon: '📉', name: '나스닥 이동평균선', pct: 50, max: 50,
+                  desc: '20/50/100/125/200일선 기준. S&P500과 동일 방식', volApplied: false },
+            ]
+        }
+    };
+
+    const VOL_MULTIPLIER_INFO = [
+        { range: '150%+',     mult: '×1.15', label: '거래 폭증 — 신호 15% 강화', color: '#FF3B30' },
+        { range: '120~150%',  mult: '×1.08', label: '거래 활발 — 신호 8% 강화',  color: '#FF9500' },
+        { range: '85~120%',   mult: '×1.00', label: '거래 정상 — 변화 없음',      color: '#34C759' },
+        { range: '60~85%',    mult: '×0.90', label: '거래 저조 — 신호 10% 약화', color: '#007AFF' },
+        { range: '60% 미만',  mult: '×0.78', label: '거래 침체 — 신호 22% 약화', color: '#5856D6' },
+    ];
+
+    const SCORE_GUIDE = [
+        { range: '80~100', label: '강한 과열 / 고점 주의',  color: '#FF3B30' },
+        { range: '65~80',  label: '과열권 — 추세 점검',     color: '#FF9500' },
+        { range: '40~65',  label: '중립 — 방향성 탐색',     color: '#FFCC00' },
+        { range: '25~40',  label: '약세권 — 바닥 근접',     color: '#34C759' },
+        { range: '0~25',   label: '강한 바닥권 / 매수 참고', color: '#007AFF' },
+    ];
+
+    function openWeightModal(type) {
+        const info = WEIGHT_INFO[type];
+        if (!info) return;
+
+        document.getElementById('weightModalTitle').textContent = info.title;
+
+        let html = '';
+
+        // ── 지표별 가중치 ──
+        html += '<div class="weight-modal-subtitle">지표별 가중치</div>';
+        info.items.forEach(item => {
+            const barW = Math.round((item.pct / 25) * 100); // 최대 25% 기준 바
+            html += `
+            <div class="weight-row">
+                <div class="weight-row-icon">${item.icon}</div>
+                <div class="weight-row-info">
+                    <div class="weight-row-name">${item.name}
+                        ${item.volApplied ? '<span style="font-size:10px;color:#007AFF;font-weight:700;margin-left:4px;">거래량 검증</span>' : ''}
+                    </div>
+                    <div class="weight-row-desc">${item.desc}</div>
+                    <div class="weight-bar-wrap">
+                        <div class="weight-bar-track">
+                            <div class="weight-bar-fill" style="width:${barW}%"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="weight-row-pct">${item.pct}%</div>
+            </div>`;
+        });
+
+        // ── 거래량 승수 (KR만) ──
+        if (type === 'KR') {
+            html += '<div class="weight-modal-subtitle">거래량 신뢰도 승수</div>';
+            html += '<div class="weight-vol-note">거래량은 직접 점수에 기여하지 않고, <b>각 지표의 가중치를 실시간으로 조절</b>하는 승수로 작동합니다. 거래 활발 시 신호가 강해지고, 거래 침체 시 신호가 약해집니다.</div>';
+            html += '<div style="margin-top:10px;">';
+            VOL_MULTIPLIER_INFO.forEach(v => {
+                html += `
+                <div class="weight-score-row">
+                    <div class="weight-score-dot" style="background:${v.color}"></div>
+                    <div class="weight-score-range">${v.range}</div>
+                    <div style="font-weight:700;color:var(--text-main);min-width:44px;">${v.mult}</div>
+                    <div class="weight-score-label">${v.label}</div>
+                </div>`;
+            });
+            html += '</div>';
+        }
+
+        // ── 점수 해석 가이드 ──
+        html += '<div class="weight-modal-subtitle">점수 해석 가이드</div>';
+        html += '<div class="weight-score-guide">';
+        SCORE_GUIDE.forEach(s => {
+            html += `
+            <div class="weight-score-row">
+                <div class="weight-score-dot" style="background:${s.color}"></div>
+                <div class="weight-score-range">${s.range}점</div>
+                <div class="weight-score-label">${s.label}</div>
+            </div>`;
+        });
+        html += '</div>';
+
+        document.getElementById('weightModalBody').innerHTML = html;
+        document.getElementById('weightModalOverlay').classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeWeightModal(e) {
+        if (e && e.target !== document.getElementById('weightModalOverlay')) return;
+        document.getElementById('weightModalOverlay').classList.remove('open');
+        document.body.style.overflow = '';
+    }
+
+    // ESC 키로 닫기
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeWeightModal();
+    });
+
 </script>
+
+    <!-- ══════════════════════════════════════════
+         종합신호 가중치 설명 모달
+    ══════════════════════════════════════════ -->
+    <div class="weight-modal-overlay" id="weightModalOverlay" onclick="closeWeightModal(event)">
+        <div class="weight-modal" id="weightModal">
+            <div class="weight-modal-header">
+                <div class="weight-modal-title" id="weightModalTitle">🇰🇷 국내 시장 종합신호 — 가중치</div>
+                <button class="weight-modal-close" onclick="closeWeightModal()">✕</button>
+            </div>
+            <div class="weight-modal-body" id="weightModalBody">
+                <!-- JS로 채워짐 -->
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
