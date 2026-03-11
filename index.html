@@ -248,6 +248,8 @@
         .ma-ma-signal.nodata { background: rgba(0,0,0,0.05); color: var(--text-sub); }
         .ma-ma-updated { font-size: 11px; color: var(--text-sub); margin-top: 10px; }
         .ma-ma-summary { margin-top: 12px; background: var(--bg); border-radius: 10px; padding: 10px 12px; font-size: 12px; color: var(--text-sub); line-height: 1.6; }
+        .ma-chart-wrap { margin-top: 14px; height: 130px; position: relative; }
+        .ma-chart-wrap { margin-top: 14px; height: 130px; position: relative; }
     </style>
 </head>
 <body>
@@ -573,6 +575,7 @@
             </div>
             <div class="ma-ma-updated" id="maKospiMAUpdated">MarketData 시트에서 계산 중...</div>
             <div class="ma-ma-summary" id="maKospiMASummary">💡 코스피 지수의 이동평균선 돌파 여부를 분석합니다</div>
+            <div class="ma-chart-wrap"><canvas id="maKospiMAChart"></canvas></div>
         </div>
 
         <!-- ③ 신용융자잔고 -->
@@ -697,6 +700,7 @@
             </div>
             <div class="ma-ma-updated" id="maSPXMAUpdated">차트 데이터 불러오는 중...</div>
             <div class="ma-ma-summary" id="maSPXMASummary">💡 S&amp;P500 지수의 이동평균선 돌파 여부를 분석합니다</div>
+            <div class="ma-chart-wrap"><canvas id="maSPXMAChart"></canvas></div>
         </div>
         <!-- 나스닥 이동평균선 -->
         <div class="ma-card" id="maNDXMACard">
@@ -733,6 +737,7 @@
             </div>
             <div class="ma-ma-updated" id="maNDXMAUpdated">차트 데이터 불러오는 중...</div>
             <div class="ma-ma-summary" id="maNDXMASummary">💡 나스닥100 지수의 이동평균선 돌파 여부를 분석합니다</div>
+            <div class="ma-chart-wrap"><canvas id="maNDXMAChart"></canvas></div>
         </div>
     </div>
 
@@ -881,8 +886,8 @@
     function processMarketData(data) {
         if (!data || data.length === 0) return [];
         let mappedData = data.map(row => ({
-            date: row[0], ticker: row[1] || '', sp500: Number(row[2]) || 0,
-            nasdaq: Number(row[3]) || 0, kospi: Number(row[4]) || 0,
+            date: row[0], sp500: Number(row[1]) || 0,
+            nasdaq: Number(row[2]) || 0, kospi: Number(row[3]) || 0,
             usd: Number(row[5]) || 0, price: Number(row[6]) || 0
         }));
         if (mappedData.length > 0) {
@@ -1827,11 +1832,18 @@
     // 국내/미국 탭 전환
     // ====== 날짜 포맷 헬퍼: "2026-03-10" → "3/10" ======
     function fmtDateSlash(dateStr) {
-        if (!dateStr) return '-';
-        // "MM-DD" 형식 (GAS에서 substring(5,10))
-        const match = String(dateStr).match(/(\d{1,2})[-/](\d{1,2})/);
-        if (match) return parseInt(match[1]) + '/' + parseInt(match[2]);
-        return dateStr;
+        if (!dateStr || dateStr === '-') return '-';
+        const s = String(dateStr).trim();
+        // "2026-03-10" 전체 날짜 형식
+        const fullMatch = s.match(/\d{4}[-./](\d{1,2})[-./](\d{1,2})/);
+        if (fullMatch) return parseInt(fullMatch[1]) + '월' + parseInt(fullMatch[2]) + '일';
+        // "03-10" 또는 "03/10" 형식 (GAS substring(5,10))
+        const shortMatch = s.match(/^(\d{1,2})[-/](\d{1,2})$/);
+        if (shortMatch) return parseInt(shortMatch[1]) + '월' + parseInt(shortMatch[2]) + '일';
+        // "310" 숫자만 붙은 경우 (MMDD)
+        const numMatch = s.match(/^(\d{1,2})(\d{2})$/);
+        if (numMatch) return parseInt(numMatch[1]) + '월' + parseInt(numMatch[2]) + '일';
+        return s;
     }
 
     function switchMarketView(view) {
@@ -1946,6 +1958,117 @@
             const above = aboveCount, below = belowCount;
             sumEl.textContent = '📊 ' + total + '개 이동평균선 중 ' + above + '개 위 / ' + below + '개 아래';
         }
+        // ===== 미니 차트 렌더링 =====
+        const chartCanvasId = cardId.replace('Card', 'Chart');
+        const canvas = document.getElementById(chartCanvasId);
+        if (canvas && closes.length >= 20) {
+            drawMAChart(canvas, closes, periods, currentPrice, label);
+        }
+    }
+
+    // MA 미니 차트 - 최근 120일 종가 + 이동평균선
+    const _maChartInstances = {};
+    function drawMAChart(canvas, closes, periods, currentPrice, label) {
+        const canvasId = canvas.id;
+        // 기존 차트 파괴
+        if (_maChartInstances[canvasId]) {
+            _maChartInstances[canvasId].destroy();
+            delete _maChartInstances[canvasId];
+        }
+
+        const displayDays = Math.min(120, closes.length);
+        const recentCloses = closes.slice(closes.length - displayDays);
+
+        // 이동평균선 색상 팔레트
+        const maColors = {
+            20:  '#FF9500',
+            50:  '#007AFF',
+            60:  '#FF9500',
+            100: '#34C759',
+            120: '#5856D6',
+            125: '#34C759',
+            200: '#FF3B30'
+        };
+
+        // 종가 라인
+        const datasets = [{
+            label: '종가',
+            data: recentCloses,
+            borderColor: 'rgba(255,255,255,0.85)',
+            borderWidth: 1.5,
+            pointRadius: 0,
+            tension: 0.3,
+            fill: false,
+            order: 0
+        }];
+
+        // 각 이동평균선 — 전체 closes로 계산 후 마지막 displayDays 개만 추출
+        periods.forEach(function(p) {
+            if (closes.length < p) return;
+            const maLine = [];
+            for (let i = closes.length - displayDays; i < closes.length; i++) {
+                if (i < p - 1) { maLine.push(null); continue; }
+                const slice = closes.slice(i - p + 1, i + 1);
+                maLine.push(slice.reduce((a, b) => a + b, 0) / p);
+            }
+            datasets.push({
+                label: p + '일선',
+                data: maLine,
+                borderColor: maColors[p] || '#888',
+                borderWidth: 1.2,
+                borderDash: p >= 100 ? [4, 3] : [],
+                pointRadius: 0,
+                tension: 0,
+                fill: false,
+                order: 1,
+                spanGaps: true
+            });
+        });
+
+        const isDark = document.body.classList.contains('dark') ||
+                       window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+        const tickColor = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)';
+
+        _maChartInstances[canvasId] = new Chart(canvas, {
+            type: 'line',
+            data: { labels: Array.from({length: displayDays}, (_, i) => i), datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 400 },
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            boxWidth: 12, boxHeight: 2,
+                            font: { size: 10 },
+                            color: tickColor,
+                            padding: 6,
+                            usePointStyle: true, pointStyle: 'line'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: () => '',
+                            label: ctx => ctx.dataset.label + ': ' + (ctx.parsed.y ? ctx.parsed.y.toLocaleString(undefined, {maximumFractionDigits: 2}) : '-')
+                        }
+                    }
+                },
+                scales: {
+                    x: { display: false },
+                    y: {
+                        grid: { color: gridColor },
+                        ticks: {
+                            color: tickColor, font: { size: 9 }, maxTicksLimit: 4,
+                            callback: v => v >= 1000 ? (v/1000).toFixed(1)+'k' : v.toFixed(0)
+                        }
+                    }
+                }
+            }
+        });
     }
 
     // ====== 코스피 이동평균선 ======
@@ -1953,7 +2076,7 @@
         const chartData = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA) ? LAST_FETCHED_DATA : null;
         // MarketData 시트에서 코스피 종가 배열 구성
         const market = chartData && chartData.market ? chartData.market : [];
-        const closes = market.map(r => Number(r[4])).filter(v => v > 0);
+        const closes = market.map(r => Number(r[3])).filter(v => v > 0); // r[3] = KOSPI
         if (closes.length < 5) {
             document.getElementById('maKospiMAUpdated').textContent = '⚠️ MarketData 시트에 코스피 데이터가 없습니다';
             maSetBadge('maKospiMABadge', '데이터 없음', '');
@@ -1973,8 +2096,8 @@
         const market = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.market)
                        ? LAST_FETCHED_DATA.market : [];
         // raw market 컬럼: [Date=0, ticker=1, SP500=2, NASDAQ=3, KOSPI=4, USD=5]
-        const spCloses  = market.map(r => Number(r[2])).filter(v => v > 0);
-        const ndxCloses = market.map(r => Number(r[3])).filter(v => v > 0);
+        const spCloses  = market.map(r => Number(r[1])).filter(v => v > 0); // r[1] = SP500
+        const ndxCloses = market.map(r => Number(r[2])).filter(v => v > 0); // r[2] = NASDAQ
         const lastDateRaw = market.length > 0 ? market[market.length - 1][0] : '';
         const lastDate = lastDateRaw ? String(lastDateRaw).substring(5, 10) : '-';
 
@@ -2028,71 +2151,192 @@
         let label,colorClass,activeIdx; if(ratio<20){label='극도 공포 🎯';colorClass='ma-panic';activeIdx=0;} else if(ratio<35){label='공포 📉';colorClass='ma-fear';activeIdx=1;} else if(ratio<55){label='중립 ➡️';colorClass='ma-normal';activeIdx=2;} else if(ratio<70){label='상승세 📈';colorClass='ma-warn';activeIdx=3;} else{label='과열 🔴';colorClass='ma-hot';activeIdx=4;}
         maSetCard('maAdCard',colorClass); maSetBadge('maAdBadge',label,colorClass); maHighlightRange('maAdTable',activeIdx);
     }
-    function renderSignalBannerKR(){
-        const ma=(typeof LAST_FETCHED_DATA!=='undefined'&&LAST_FETCHED_DATA)?(LAST_FETCHED_DATA.marketAnalysis||null):null;
-        if(!ma){document.getElementById('maSignalValueKR').textContent='데이터 없음';document.getElementById('maSignalDescKR').textContent='GAS market 시트에 데이터를 추가해주세요';return;}
-        let score=0,signals=[];
-        // VKOSPI
-        if(ma.vkospi&&ma.vkospi.value!==null){const v=Number(ma.vkospi.value);let s=v>=60?20:v>=40?15:v>=30?10:v>=20?5:0;score+=s;if(s>=15)signals.push('VKOSPI 패닉('+v.toFixed(0)+')');else if(s>=10)signals.push('VKOSPI 불안('+v.toFixed(0)+')');}
-        // 신용융자잔고
-        if(ma.creditBalance&&ma.creditBalance.value!==null){const v=Number(ma.creditBalance.value);let s=v<5?20:v<8?15:v<11?10:v<14?3:0;score+=s;if(s>=15)signals.push('신용잔고 침체('+v.toFixed(1)+'조)');}
-        // 외국인 수급
-        if(ma.foreign){const ss=ma.foreign['005930'],sk=ma.foreign['000660'],bothBuy=ss&&Number(ss.net5d)>0&&sk&&Number(sk.net5d)>0;let s=bothBuy?20:10;score+=s;if(bothBuy)signals.push('외국인 동반매수');}
-        // A/D Ratio
-        if(ma.adRatio&&ma.adRatio.up!==undefined){const up=Number(ma.adRatio.up)||0,dn=Number(ma.adRatio.down)||0,ratio=(up+dn)>0?up/(up+dn)*100:50;let s=ratio<20?20:ratio<35?15:ratio<55?8:ratio<70?3:0;score+=s;if(s>=15)signals.push('A/D '+ratio.toFixed(0)+'% 공포');}
-        // 코스피 이동평균선 (120일선 기준)
-        const market = (typeof LAST_FETCHED_DATA!=='undefined'&&LAST_FETCHED_DATA&&LAST_FETCHED_DATA.market)?LAST_FETCHED_DATA.market:[];
-        const kCloses = market.map(r=>Number(r[3])).filter(v=>v>0);
-        if(kCloses.length>=120){
-            const cur=kCloses[kCloses.length-1],prev=kCloses[kCloses.length-2];
-            const ma120=calcMA(kCloses,120),ma60=calcMA(kCloses,60),ma20=calcMA(kCloses,20);
-            const aboveAll=cur>ma20&&cur>ma60&&cur>ma120;
-            const belowAll=cur<ma20&&cur<ma60&&cur<ma120;
-            if(belowAll){score+=15;signals.push('코스피 전선 이탈');}
-            else if(aboveAll){score-=5;}
-            // 데드크로스 감지 (120일선 하향돌파)
-            if(prev>ma120&&cur<ma120){score+=10;signals.push('코스피 120일선 이탈');}
-        }
-        _applySignalBanner(score,signals,'KR','linear-gradient(135deg,#1C1C2E 0%,#2C2C4E 100%)');
+    // ====================================================================
+    // 종합 신호 배너 — 0~100 정규화 점수 체계
+    //
+    // 설계 원칙:
+    //   · 점수가 높을수록 "바닥권 / 공포 구간" = 매수 기회
+    //   · 점수가 낮을수록 "과열 구간" = 고점 주의
+    //   · 각 지표마다 0~25점 동등 가중치 → 합산 후 /만점*100 정규화
+    //   · 데이터 없는 지표는 가중치 자체를 분모에서 제외 (왜곡 방지)
+    //
+    // KR 지표 (각 25점):
+    //   ① VKOSPI          : 0(안정) ~ 25(패닉60+)
+    //   ② 신용융자잔고      : 0(과열) ~ 25(극침체)
+    //   ③ 외국인 수급       : 0(동반매도) ~ 25(동반매수) — 데이터 없으면 제외
+    //   ④ A/D Ratio        : 0(과열70%+) ~ 25(극공포~20%)
+    //   ⑤ 코스피 이동평균선 : 0(전선 위) ~ 25(전선 아래+돌파)
+    //
+    // US 지표 (각 25점):
+    //   ① S&P500 이동평균선 : 0(전선 위) ~ 25(전선 아래+돌파)
+    //   ② 나스닥 이동평균선  : 0(전선 위) ~ 25(전선 아래+돌파)
+    //
+    // 판정 기준 (0~100):
+    //   75+ : 🎯 강한 바닥 신호
+    //   55+ : 📉 바닥권 접근
+    //   40+ : 😐 중립
+    //   25+ : ⚠️ 상승세 — 고점 주의
+    //    0+ : 🔴 과열 — 매수 자제
+    // ====================================================================
+
+    function _calcMAScore(closes, periods) {
+        // 이동평균선 점수: 0~25
+        // 기준: 현재가가 몇 개 이동평균선 아래에 있는가
+        // + 직전 돌파 여부에 가산점
+        if (!closes || closes.length < Math.max.apply(null, periods)) return { score: null };
+        const cur = closes[closes.length - 1];
+        const prev = closes.length >= 2 ? closes[closes.length - 2] : cur;
+        let belowCount = 0, crossDownCount = 0;
+        periods.forEach(function(p) {
+            const ma = calcMA(closes, p);
+            if (ma === null) return;
+            if (cur < ma) belowCount++;
+            if (prev >= ma && cur < ma) crossDownCount++; // 하향돌파
+        });
+        const total = periods.length;
+        // 전선 아래 비율로 기본 점수 (0~20)
+        let score = Math.round((belowCount / total) * 20);
+        // 당일 하향돌파가 있으면 +5 가산
+        if (crossDownCount > 0) score = Math.min(25, score + 5);
+        return { score, belowCount, total, crossDownCount };
     }
-    function renderSignalBannerUS(){
-        // S&P500 이동평균선 기반 신호
-        const spxBadge = document.getElementById('maSPXMABadge');
-        const ndxBadge = document.getElementById('maNDXMABadge');
-        if (!spxBadge || spxBadge.textContent==='-') {
-            document.getElementById('maScoreNumUS').textContent='-';
+
+    function renderSignalBannerKR() {
+        const maData = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA)
+                       ? (LAST_FETCHED_DATA.marketAnalysis || null) : null;
+        if (!maData) {
+            document.getElementById('maSignalValueKR').textContent = '데이터 없음';
+            document.getElementById('maSignalDescKR').textContent = 'GAS market 시트에 데이터를 추가해주세요';
             return;
         }
-        let score=0,signals=[];
-        // SPX MA 신호
-        const spxText = spxBadge.textContent;
-        if(spxText.includes('골든크로스')){score+=20;signals.push('SPX 골든크로스');}
-        else if(spxText.includes('데드크로스')){score+=15;signals.push('SPX 데드크로스');}
-        else if(spxText.includes('전선 아래')){score+=12;}
-        else if(spxText.includes('전선 위')){score+=0;}
-        // 개별 선 점검
-        ['maSPXMA200Signal','maSPXMA125Signal'].forEach(function(id){
-            const el=document.getElementById(id);
-            if(!el)return;
-            if(el.textContent.includes('상향돌파')){score-=5;signals.push(id.includes('200')?'SPX 200일선 탈환':'SPX 125일선 탈환');}
-            if(el.textContent.includes('하향돌파')){score+=12;signals.push(id.includes('200')?'SPX 200일선 붕괴':'SPX 125일선 붕괴');}
-        });
-        _applySignalBanner(score,signals,'US','linear-gradient(135deg,#1C2E1C 0%,#2C4E2C 100%)');
+
+        let totalMax = 0, totalScore = 0, signals = [];
+
+        // ① VKOSPI (0~25)
+        if (maData.vkospi && maData.vkospi.value !== null) {
+            const v = Number(maData.vkospi.value);
+            const s = v >= 60 ? 25 : v >= 40 ? 20 : v >= 30 ? 13 : v >= 20 ? 6 : 0;
+            totalScore += s; totalMax += 25;
+            if (s >= 20) signals.push('VKOSPI 패닉(' + v.toFixed(0) + ')');
+            else if (s >= 13) signals.push('VKOSPI 불안(' + v.toFixed(0) + ')');
+        }
+
+        // ② 신용융자잔고 (0~25) — 낮을수록 바닥권 신호
+        if (maData.creditBalance && maData.creditBalance.value !== null) {
+            const v = Number(maData.creditBalance.value);
+            const s = v < 5 ? 25 : v < 8 ? 20 : v < 11 ? 12 : v < 14 ? 5 : 0;
+            totalScore += s; totalMax += 25;
+            if (s >= 20) signals.push('신용잔고 침체(' + v.toFixed(1) + '조)');
+        }
+
+        // ③ 외국인 수급 (0~25) — 데이터 없으면 지표 자체 제외
+        if (maData.foreign) {
+            const ss = maData.foreign['005930'], sk = maData.foreign['000660'];
+            const ssVal = ss && ss.net5d !== null ? Number(ss.net5d) : null;
+            const skVal = sk && sk.net5d !== null ? Number(sk.net5d) : null;
+            if (ssVal !== null || skVal !== null) {
+                totalMax += 25;
+                const bothBuy = ssVal !== null && ssVal > 0 && skVal !== null && skVal > 0;
+                const bothSell = ssVal !== null && ssVal < 0 && skVal !== null && skVal < 0;
+                const s = bothBuy ? 25 : bothSell ? 0 : 12; // 혼조 = 중립
+                totalScore += s;
+                if (bothBuy) signals.push('외국인 동반매수');
+                else if (bothSell) signals.push('외국인 동반매도');
+            }
+        }
+
+        // ④ A/D Ratio (0~25)
+        if (maData.adRatio && maData.adRatio.up !== undefined) {
+            const up = Number(maData.adRatio.up) || 0, dn = Number(maData.adRatio.down) || 0;
+            const ratio = (up + dn) > 0 ? (up / (up + dn)) * 100 : 50;
+            const s = ratio < 20 ? 25 : ratio < 35 ? 20 : ratio < 55 ? 12 : ratio < 70 ? 5 : 0;
+            totalScore += s; totalMax += 25;
+            if (s >= 20) signals.push('A/D ' + ratio.toFixed(0) + '% 공포');
+        }
+
+        // ⑤ 코스피 이동평균선 (0~25)
+        const market = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.market)
+                       ? LAST_FETCHED_DATA.market : [];
+        const kCloses = market.map(r => Number(r[3])).filter(v => v > 0); // r[3] = KOSPI
+        const maResult = _calcMAScore(kCloses, [20, 60, 120]);
+        if (maResult.score !== null) {
+            totalScore += maResult.score; totalMax += 25;
+            if (maResult.crossDownCount > 0) signals.push('코스피 MA 하향돌파');
+            else if (maResult.belowCount === maResult.total) signals.push('코스피 전선 아래');
+        }
+
+        const pct = totalMax > 0 ? Math.round((totalScore / totalMax) * 100) : 0;
+        _applySignalBanner(pct, signals, 'KR', 'linear-gradient(135deg,#1C1C2E 0%,#2C2C4E 100%)');
     }
-    function _applySignalBanner(score,signals,suffix,defaultGrad){
-        let emoji,valueText,desc,bgGrad;
-        // score 최대 35점 (VIX 20 + SPY PER 15)
-        if(score>=38){emoji='🎯';valueText='강한 바닥 신호';desc='여러 지표가 극단적 공포를 가리킵니다.';bgGrad='linear-gradient(135deg,#1a0050 0%,#2d0080 100%)';}
-        else if(score>=25){emoji='📉';valueText='바닥권 접근';desc='일부 지표에서 공포 신호가 감지됩니다.';bgGrad='linear-gradient(135deg,#001a40 0%,#003060 100%)';}
-        else if(score>=14){emoji='😐';valueText='중립 — 방향 탐색';desc='뚜렷한 방향성이 없는 구간입니다.';bgGrad=defaultGrad;}
-        else if(score>=5){emoji='⚠️';valueText='상승세 — 고점 주의';desc='시장이 과열 방향으로 움직이고 있습니다.';bgGrad='linear-gradient(135deg,#3C1C00 0%,#5C3000 100%)';}
-        else{emoji='🔴';valueText='과열 — 매수 자제';desc='대부분의 지표가 과열을 가리킵니다.';bgGrad='linear-gradient(135deg,#3C0000 0%,#600000 100%)';}
-        const banner=document.getElementById('maSignalBanner'+suffix); if(banner) banner.style.background=bgGrad;
-        const eEl=document.getElementById('maSignalEmoji'+suffix); if(eEl) eEl.textContent=emoji;
-        const vEl=document.getElementById('maSignalValue'+suffix); if(vEl) vEl.textContent=valueText;
-        const dEl=document.getElementById('maSignalDesc'+suffix); if(dEl) dEl.textContent=desc+(signals.length?' ('+signals.slice(0,3).join(', ')+')':'');
-        const arc=document.getElementById('maScoreArc'+suffix); if(arc) arc.style.strokeDashoffset=138.2-(score/100)*138.2;
-        const num=document.getElementById('maScoreNum'+suffix); if(num) num.textContent=score;
+
+    function renderSignalBannerUS() {
+        const market = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.market)
+                       ? LAST_FETCHED_DATA.market : [];
+        if (!market || market.length < 5) {
+            document.getElementById('maScoreNumUS').textContent = '-';
+            document.getElementById('maSignalValueUS').textContent = '데이터 없음';
+            document.getElementById('maSignalDescUS').textContent = 'MarketData 시트에 데이터가 없습니다';
+            return;
+        }
+
+        let totalMax = 0, totalScore = 0, signals = [];
+
+        // ① S&P500 이동평균선 (0~25)
+        const spCloses = market.map(r => Number(r[1])).filter(v => v > 0); // r[1] = SP500
+        const spResult = _calcMAScore(spCloses, [20, 50, 100, 125, 200]);
+        if (spResult.score !== null) {
+            totalScore += spResult.score; totalMax += 25;
+            if (spResult.crossDownCount > 0) signals.push('S&P500 MA 하향돌파');
+            else if (spResult.belowCount === spResult.total) signals.push('S&P500 전선 아래');
+            else if (spResult.belowCount === 0) signals.push('S&P500 전선 위');
+        }
+
+        // ② 나스닥 이동평균선 (0~25)
+        const ndxCloses = market.map(r => Number(r[2])).filter(v => v > 0); // r[2] = NASDAQ
+        const ndxResult = _calcMAScore(ndxCloses, [20, 50, 100, 125, 200]);
+        if (ndxResult.score !== null) {
+            totalScore += ndxResult.score; totalMax += 25;
+            if (ndxResult.crossDownCount > 0) signals.push('나스닥 MA 하향돌파');
+            else if (ndxResult.belowCount === ndxResult.total) signals.push('나스닥 전선 아래');
+        }
+
+        const pct = totalMax > 0 ? Math.round((totalScore / totalMax) * 100) : 0;
+        _applySignalBanner(pct, signals, 'US', 'linear-gradient(135deg,#1C2E1C 0%,#2C4E2C 100%)');
+    }
+
+    function _applySignalBanner(score, signals, suffix, defaultGrad) {
+        // score: 0~100 정규화 점수 (높을수록 바닥권/공포)
+        let emoji, valueText, desc, bgGrad;
+        if (score >= 75) {
+            emoji = '🎯'; valueText = '강한 바닥 신호';
+            desc = '여러 지표가 극단적 공포를 가리킵니다.';
+            bgGrad = 'linear-gradient(135deg,#1a0050 0%,#2d0080 100%)';
+        } else if (score >= 55) {
+            emoji = '📉'; valueText = '바닥권 접근';
+            desc = '일부 지표에서 공포 신호가 감지됩니다.';
+            bgGrad = 'linear-gradient(135deg,#001a40 0%,#003060 100%)';
+        } else if (score >= 40) {
+            emoji = '😐'; valueText = '중립 — 방향 탐색';
+            desc = '뚜렷한 방향성이 없는 구간입니다.';
+            bgGrad = defaultGrad;
+        } else if (score >= 20) {
+            emoji = '⚠️'; valueText = '상승세 — 고점 주의';
+            desc = '시장이 과열 방향으로 움직이고 있습니다.';
+            bgGrad = 'linear-gradient(135deg,#3C1C00 0%,#5C3000 100%)';
+        } else {
+            emoji = '🔴'; valueText = '과열 — 매수 자제';
+            desc = '대부분의 지표가 과열을 가리킵니다.';
+            bgGrad = 'linear-gradient(135deg,#3C0000 0%,#600000 100%)';
+        }
+        const banner = document.getElementById('maSignalBanner' + suffix);
+        if (banner) banner.style.background = bgGrad;
+        const eEl = document.getElementById('maSignalEmoji' + suffix); if (eEl) eEl.textContent = emoji;
+        const vEl = document.getElementById('maSignalValue' + suffix); if (vEl) vEl.textContent = valueText;
+        const dEl = document.getElementById('maSignalDesc' + suffix);
+        if (dEl) dEl.textContent = desc + (signals.length ? ' (' + signals.slice(0, 3).join(', ') + ')' : '');
+        const arc = document.getElementById('maScoreArc' + suffix);
+        if (arc) arc.style.strokeDashoffset = 138.2 - (score / 100) * 138.2;
+        const num = document.getElementById('maScoreNum' + suffix); if (num) num.textContent = score;
     }
 
 
