@@ -1953,7 +1953,7 @@
         const chartData = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA) ? LAST_FETCHED_DATA : null;
         // MarketData 시트에서 코스피 종가 배열 구성
         const market = chartData && chartData.market ? chartData.market : [];
-        const closes = market.map(r => Number(r[3])).filter(v => v > 0);
+        const closes = market.map(r => Number(r[4])).filter(v => v > 0);
         if (closes.length < 5) {
             document.getElementById('maKospiMAUpdated').textContent = '⚠️ MarketData 시트에 코스피 데이터가 없습니다';
             maSetBadge('maKospiMABadge', '데이터 없음', '');
@@ -1968,35 +1968,33 @@
             closes, [20, 60, 120], currentPrice, prevPrice, '코스피', lastDate);
     }
 
-    // ====== 미국 이동평균선 (Yahoo Finance) ======
+    // ====== 미국 이동평균선 (MarketData 시트 활용) ======
     function renderUSMA() {
-        renderIndexMA('SPX', '^GSPC', 'maSPXMACard', 'maSPXMABadge', 'maSPXMA', 'maSPXMAUpdated', 'maSPXMASummary', 'S&P500');
-        renderIndexMA('NDX', '^NDX', 'maNDXMACard', 'maNDXMABadge', 'maNDXMA', 'maNDXMAUpdated', 'maNDXMASummary', '나스닥100');
-    }
+        const market = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.market)
+                       ? LAST_FETCHED_DATA.market : [];
+        // raw market 컬럼: [Date=0, ticker=1, SP500=2, NASDAQ=3, KOSPI=4, USD=5]
+        const spCloses  = market.map(r => Number(r[2])).filter(v => v > 0);
+        const ndxCloses = market.map(r => Number(r[3])).filter(v => v > 0);
+        const lastDateRaw = market.length > 0 ? market[market.length - 1][0] : '';
+        const lastDate = lastDateRaw ? String(lastDateRaw).substring(5, 10) : '-';
 
-    function renderIndexMA(key, yahooSymbol, cardId, badgeId, listPrefix, updatedId, summaryId, label) {
-        const updEl = document.getElementById(updatedId);
-        if (updEl) updEl.textContent = '실시간 조회 중...';
-        const enc = encodeURIComponent('https://query2.finance.yahoo.com/v8/finance/chart/' + yahooSymbol + '?interval=1d&range=14mo');
-        fetch('https://corsproxy.io/?' + enc)
-            .then(r => r.json())
-            .then(d => {
-                const j = JSON.parse(d.contents);
-                const result = j.chart.result[0];
-                const closes = result.indicators.quote[0].close.filter(v => v !== null);
-                const timestamps = result.timestamp;
-                const currentPrice = closes[closes.length - 1];
-                const prevPrice = closes.length >= 2 ? closes[closes.length - 2] : null;
-                const lastTs = timestamps[timestamps.length - 1];
-                const lastDate = new Date(lastTs * 1000);
-                const dateStr = (lastDate.getMonth()+1) + '/' + lastDate.getDate();
-                renderMACard(cardId, badgeId, listPrefix, updatedId, summaryId,
-                    closes, [20, 50, 100, 125, 200], currentPrice, prevPrice, label, dateStr);
-            })
-            .catch(() => {
-                if (updEl) updEl.textContent = '⚠️ Yahoo Finance 연결 실패';
-                maSetBadge(badgeId, '조회 실패', '');
+        if (spCloses.length < 5) {
+            ['maSPXMAUpdated','maNDXMAUpdated'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = '⚠️ MarketData 시트에 데이터가 없습니다';
             });
+            maSetBadge('maSPXMABadge', '데이터 없음', '');
+            maSetBadge('maNDXMABadge', '데이터 없음', '');
+            return;
+        }
+
+        const spCur  = spCloses[spCloses.length - 1],  spPrev  = spCloses.length  >= 2 ? spCloses[spCloses.length - 2]  : null;
+        const ndxCur = ndxCloses[ndxCloses.length - 1], ndxPrev = ndxCloses.length >= 2 ? ndxCloses[ndxCloses.length - 2] : null;
+
+        renderMACard('maSPXMACard', 'maSPXMABadge', 'maSPXMA', 'maSPXMAUpdated', 'maSPXMASummary',
+            spCloses,  [20, 50, 100, 125, 200], spCur,  spPrev,  'S&P500',   lastDate);
+        renderMACard('maNDXMACard', 'maNDXMABadge', 'maNDXMA', 'maNDXMAUpdated', 'maNDXMASummary',
+            ndxCloses, [20, 50, 100, 125, 200], ndxCur, ndxPrev, '나스닥100', lastDate);
     }
     function renderCredit(data){
         if(!data||data.value===undefined||data.value===null){maNoData('maCreditValue','maCreditUpdated');maSetBadge('maCreditBadge','데이터없음','');return;}
