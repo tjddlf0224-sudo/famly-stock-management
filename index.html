@@ -2433,13 +2433,16 @@
         }
         const currentPrice = closes[closes.length - 1];
         const prevPrice = closes.length >= 2 ? closes[closes.length - 2] : null;
-        // ★ 날짜: kospiRows 마지막 유효 행 기준 (Date 객체/문자열 모두 안전 처리)
+        // ★ 날짜: GAS가 JSON 직렬화 시 UTC 문자열로 변환 → new Date() 파싱 후 KST 기준으로 읽어야 함
         const _toMD = (v) => {
             if (!v) return '-';
-            const s = (v instanceof Date)
-                ? v.getFullYear() + '-' + String(v.getMonth()+1).padStart(2,'0') + '-' + String(v.getDate()).padStart(2,'0')
-                : String(v);
-            return s.slice(5, 10); // "MM-DD"
+            const d = (v instanceof Date) ? v : new Date(v);
+            if (isNaN(d.getTime())) return '-';
+            // KST(UTC+9) 기준 날짜 추출
+            const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+            const mm = String(kst.getUTCMonth() + 1).padStart(2, '0');
+            const dd = String(kst.getUTCDate()).padStart(2, '0');
+            return mm + '-' + dd;
         };
         const lastDate = _toMD(kospiRows[kospiRows.length - 1][0]);
         renderMACard('maKospiMACard', 'maKospiMABadge', 'maKospiMA', 'maKospiMAUpdated', 'maKospiMASummary',
@@ -2472,13 +2475,15 @@
         const spCloses  = spRows.map(r => Number(r[1]));
         const ndxCloses = ndxRows.map(r => Number(r[2]));
         // 날짜는 SP500 기준 마지막 유효 행에서 추출
-        // ★ 날짜: SP500 유효 행 마지막 기준 (Date 객체/문자열 모두 안전 처리)
+        // ★ 날짜: GAS JSON 직렬화 시 UTC 문자열 → new Date() 파싱 후 KST 기준으로 읽어야 함
         const _toMD_us = (v) => {
             if (!v) return '-';
-            const s = (v instanceof Date)
-                ? v.getFullYear() + '-' + String(v.getMonth()+1).padStart(2,'0') + '-' + String(v.getDate()).padStart(2,'0')
-                : String(v);
-            return s.slice(5, 10);
+            const d = (v instanceof Date) ? v : new Date(v);
+            if (isNaN(d.getTime())) return '-';
+            const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+            const mm = String(kst.getUTCMonth() + 1).padStart(2, '0');
+            const dd = String(kst.getUTCDate()).padStart(2, '0');
+            return mm + '-' + dd;
         };
         const lastDate = spRows.length > 0 ? _toMD_us(spRows[spRows.length - 1][0]) : '-';
 
