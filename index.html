@@ -532,37 +532,7 @@
     <div id="maViewKR">
     <div class="ma-section-title">🇰🇷 국내 시장 지표</div>
     <div class="ma-grid">
-        <!-- ① VKOSPI -->
-        <div class="ma-card" id="maVkospiCard">
-            <div class="ma-card-top">
-                <div class="ma-card-name">📉 VKOSPI — 코스피200 변동성지수</div>
-                <div class="ma-card-badge" id="maVkospiBadge">-</div>
-            </div>
-            <div class="ma-card-value-row">
-                <div class="ma-card-value" id="maVkospiValue">-</div>
-                <div class="ma-card-unit">pt</div>
-            </div>
-            <div class="ma-card-updated" id="maVkospiUpdated">GAS market 시트에서 가져오는 중...</div>
-            <div class="ma-spectrum">
-                <div class="ma-spectrum-track" style="background: linear-gradient(to right, #5856D6 0%, #007AFF 20%, #34C759 40%, #FFCC00 60%, #FF9500 80%, #FF3B30 100%);">
-                    <div class="ma-spectrum-thumb" id="maVkospiThumb" style="left:0%"></div>
-                </div>
-                <div class="ma-spectrum-labels">
-                    <span class="ma-spectrum-label">0</span><span class="ma-spectrum-label">20</span>
-                    <span class="ma-spectrum-label">30</span><span class="ma-spectrum-label">40</span>
-                    <span class="ma-spectrum-label">60</span><span class="ma-spectrum-label">80+</span>
-                </div>
-            </div>
-            <table class="ma-range-table" id="maVkospiTable">
-                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>~20</td><td>안정</td><td>과열 가능성 점검</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FFCC00"></span>20~30</td><td>주의</td><td>시장 불안 감지</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>30~40</td><td>불안</td><td>변동성 확대 구간</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>40~60</td><td>공포</td><td>바닥 탐색 가능성</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>60+</td><td>패닉</td><td>🎯 역사적 바닥 근처</td></tr>
-            </table>
-        </div>
-
-        <!-- ② 코스피 이동평균선 분석 -->
+        <!-- ① 코스피 이동평균선 분석 (가중치 25) -->
         <div class="ma-card" id="maKospiMACard">
             <div class="ma-card-top">
                 <div class="ma-card-name">📈 코스피 이동평균선 분석</div>
@@ -590,89 +560,7 @@
             <div class="ma-chart-wrap"><canvas id="maKospiMAChart"></canvas></div>
         </div>
 
-        <!-- ③ 신용융자잔고 -->
-        <div class="ma-card" id="maCreditCard">
-            <div class="ma-card-top">
-                <div class="ma-card-name">💳 코스피 신용융자잔고</div>
-                <div class="ma-card-badge" id="maCreditBadge">-</div>
-            </div>
-            <div class="ma-card-value-row">
-                <div class="ma-card-value" id="maCreditValue">-</div>
-                <div class="ma-card-unit">조원</div>
-            </div>
-            <div class="ma-card-updated" id="maCreditUpdated">GAS market 시트에서 가져오는 중...</div>
-            <div class="ma-spectrum">
-                <div class="ma-spectrum-track" style="background: linear-gradient(to right, #5856D6 0%, #007AFF 15%, #34C759 35%, #FFCC00 60%, #FF9500 80%, #FF3B30 100%);">
-                    <div class="ma-spectrum-thumb" id="maCreditThumb" style="left:0%"></div>
-                </div>
-                <div class="ma-spectrum-labels">
-                    <span class="ma-spectrum-label">0</span><span class="ma-spectrum-label">5조</span>
-                    <span class="ma-spectrum-label">8조</span><span class="ma-spectrum-label">11조</span>
-                    <span class="ma-spectrum-label">14조+</span>
-                </div>
-            </div>
-            <table class="ma-range-table" id="maCreditTable">
-                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>~5조</td><td>극도침체</td><td>🎯 바닥권 신호</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#007AFF"></span>5~8조</td><td>침체</td><td>투자심리 위축</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>8~11조</td><td>정상</td><td>코스피 역사적 평균</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>11~14조</td><td>과열주의</td><td>빚투 증가, 조정 리스크</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>14조+</td><td>과열</td><td>⚠️ 역대 최고치 수준</td></tr>
-            </table>
-        </div>
-        <!-- ④ 외국인 수급 -->
-        <div class="ma-card" id="maForeignCard">
-            <div class="ma-card-top">
-                <div class="ma-card-name">🌏 외국인 핵심 종목 수급</div>
-                <div class="ma-card-badge" id="maForeignBadge">-</div>
-            </div>
-            <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;" id="maForeignUpdated">GAS market 시트에서 가져오는 중...</div>
-            <div id="maForeignList">
-                <div class="ma-foreigner-row">
-                    <div><div class="ma-foreigner-name">삼성전자 <span style="font-size:11px;color:var(--text-sub);">005930</span></div><div style="font-size:11px;color:var(--text-sub);">최근 5일 누적</div></div>
-                    <div class="ma-foreigner-val" id="maForeign005930">-</div>
-                </div>
-                <div class="ma-foreigner-row">
-                    <div><div class="ma-foreigner-name">SK하이닉스 <span style="font-size:11px;color:var(--text-sub);">000660</span></div><div style="font-size:11px;color:var(--text-sub);">최근 5일 누적</div></div>
-                    <div class="ma-foreigner-val" id="maForeign000660">-</div>
-                </div>
-                <div class="ma-foreigner-row" style="border-top:1.5px solid var(--border-color); margin-top:6px; padding-top:10px;">
-                    <div style="font-weight:700; font-size:13px;">동반 순매수 신호</div>
-                    <div id="maForeignSignal" style="font-size:13px; font-weight:700;">-</div>
-                </div>
-            </div>
-            <div style="margin-top:10px; font-size:11px; color:var(--text-sub); background:var(--bg); border-radius:8px; padding:8px 10px;">💡 삼성전자·SK하이닉스 동반 순매수 → 외국인이 한국 반도체를 사기 시작했다는 강한 바닥 신호</div>
-        </div>
-        <!-- ⑤ A/D Ratio -->
-        <div class="ma-card" id="maAdCard">
-            <div class="ma-card-top">
-                <div class="ma-card-name">📈 등락비율 (A/D Ratio)</div>
-                <div class="ma-card-badge" id="maAdBadge">-</div>
-            </div>
-            <div class="ma-card-value-row">
-                <div class="ma-card-value" id="maAdValue">-</div>
-                <div class="ma-card-unit">% 상승</div>
-            </div>
-            <div class="ma-card-updated" id="maAdUpdated">GAS market 시트에서 가져오는 중...</div>
-            <div style="margin-top:10px;">
-                <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-sub); margin-bottom:4px;"><span>하락 종목</span><span>상승 종목</span></div>
-                <div class="ma-ad-gauge">
-                    <div class="ma-ad-fill" id="maAdBar" style="width:50%; background: linear-gradient(to right, #FF3B30, #FF9500, #34C759);"></div>
-                </div>
-                <div style="display:flex; justify-content:space-between; font-size:11px; margin-top:3px;">
-                    <span id="maAdDown" style="color:var(--down);">하락 -</span>
-                    <span id="maAdUp" style="color:var(--up);">상승 -</span>
-                </div>
-            </div>
-            <table class="ma-range-table" style="margin-top:12px;" id="maAdTable">
-                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>~20%</td><td>극도공포</td><td>🎯 바닥권</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#007AFF"></span>20~35%</td><td>공포</td><td>하락 압력 우세</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FFCC00"></span>35~55%</td><td>중립</td><td>방향성 탐색 중</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>55~70%</td><td>상승세</td><td>강세, 고점 주의</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>70%+</td><td>과열</td><td>⚠️ 단기 조정 가능성</td></tr>
-            </table>
-        </div>
-
-        <!-- ⑥ 코스피 RSI(14) -->
+        <!-- ② 코스피 RSI(14) (가중치 20) -->
         <div class="ma-card" id="maKospiRSICard">
             <div class="ma-card-top">
                 <div class="ma-card-name">📊 코스피 RSI (14일)</div>
@@ -700,7 +588,7 @@
             </table>
         </div>
 
-        <!-- ⑦ 코스피 52주 고저 위치 -->
+        <!-- ③ 코스피 52주 고저 위치 (가중치 20) -->
         <div class="ma-card" id="maKospi52Card">
             <div class="ma-card-top">
                 <div class="ma-card-name">📐 코스피 52주 고저 위치</div>
@@ -731,6 +619,118 @@
                 <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>80~100%</td><td>52주 고점</td><td>⚠️ 강한 매도 참고</td></tr>
             </table>
         </div>
+        <!-- ④ VKOSPI (가중치 15) -->
+        <div class="ma-card" id="maVkospiCard">
+            <div class="ma-card-top">
+                <div class="ma-card-name">📉 VKOSPI — 코스피200 변동성지수</div>
+                <div class="ma-card-badge" id="maVkospiBadge">-</div>
+            </div>
+            <div class="ma-card-value-row">
+                <div class="ma-card-value" id="maVkospiValue">-</div>
+                <div class="ma-card-unit">pt</div>
+            </div>
+            <div class="ma-card-updated" id="maVkospiUpdated">GAS market 시트에서 가져오는 중...</div>
+            <div class="ma-spectrum">
+                <div class="ma-spectrum-track" style="background: linear-gradient(to right, #5856D6 0%, #007AFF 20%, #34C759 40%, #FFCC00 60%, #FF9500 80%, #FF3B30 100%);">
+                    <div class="ma-spectrum-thumb" id="maVkospiThumb" style="left:0%"></div>
+                </div>
+                <div class="ma-spectrum-labels">
+                    <span class="ma-spectrum-label">0</span><span class="ma-spectrum-label">20</span>
+                    <span class="ma-spectrum-label">30</span><span class="ma-spectrum-label">40</span>
+                    <span class="ma-spectrum-label">60</span><span class="ma-spectrum-label">80+</span>
+                </div>
+            </div>
+            <table class="ma-range-table" id="maVkospiTable">
+                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>~20</td><td>안정</td><td>과열 가능성 점검</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FFCC00"></span>20~30</td><td>주의</td><td>시장 불안 감지</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>30~40</td><td>불안</td><td>변동성 확대 구간</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>40~60</td><td>공포</td><td>바닥 탐색 가능성</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>60+</td><td>패닉</td><td>🎯 역사적 바닥 근처</td></tr>
+            </table>
+        </div>
+
+        <!-- ⑤ 외국인 수급 (가중치 12) -->
+        <div class="ma-card" id="maForeignCard">
+            <div class="ma-card-top">
+                <div class="ma-card-name">🌏 외국인 핵심 종목 수급</div>
+                <div class="ma-card-badge" id="maForeignBadge">-</div>
+            </div>
+            <div style="font-size:12px; color:var(--text-sub); margin-bottom:10px;" id="maForeignUpdated">GAS market 시트에서 가져오는 중...</div>
+            <div id="maForeignList">
+                <div class="ma-foreigner-row">
+                    <div><div class="ma-foreigner-name">삼성전자 <span style="font-size:11px;color:var(--text-sub);">005930</span></div><div style="font-size:11px;color:var(--text-sub);">최근 5일 누적</div></div>
+                    <div class="ma-foreigner-val" id="maForeign005930">-</div>
+                </div>
+                <div class="ma-foreigner-row">
+                    <div><div class="ma-foreigner-name">SK하이닉스 <span style="font-size:11px;color:var(--text-sub);">000660</span></div><div style="font-size:11px;color:var(--text-sub);">최근 5일 누적</div></div>
+                    <div class="ma-foreigner-val" id="maForeign000660">-</div>
+                </div>
+                <div class="ma-foreigner-row" style="border-top:1.5px solid var(--border-color); margin-top:6px; padding-top:10px;">
+                    <div style="font-weight:700; font-size:13px;">동반 순매수 신호</div>
+                    <div id="maForeignSignal" style="font-size:13px; font-weight:700;">-</div>
+                </div>
+            </div>
+            <div style="margin-top:10px; font-size:11px; color:var(--text-sub); background:var(--bg); border-radius:8px; padding:8px 10px;">💡 삼성전자·SK하이닉스 동반 순매수 → 외국인이 한국 반도체를 사기 시작했다는 강한 바닥 신호</div>
+        </div>
+        <!-- ⑥ 신용융자잔고 (가중치 8) -->
+        <div class="ma-card" id="maCreditCard">
+            <div class="ma-card-top">
+                <div class="ma-card-name">💳 코스피 신용융자잔고</div>
+                <div class="ma-card-badge" id="maCreditBadge">-</div>
+            </div>
+            <div class="ma-card-value-row">
+                <div class="ma-card-value" id="maCreditValue">-</div>
+                <div class="ma-card-unit">조원</div>
+            </div>
+            <div class="ma-card-updated" id="maCreditUpdated">GAS market 시트에서 가져오는 중...</div>
+            <div class="ma-spectrum">
+                <div class="ma-spectrum-track" style="background: linear-gradient(to right, #5856D6 0%, #007AFF 15%, #34C759 35%, #FFCC00 60%, #FF9500 80%, #FF3B30 100%);">
+                    <div class="ma-spectrum-thumb" id="maCreditThumb" style="left:0%"></div>
+                </div>
+                <div class="ma-spectrum-labels">
+                    <span class="ma-spectrum-label">0</span><span class="ma-spectrum-label">5조</span>
+                    <span class="ma-spectrum-label">8조</span><span class="ma-spectrum-label">11조</span>
+                    <span class="ma-spectrum-label">14조+</span>
+                </div>
+            </div>
+            <table class="ma-range-table" id="maCreditTable">
+                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>~5조</td><td>극도침체</td><td>🎯 바닥권 신호</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#007AFF"></span>5~8조</td><td>침체</td><td>투자심리 위축</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>8~11조</td><td>정상</td><td>코스피 역사적 평균</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>11~14조</td><td>과열주의</td><td>빚투 증가, 조정 리스크</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>14조+</td><td>과열</td><td>⚠️ 역대 최고치 수준</td></tr>
+            </table>
+        </div>
+        <!-- ⑦ A/D Ratio (참고지표) -->
+        <div class="ma-card" id="maAdCard">
+            <div class="ma-card-top">
+                <div class="ma-card-name">📈 등락비율 (A/D Ratio)</div>
+                <div class="ma-card-badge" id="maAdBadge">-</div>
+            </div>
+            <div class="ma-card-value-row">
+                <div class="ma-card-value" id="maAdValue">-</div>
+                <div class="ma-card-unit">% 상승</div>
+            </div>
+            <div class="ma-card-updated" id="maAdUpdated">GAS market 시트에서 가져오는 중...</div>
+            <div style="margin-top:10px;">
+                <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-sub); margin-bottom:4px;"><span>하락 종목</span><span>상승 종목</span></div>
+                <div class="ma-ad-gauge">
+                    <div class="ma-ad-fill" id="maAdBar" style="width:50%; background: linear-gradient(to right, #FF3B30, #FF9500, #34C759);"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:11px; margin-top:3px;">
+                    <span id="maAdDown" style="color:var(--down);">하락 -</span>
+                    <span id="maAdUp" style="color:var(--up);">상승 -</span>
+                </div>
+            </div>
+            <table class="ma-range-table" style="margin-top:12px;" id="maAdTable">
+                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>~20%</td><td>극도공포</td><td>🎯 바닥권</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#007AFF"></span>20~35%</td><td>공포</td><td>하락 압력 우세</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FFCC00"></span>35~55%</td><td>중립</td><td>방향성 탐색 중</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>55~70%</td><td>상승세</td><td>강세, 고점 주의</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>70%+</td><td>과열</td><td>⚠️ 단기 조정 가능성</td></tr>
+            </table>
+        </div>
+
 
     </div>
     </div><!-- /maViewKR -->
@@ -2603,71 +2603,95 @@
     }
 
     function renderSignalBannerKR() {
+        // ★ v61: 6개 지표 가중 평균 종합 신호
+        // 점수 0~100: 높을수록 강세/과열, 낮을수록 약세/바닥권
+        // 가중치: 20일선25% | RSI20% | 52주위치20% | VKOSPI15% | 외국인수급12% | 신용잔고8%
+
         const maData = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA)
                        ? (LAST_FETCHED_DATA.marketAnalysis || null) : null;
-        if (!maData) {
-            document.getElementById('maSignalValueKR').textContent = '데이터 없음';
-            document.getElementById('maSignalDescKR').textContent = 'GAS market 시트에 데이터를 추가해주세요';
-            return;
+        const market = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.market)
+                       ? LAST_FETCHED_DATA.market : [];
+        const kRows  = market.filter(r => Number(r[3]) > 0);
+        const kClose = kRows.map(r => Number(r[3]));
+
+        let weightedSum = 0, weightTotal = 0, signals = [];
+
+        // ① 20일선 위/아래 (가중치 25) — 위=강세(100), 아래=약세(0)
+        if (kClose.length >= 20) {
+            const ma20 = calcMA(kClose, 20);
+            const cur  = kClose[kClose.length - 1];
+            if (ma20 !== null) {
+                const s = cur >= ma20 ? 100 : 0;
+                weightedSum += s * 25; weightTotal += 25;
+                signals.push(cur >= ma20 ? '20일선 위✅' : '20일선 아래🔴');
+            }
         }
 
-        let totalMax = 0, totalScore = 0, signals = [];
+        // ② RSI(14) (가중치 20) — 선형 매핑: RSI 그대로 0~100점
+        if (kClose.length >= 15) {
+            const rsiObj = calcRSI(kClose, 14);
+            if (rsiObj && rsiObj.rsi !== null) {
+                const rsi = rsiObj.rsi;
+                // RSI 50 기준 중립, 70+ 과열, 30- 과매도
+                // 점수 = RSI 값 그대로 (0~100)
+                weightedSum += rsi * 20; weightTotal += 20;
+                if (rsi >= 70) signals.push('RSI 과매수⚠️');
+                else if (rsi <= 30) signals.push('RSI 과매도🎯');
+            }
+        }
 
-        // ① VKOSPI (0~25)
-        if (maData.vkospi && maData.vkospi.value !== null) {
+        // ③ 52주 위치 (가중치 20) — 위치% 그대로 점수화
+        if (kClose.length >= 50) {
+            const w52 = calc52Week(kClose);
+            if (w52 && w52.pct !== null) {
+                weightedSum += w52.pct * 20; weightTotal += 20;
+                if (w52.pct >= 80) signals.push('52주고점권⚠️');
+                else if (w52.pct <= 15) signals.push('52주저점권🎯');
+            }
+        }
+
+        // ④ VKOSPI (가중치 15) — 높을수록 공포 → 점수 반전 (100 - 정규화)
+        if (maData && maData.vkospi && maData.vkospi.value !== null) {
             const v = Number(maData.vkospi.value);
-            const s = v >= 60 ? 25 : v >= 40 ? 20 : v >= 30 ? 13 : v >= 20 ? 6 : 0;
-            totalScore += s; totalMax += 25;
-            if (s >= 20) signals.push('VKOSPI 패닉(' + v.toFixed(0) + ')');
-            else if (s >= 13) signals.push('VKOSPI 불안(' + v.toFixed(0) + ')');
+            // VKOSPI 정상범위 10~40, 극단 60+
+            // 낮을수록 안정(강세), 높을수록 공포(약세) → 점수 반전
+            const normalized = Math.min(100, Math.max(0, (v - 10) / 55 * 100));
+            const s = 100 - normalized;
+            weightedSum += s * 15; weightTotal += 15;
+            if (v >= 60) signals.push('VKOSPI 패닉🔴(' + v.toFixed(0) + ')');
+            else if (v >= 40) signals.push('VKOSPI 공포(' + v.toFixed(0) + ')');
         }
 
-        // ② 신용융자잔고 (0~25) — 낮을수록 바닥권 신호
-        if (maData.creditBalance && maData.creditBalance.value !== null) {
-            const v = Number(maData.creditBalance.value);
-            const s = v < 5 ? 25 : v < 8 ? 20 : v < 11 ? 12 : v < 14 ? 5 : 0;
-            totalScore += s; totalMax += 25;
-            if (s >= 20) signals.push('신용잔고 침체(' + v.toFixed(1) + '조)');
-        }
-
-        // ③ 외국인 수급 (0~25) — 데이터 없으면 지표 자체 제외
-        if (maData.foreign) {
+        // ⑤ 외국인 수급 — 삼성+하이닉스 (가중치 12)
+        if (maData && maData.foreign) {
             const ss = maData.foreign['005930'], sk = maData.foreign['000660'];
             const ssVal = ss && ss.net5d !== null ? Number(ss.net5d) : null;
             const skVal = sk && sk.net5d !== null ? Number(sk.net5d) : null;
             if (ssVal !== null || skVal !== null) {
-                totalMax += 25;
-                const bothBuy = ssVal !== null && ssVal > 0 && skVal !== null && skVal > 0;
+                const bothBuy  = ssVal !== null && ssVal > 0 && skVal !== null && skVal > 0;
                 const bothSell = ssVal !== null && ssVal < 0 && skVal !== null && skVal < 0;
-                const s = bothBuy ? 25 : bothSell ? 0 : 12; // 혼조 = 중립
-                totalScore += s;
-                if (bothBuy) signals.push('외국인 동반매수');
-                else if (bothSell) signals.push('외국인 동반매도');
+                // 동반매수=100, 혼조=50, 동반매도=0
+                const s = bothBuy ? 100 : bothSell ? 0 : 50;
+                weightedSum += s * 12; weightTotal += 12;
+                if (bothBuy)  signals.push('외국인 동반매수📈');
+                else if (bothSell) signals.push('외국인 동반매도📉');
             }
         }
 
-        // ④ A/D Ratio (0~25)
-        if (maData.adRatio && maData.adRatio.up !== undefined) {
-            const up = Number(maData.adRatio.up) || 0, dn = Number(maData.adRatio.down) || 0;
-            const ratio = (up + dn) > 0 ? (up / (up + dn)) * 100 : 50;
-            const s = ratio < 20 ? 25 : ratio < 35 ? 20 : ratio < 55 ? 12 : ratio < 70 ? 5 : 0;
-            totalScore += s; totalMax += 25;
-            if (s >= 20) signals.push('A/D ' + ratio.toFixed(0) + '% 공포');
+        // ⑥ 신용융자잔고 (가중치 8) — 높을수록 과열(약세), 낮을수록 안전
+        if (maData && maData.creditBalance && maData.creditBalance.value !== null) {
+            const v = Number(maData.creditBalance.value);
+            // 정상 8~14조, 과열 18조+, 바닥 5조 이하
+            // 높을수록 약세 → 반전
+            const normalized = Math.min(100, Math.max(0, (v - 5) / 20 * 100));
+            const s = 100 - normalized;
+            weightedSum += s * 8; weightTotal += 8;
+            if (v >= 18) signals.push('신용잔고 과열🔴(' + v.toFixed(1) + '조)');
+            else if (v <= 7) signals.push('신용잔고 낮음✅');
         }
 
-        // ⑤ 코스피 이동평균선 (0~25)
-        const market = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.market)
-                       ? LAST_FETCHED_DATA.market : [];
-        const kCloses = market.map(r => Number(r[3])).filter(v => v > 0); // r[3] = KOSPI
-        const maResult = _calcMAScore(kCloses, [20, 60, 120]);
-        if (maResult.score !== null) {
-            totalScore += maResult.score; totalMax += 25;
-            if (maResult.crossDownCount > 0) signals.push('코스피 MA 하향돌파');
-            else if (maResult.belowCount === maResult.total) signals.push('코스피 전선 아래');
-        }
-
-        const pct = totalMax > 0 ? Math.round((totalScore / totalMax) * 100) : 0;
-        _applySignalBanner(pct, signals, 'KR', 'linear-gradient(135deg,#1C1C2E 0%,#2C2C4E 100%)');
+        const score = weightTotal > 0 ? Math.round(weightedSum / weightTotal) : 50;
+        _applySignalBanner(score, signals, 'KR', 'linear-gradient(135deg,#1C1C2E 0%,#2C2C4E 100%)');
     }
 
     function renderSignalBannerUS() {
@@ -2706,28 +2730,28 @@
     }
 
     function _applySignalBanner(score, signals, suffix, defaultGrad) {
-        // score: 0~100 정규화 점수 (높을수록 바닥권/공포)
+        // score 0~100: 높을수록 강세/과열, 낮을수록 약세/바닥권
         let emoji, valueText, desc, bgGrad;
         if (score >= 75) {
-            emoji = '🎯'; valueText = '강한 바닥 신호';
-            desc = '여러 지표가 극단적 공포를 가리킵니다.';
-            bgGrad = 'linear-gradient(135deg,#1a0050 0%,#2d0080 100%)';
-        } else if (score >= 55) {
-            emoji = '📉'; valueText = '바닥권 접근';
-            desc = '일부 지표에서 공포 신호가 감지됩니다.';
-            bgGrad = 'linear-gradient(135deg,#001a40 0%,#003060 100%)';
-        } else if (score >= 40) {
-            emoji = '😐'; valueText = '중립 — 방향 탐색';
-            desc = '뚜렷한 방향성이 없는 구간입니다.';
-            bgGrad = defaultGrad;
-        } else if (score >= 20) {
-            emoji = '⚠️'; valueText = '상승세 — 고점 주의';
-            desc = '시장이 과열 방향으로 움직이고 있습니다.';
-            bgGrad = 'linear-gradient(135deg,#3C1C00 0%,#5C3000 100%)';
-        } else {
             emoji = '🔴'; valueText = '과열 — 매수 자제';
-            desc = '대부분의 지표가 과열을 가리킵니다.';
+            desc = '대부분 지표가 과열을 가리킵니다. 고점 주의.';
             bgGrad = 'linear-gradient(135deg,#3C0000 0%,#600000 100%)';
+        } else if (score >= 60) {
+            emoji = '⚠️'; valueText = '상승세 — 고점 주의';
+            desc = '강세 국면이나 과열 가능성을 점검하세요.';
+            bgGrad = 'linear-gradient(135deg,#3C1C00 0%,#5C3000 100%)';
+        } else if (score >= 42) {
+            emoji = '😐'; valueText = '중립 — 방향 탐색';
+            desc = '강세·약세 신호가 혼재합니다.';
+            bgGrad = defaultGrad;
+        } else if (score >= 28) {
+            emoji = '📉'; valueText = '약세 — 바닥권 접근';
+            desc = '약세 신호가 우세합니다. 일부 지표 저점 탐색 중.';
+            bgGrad = 'linear-gradient(135deg,#001a40 0%,#003060 100%)';
+        } else {
+            emoji = '🎯'; valueText = '강한 약세 — 바닥 신호';
+            desc = '여러 지표가 극단적 약세·공포를 가리킵니다.';
+            bgGrad = 'linear-gradient(135deg,#1a0050 0%,#2d0080 100%)';
         }
         const banner = document.getElementById('maSignalBanner' + suffix);
         if (banner) banner.style.background = bgGrad;
