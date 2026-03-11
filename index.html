@@ -234,6 +234,20 @@
         .ma-panic  { --ma-accent: #5856D6; color: #5856D6; }
         .ma-update-notice { text-align: center; font-size: 11px; color: var(--text-sub); padding: 12px 0 4px; }
         .ma-manual-badge { display: inline-block; background: rgba(0,122,255,0.1); color: var(--primary); font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin-left: 4px; }
+        /* 이동평균선 카드 */
+        .ma-ma-list { display: flex; flex-direction: column; gap: 0; margin-top: 4px; }
+        .ma-ma-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border-color); }
+        .ma-ma-row:last-child { border-bottom: none; }
+        .ma-ma-label { font-size: 13px; font-weight: 700; min-width: 60px; }
+        .ma-ma-price { font-size: 13px; color: var(--text-sub); flex: 1; text-align: center; }
+        .ma-ma-signal { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+        .ma-ma-signal.above  { background: rgba(52,199,89,0.13); color: #34C759; }
+        .ma-ma-signal.below  { background: rgba(255,59,48,0.13);  color: #FF3B30; }
+        .ma-ma-signal.cross-up   { background: rgba(52,199,89,0.22); color: #34C759; font-weight: 900; }
+        .ma-ma-signal.cross-down { background: rgba(255,59,48,0.22); color: #FF3B30; font-weight: 900; }
+        .ma-ma-signal.nodata { background: rgba(0,0,0,0.05); color: var(--text-sub); }
+        .ma-ma-updated { font-size: 11px; color: var(--text-sub); margin-top: 10px; }
+        .ma-ma-summary { margin-top: 12px; background: var(--bg); border-radius: 10px; padding: 10px 12px; font-size: 12px; color: var(--text-sub); line-height: 1.6; }
     </style>
 </head>
 <body>
@@ -533,35 +547,34 @@
                 <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>60+</td><td>패닉</td><td>🎯 역사적 바닥 근처</td></tr>
             </table>
         </div>
-        <!-- ② 코스피 12M PER -->
-        <div class="ma-card" id="maKospiPerCard">
+
+        <!-- ② 코스피 이동평균선 분석 -->
+        <div class="ma-card" id="maKospiMACard">
             <div class="ma-card-top">
-                <div class="ma-card-name">📊 코스피 12개월 선행 PER</div>
-                <div class="ma-card-badge" id="maKospiPerBadge">-</div>
+                <div class="ma-card-name">📈 코스피 이동평균선 분석</div>
+                <div class="ma-card-badge" id="maKospiMABadge">-</div>
             </div>
-            <div class="ma-card-value-row">
-                <div class="ma-card-value" id="maKospiPerValue">-</div>
-                <div class="ma-card-unit">배</div>
-            </div>
-            <div class="ma-card-updated" id="maKospiPerUpdated">GAS market 시트에서 가져오는 중...</div>
-            <div class="ma-spectrum">
-                <div class="ma-spectrum-track" style="background: linear-gradient(to right, #5856D6 0%, #007AFF 20%, #34C759 45%, #FFCC00 65%, #FF9500 80%, #FF3B30 100%);">
-                    <div class="ma-spectrum-thumb" id="maKospiPerThumb" style="left:0%"></div>
+            <div class="ma-ma-list">
+                <div class="ma-ma-row">
+                    <span class="ma-ma-label">20일선</span>
+                    <span class="ma-ma-price" id="maKospiMA20Price">-</span>
+                    <span class="ma-ma-signal nodata" id="maKospiMA20Signal">-</span>
                 </div>
-                <div class="ma-spectrum-labels">
-                    <span class="ma-spectrum-label">6</span><span class="ma-spectrum-label">8</span>
-                    <span class="ma-spectrum-label">10</span><span class="ma-spectrum-label">12</span>
-                    <span class="ma-spectrum-label">14+</span>
+                <div class="ma-ma-row">
+                    <span class="ma-ma-label">60일선</span>
+                    <span class="ma-ma-price" id="maKospiMA60Price">-</span>
+                    <span class="ma-ma-signal nodata" id="maKospiMA60Signal">-</span>
+                </div>
+                <div class="ma-ma-row">
+                    <span class="ma-ma-label">120일선</span>
+                    <span class="ma-ma-price" id="maKospiMA120Price">-</span>
+                    <span class="ma-ma-signal nodata" id="maKospiMA120Signal">-</span>
                 </div>
             </div>
-            <table class="ma-range-table" id="maKospiPerTable">
-                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>~8</td><td>극저평가</td><td>🎯 역사적 바닥권</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>8~10</td><td>저평가</td><td>바닥권 신호</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FFCC00"></span>10~11</td><td>적정</td><td>코스피 역사적 평균</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>11~12</td><td>보통</td><td>다소 고평가 영역</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>12+</td><td>고평가</td><td>추가 상승 제한적</td></tr>
-            </table>
+            <div class="ma-ma-updated" id="maKospiMAUpdated">MarketData 시트에서 계산 중...</div>
+            <div class="ma-ma-summary" id="maKospiMASummary">💡 코스피 지수의 이동평균선 돌파 여부를 분석합니다</div>
         </div>
+
         <!-- ③ 신용융자잔고 -->
         <div class="ma-card" id="maCreditCard">
             <div class="ma-card-top">
@@ -649,67 +662,83 @@
     <div id="maViewUS" style="display:none;">
     <div class="ma-section-title">🇺🇸 미국 시장 지표</div>
     <div class="ma-grid">
-        <!-- ① VIX 변동성지수 -->
-        <div class="ma-card" id="maVixCard">
+        <!-- S&P500 이동평균선 -->
+        <div class="ma-card" id="maSPXMACard">
             <div class="ma-card-top">
-                <div class="ma-card-name">🌪️ VIX — 미국 변동성지수</div>
-                <div class="ma-card-badge" id="maVixBadge">-</div>
+                <div class="ma-card-name">📈 S&amp;P500 이동평균선 분석</div>
+                <div class="ma-card-badge" id="maSPXMABadge">-</div>
             </div>
-            <div class="ma-card-value-row">
-                <div class="ma-card-value" id="maVixValue">-</div>
-                <div class="ma-card-unit">pt</div>
-            </div>
-            <div class="ma-card-updated" id="maVixUpdated">불러오는 중...</div>
-            <div class="ma-spectrum">
-                <div class="ma-spectrum-track" style="background: linear-gradient(to right, #34C759 0%, #FFCC00 25%, #FF9500 55%, #FF3B30 75%, #5856D6 100%);">
-                    <div class="ma-spectrum-thumb" id="maVixThumb" style="left:0%"></div>
+            <div id="maSPXMAList" class="ma-ma-list">
+                <div class="ma-ma-row">
+                    <span class="ma-ma-label">20일선</span>
+                    <span class="ma-ma-price" id="maSPXMA20Price">-</span>
+                    <span class="ma-ma-signal nodata" id="maSPXMA20Signal">-</span>
                 </div>
-                <div class="ma-spectrum-labels">
-                    <span class="ma-spectrum-label">0</span><span class="ma-spectrum-label">15</span>
-                    <span class="ma-spectrum-label">20</span><span class="ma-spectrum-label">30</span>
-                    <span class="ma-spectrum-label">40</span><span class="ma-spectrum-label">60+</span>
+                <div class="ma-ma-row">
+                    <span class="ma-ma-label">50일선</span>
+                    <span class="ma-ma-price" id="maSPXMA50Price">-</span>
+                    <span class="ma-ma-signal nodata" id="maSPXMA50Signal">-</span>
+                </div>
+                <div class="ma-ma-row">
+                    <span class="ma-ma-label">100일선</span>
+                    <span class="ma-ma-price" id="maSPXMA100Price">-</span>
+                    <span class="ma-ma-signal nodata" id="maSPXMA100Signal">-</span>
+                </div>
+                <div class="ma-ma-row">
+                    <span class="ma-ma-label">125일선</span>
+                    <span class="ma-ma-price" id="maSPXMA125Price">-</span>
+                    <span class="ma-ma-signal nodata" id="maSPXMA125Signal">-</span>
+                </div>
+                <div class="ma-ma-row">
+                    <span class="ma-ma-label">200일선</span>
+                    <span class="ma-ma-price" id="maSPXMA200Price">-</span>
+                    <span class="ma-ma-signal nodata" id="maSPXMA200Signal">-</span>
                 </div>
             </div>
-            <table class="ma-range-table" id="maVixTable">
-                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>~15</td><td>안정</td><td>시장 낙관, 과열 주의</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FFCC00"></span>15~20</td><td>보통</td><td>정상 변동성 수준</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>20~30</td><td>불안</td><td>시장 우려 확대</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>30~40</td><td>공포</td><td>바닥 탐색 가능성</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>40+</td><td>패닉</td><td>🎯 역사적 매수 기회</td></tr>
-            </table>
+            <div class="ma-ma-updated" id="maSPXMAUpdated">차트 데이터 불러오는 중...</div>
+            <div class="ma-ma-summary" id="maSPXMASummary">💡 S&amp;P500 지수의 이동평균선 돌파 여부를 분석합니다</div>
         </div>
-        <!-- ③ S&P500 / QQQ PER -->
-        <div class="ma-card" id="maSPYPERCard">
+        <!-- 나스닥 이동평균선 -->
+        <div class="ma-card" id="maNDXMACard">
             <div class="ma-card-top">
-                <div class="ma-card-name">📈 미국 시장 PER</div>
-                <div class="ma-card-badge" id="maSPYPERBadge">-</div>
+                <div class="ma-card-name">📊 나스닥100 이동평균선 분석</div>
+                <div class="ma-card-badge" id="maNDXMABadge">-</div>
             </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:4px;">
-                <div>
-                    <div style="font-size:11px; color:var(--text-sub); margin-bottom:3px;">S&amp;P500 (SPY)</div>
-                    <div style="font-size:26px; font-weight:800;" id="maSPYPERValue">-</div>
-                    <div style="font-size:11px; color:var(--text-sub); margin-top:2px;">TTM PER</div>
+            <div id="maNDXMAList" class="ma-ma-list">
+                <div class="ma-ma-row">
+                    <span class="ma-ma-label">20일선</span>
+                    <span class="ma-ma-price" id="maNDXMA20Price">-</span>
+                    <span class="ma-ma-signal nodata" id="maNDXMA20Signal">-</span>
                 </div>
-                <div>
-                    <div style="font-size:11px; color:var(--text-sub); margin-bottom:3px;">나스닥100 (QQQ)</div>
-                    <div style="font-size:26px; font-weight:800;" id="maQQQPERValue">-</div>
-                    <div style="font-size:11px; color:var(--text-sub); margin-top:2px;">TTM PER</div>
+                <div class="ma-ma-row">
+                    <span class="ma-ma-label">50일선</span>
+                    <span class="ma-ma-price" id="maNDXMA50Price">-</span>
+                    <span class="ma-ma-signal nodata" id="maNDXMA50Signal">-</span>
+                </div>
+                <div class="ma-ma-row">
+                    <span class="ma-ma-label">100일선</span>
+                    <span class="ma-ma-price" id="maNDXMA100Price">-</span>
+                    <span class="ma-ma-signal nodata" id="maNDXMA100Signal">-</span>
+                </div>
+                <div class="ma-ma-row">
+                    <span class="ma-ma-label">125일선</span>
+                    <span class="ma-ma-price" id="maNDXMA125Price">-</span>
+                    <span class="ma-ma-signal nodata" id="maNDXMA125Signal">-</span>
+                </div>
+                <div class="ma-ma-row">
+                    <span class="ma-ma-label">200일선</span>
+                    <span class="ma-ma-price" id="maNDXMA200Price">-</span>
+                    <span class="ma-ma-signal nodata" id="maNDXMA200Signal">-</span>
                 </div>
             </div>
-            <div class="ma-card-updated" id="maSPYPERUpdated" style="margin-top:8px;">불러오는 중...</div>
-            <table class="ma-range-table" style="margin-top:12px;" id="maSPYPERTable">
-                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>~15x</td><td>저평가</td><td>역사적 평균 하단</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FFCC00"></span>15~20x</td><td>적정</td><td>역사적 평균 구간</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>20~25x</td><td>고평가</td><td>성장 기대 선반영</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>25x+</td><td>매우 고평가</td><td>⚠️ 버블 위험 구간</td></tr>
-            </table>
-            <div style="margin-top:8px; font-size:11px; color:var(--text-sub); background:var(--bg); border-radius:8px; padding:8px 10px;">💡 Forward PER 기준. QQQ는 기술주 집중으로 SPY보다 항상 높음. SPY 20x = QQQ ~28x 수준이 역사적 중간값</div>
+            <div class="ma-ma-updated" id="maNDXMAUpdated">차트 데이터 불러오는 중...</div>
+            <div class="ma-ma-summary" id="maNDXMASummary">💡 나스닥100 지수의 이동평균선 돌파 여부를 분석합니다</div>
         </div>
     </div>
 
     </div><!-- /maViewUS -->
 
-    <div class="ma-update-notice">데이터는 GAS market 시트에 수동 입력 또는 트리거로 자동 업데이트됩니다<span class="ma-manual-badge">GAS 연동</span></div>
+    <div class="ma-update-notice">업데이트: <span id="maLastUpdated">-</span> &nbsp;|&nbsp; GAS 트리거 자동 업데이트<span class="ma-manual-badge">GAS 연동</span></div>
 </div>
 
 <!-- 예수금 수정 모달 -->
@@ -1796,6 +1825,15 @@
 
     // ====== 시장분석 탭 ======
     // 국내/미국 탭 전환
+    // ====== 날짜 포맷 헬퍼: "2026-03-10" → "3/10" ======
+    function fmtDateSlash(dateStr) {
+        if (!dateStr) return '-';
+        // "MM-DD" 형식 (GAS에서 substring(5,10))
+        const match = String(dateStr).match(/(\d{1,2})[-/](\d{1,2})/);
+        if (match) return parseInt(match[1]) + '/' + parseInt(match[2]);
+        return dateStr;
+    }
+
     function switchMarketView(view) {
         const isKR = view === 'kr';
         document.getElementById('maViewKR').style.display = isKR ? '' : 'none';
@@ -1804,18 +1842,30 @@
         document.getElementById('maSignalBannerUS').style.display = isKR ? 'none' : '';
         document.getElementById('maBtnKR').classList.toggle('active', isKR);
         document.getElementById('maBtnUS').classList.toggle('active', !isKR);
-        if (!isKR) { renderVIX(); renderSPYQQQPER(); renderSignalBannerUS(); }
+        if (!isKR) { renderUSMA(); renderSignalBannerUS(); }
     }
 
     function renderMarketTab() {
         const ma = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA) ? (LAST_FETCHED_DATA.marketAnalysis || null) : null;
-        renderVkospi(ma ? ma.vkospi : null); renderKospiPer(ma ? ma.kospiPer : null);
-        renderCredit(ma ? ma.creditBalance : null); renderForeign(ma ? ma.foreign : null);
+        renderVkospi(ma ? ma.vkospi : null);
+        renderCredit(ma ? ma.creditBalance : null);
+        renderForeign(ma ? ma.foreign : null);
         renderADRatio(ma ? ma.adRatio : null);
+        renderKospiMA();
         renderSignalBannerKR();
-        // 기본은 국내 탭 표시 (상태 유지)
+        updateLastUpdated(ma);
         const isUS = document.getElementById('maBtnUS').classList.contains('active');
-        if (isUS) { renderVIX(); renderSPYQQQPER(); renderSignalBannerUS(); }
+        if (isUS) { renderUSMA(); renderSignalBannerUS(); }
+    }
+
+    function updateLastUpdated(ma) {
+        const el = document.getElementById('maLastUpdated');
+        if (!el) return;
+        if (ma && ma.vkospi && ma.vkospi.updated) {
+            el.textContent = fmtDateSlash(ma.vkospi.updated);
+        } else {
+            el.textContent = '-';
+        }
     }
     function maSetCard(cardId, colorClass) { const card=document.getElementById(cardId); if(!card) return; card.className='ma-card '+colorClass; }
     function maSetBadge(badgeId, text, colorClass) {
@@ -1828,21 +1878,129 @@
     function maNoData(valueId,updatedId){const v=document.getElementById(valueId),u=document.getElementById(updatedId);if(v)v.textContent='N/A';if(u)u.textContent='⚠️ GAS market 시트에 데이터를 입력해주세요';}
     function renderVkospi(data){
         if(!data||data.value===undefined||data.value===null){maNoData('maVkospiValue','maVkospiUpdated');maSetBadge('maVkospiBadge','데이터없음','');return;}
-        const v=Number(data.value); document.getElementById('maVkospiValue').textContent=v.toFixed(1); document.getElementById('maVkospiUpdated').textContent='업데이트: '+(data.updated||'-');
-        let label,colorClass,activeIdx; if(v>=60){label='패닉 😱';colorClass='ma-panic';activeIdx=4;} else if(v>=40){label='공포 😨';colorClass='ma-fear';activeIdx=3;} else if(v>=30){label='불안 😰';colorClass='ma-warn';activeIdx=2;} else if(v>=20){label='주의 😐';colorClass='ma-normal';activeIdx=1;} else{label='안정 😊';colorClass='ma-cool';activeIdx=0;}
+        const v=Number(data.value);
+        document.getElementById('maVkospiValue').textContent=v.toFixed(1);
+        document.getElementById('maVkospiUpdated').textContent='업데이트: '+fmtDateSlash(data.updated||'-');
+        let label,colorClass,activeIdx;
+        if(v>=60){label='패닉 😱';colorClass='ma-panic';activeIdx=4;}
+        else if(v>=40){label='공포 😨';colorClass='ma-fear';activeIdx=3;}
+        else if(v>=30){label='불안 😰';colorClass='ma-warn';activeIdx=2;}
+        else if(v>=20){label='주의 😐';colorClass='ma-normal';activeIdx=1;}
+        else{label='안정 😊';colorClass='ma-cool';activeIdx=0;}
         maSetCard('maVkospiCard',colorClass); maSetBadge('maVkospiBadge',label,colorClass); maHighlightRange('maVkospiTable',activeIdx);
         const thumb=document.getElementById('maVkospiThumb'); if(thumb) thumb.style.left=maThumbPos(v,0,80);
     }
-    function renderKospiPer(data){
-        if(!data||data.value===undefined||data.value===null){maNoData('maKospiPerValue','maKospiPerUpdated');maSetBadge('maKospiPerBadge','데이터없음','');return;}
-        const v=Number(data.value); document.getElementById('maKospiPerValue').textContent=v.toFixed(1); document.getElementById('maKospiPerUpdated').textContent='업데이트: '+(data.updated||'-');
-        let label,colorClass,activeIdx; if(v<8){label='극저평가 🎯';colorClass='ma-panic';activeIdx=0;} else if(v<10){label='저평가 💚';colorClass='ma-cool';activeIdx=1;} else if(v<11){label='적정 ✅';colorClass='ma-normal';activeIdx=2;} else if(v<12){label='보통 🟡';colorClass='ma-warn';activeIdx=3;} else{label='고평가 🔴';colorClass='ma-hot';activeIdx=4;}
-        maSetCard('maKospiPerCard',colorClass); maSetBadge('maKospiPerBadge',label,colorClass); maHighlightRange('maKospiPerTable',activeIdx);
-        const thumb=document.getElementById('maKospiPerThumb'); if(thumb) thumb.style.left=maThumbPos(v,6,15);
+
+    // ====== 이동평균선 계산 공통 함수 ======
+    function calcMA(closes, period) {
+        if (!closes || closes.length < period) return null;
+        const slice = closes.slice(closes.length - period);
+        return slice.reduce((a, b) => a + b, 0) / period;
+    }
+
+    function getMASignalInfo(currentPrice, maValue, maPeriod, prevPrice) {
+        if (maValue === null || currentPrice === null) return { text: '데이터 없음', cls: 'nodata' };
+        const aboveNow = currentPrice > maValue;
+        const abovePrev = prevPrice !== null ? prevPrice > maValue : aboveNow;
+        const crossed = aboveNow !== abovePrev;
+        if (crossed && aboveNow)  return { text: maPeriod + '일선 상향돌파 🚀', cls: 'cross-up' };
+        if (crossed && !aboveNow) return { text: maPeriod + '일선 하향돌파 ⚠️', cls: 'cross-down' };
+        if (aboveNow) return { text: maPeriod + '일선 위 ✅', cls: 'above' };
+        return { text: maPeriod + '일선 아래 📉', cls: 'below' };
+    }
+
+    function renderMACard(cardId, badgeId, listPrefix, updatedId, summaryId, closes, periods, currentPrice, prevPrice, label, updated) {
+        const upEl = document.getElementById(updatedId);
+        const sumEl = document.getElementById(summaryId);
+        if (!closes || closes.length < 20) {
+            if (upEl) upEl.textContent = '⚠️ 차트 데이터가 부족합니다';
+            maSetBadge(badgeId, '데이터 없음', '');
+            return;
+        }
+        let aboveCount = 0, belowCount = 0, crossUpCount = 0, crossDownCount = 0;
+        const priceText = currentPrice ? currentPrice.toLocaleString() : '-';
+        periods.forEach(function(p) {
+            const ma = calcMA(closes, p);
+            const sig = getMASignalInfo(currentPrice, ma, p, prevPrice);
+            const priceEl = document.getElementById(listPrefix + p + 'Price');
+            const sigEl   = document.getElementById(listPrefix + p + 'Signal');
+            if (priceEl) priceEl.textContent = ma ? ma.toLocaleString(undefined, {maximumFractionDigits: p <= 60 ? 0 : 0}) : '-';
+            if (sigEl)   { sigEl.textContent = sig.text; sigEl.className = 'ma-ma-signal ' + sig.cls; }
+            if (sig.cls === 'above' || sig.cls === 'cross-up') aboveCount++;
+            else if (sig.cls === 'below' || sig.cls === 'cross-down') belowCount++;
+            if (sig.cls === 'cross-up') crossUpCount++;
+            if (sig.cls === 'cross-down') crossDownCount++;
+        });
+        const total = periods.length;
+        let badge, badgeCls;
+        if (crossUpCount >= 2) { badge = '골든크로스 🚀'; badgeCls = 'ma-cool'; }
+        else if (crossDownCount >= 2) { badge = '데드크로스 📉'; badgeCls = 'ma-hot'; }
+        else if (aboveCount === total) { badge = '전선 위 📈'; badgeCls = 'ma-cool'; }
+        else if (belowCount === total) { badge = '전선 아래 ⚠️'; badgeCls = 'ma-hot'; }
+        else if (aboveCount > belowCount) { badge = '우세 📈'; badgeCls = 'ma-normal'; }
+        else { badge = '약세 📉'; badgeCls = 'ma-warn'; }
+        maSetCard(cardId, aboveCount >= total * 0.6 ? 'ma-cool' : belowCount >= total * 0.6 ? 'ma-hot' : 'ma-normal');
+        maSetBadge(badgeId, badge, badgeCls);
+        if (upEl) upEl.textContent = '현재가 ' + priceText + ' · 기준일 ' + fmtDateSlash(updated);
+        if (sumEl) {
+            const above = aboveCount, below = belowCount;
+            sumEl.textContent = '📊 ' + total + '개 이동평균선 중 ' + above + '개 위 / ' + below + '개 아래';
+        }
+    }
+
+    // ====== 코스피 이동평균선 ======
+    function renderKospiMA() {
+        const chartData = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA) ? LAST_FETCHED_DATA : null;
+        // MarketData 시트에서 코스피 종가 배열 구성
+        const market = chartData && chartData.market ? chartData.market : [];
+        const closes = market.map(r => Number(r[3])).filter(v => v > 0);
+        if (closes.length < 5) {
+            document.getElementById('maKospiMAUpdated').textContent = '⚠️ MarketData 시트에 코스피 데이터가 없습니다';
+            maSetBadge('maKospiMABadge', '데이터 없음', '');
+            return;
+        }
+        const currentPrice = closes[closes.length - 1];
+        const prevPrice = closes.length >= 2 ? closes[closes.length - 2] : null;
+        // 최근 업데이트 날짜
+        const lastDateRaw = market.length > 0 ? market[market.length - 1][0] : '';
+        const lastDate = lastDateRaw ? String(lastDateRaw).substring(5, 10) : '-';
+        renderMACard('maKospiMACard', 'maKospiMABadge', 'maKospiMA', 'maKospiMAUpdated', 'maKospiMASummary',
+            closes, [20, 60, 120], currentPrice, prevPrice, '코스피', lastDate);
+    }
+
+    // ====== 미국 이동평균선 (Yahoo Finance) ======
+    function renderUSMA() {
+        renderIndexMA('SPX', '^GSPC', 'maSPXMACard', 'maSPXMABadge', 'maSPXMA', 'maSPXMAUpdated', 'maSPXMASummary', 'S&P500');
+        renderIndexMA('NDX', '^NDX', 'maNDXMACard', 'maNDXMABadge', 'maNDXMA', 'maNDXMAUpdated', 'maNDXMASummary', '나스닥100');
+    }
+
+    function renderIndexMA(key, yahooSymbol, cardId, badgeId, listPrefix, updatedId, summaryId, label) {
+        const updEl = document.getElementById(updatedId);
+        if (updEl) updEl.textContent = '실시간 조회 중...';
+        const enc = encodeURIComponent('https://query2.finance.yahoo.com/v8/finance/chart/' + yahooSymbol + '?interval=1d&range=14mo');
+        fetch('https://corsproxy.io/?' + enc)
+            .then(r => r.json())
+            .then(d => {
+                const j = JSON.parse(d.contents);
+                const result = j.chart.result[0];
+                const closes = result.indicators.quote[0].close.filter(v => v !== null);
+                const timestamps = result.timestamp;
+                const currentPrice = closes[closes.length - 1];
+                const prevPrice = closes.length >= 2 ? closes[closes.length - 2] : null;
+                const lastTs = timestamps[timestamps.length - 1];
+                const lastDate = new Date(lastTs * 1000);
+                const dateStr = (lastDate.getMonth()+1) + '/' + lastDate.getDate();
+                renderMACard(cardId, badgeId, listPrefix, updatedId, summaryId,
+                    closes, [20, 50, 100, 125, 200], currentPrice, prevPrice, label, dateStr);
+            })
+            .catch(() => {
+                if (updEl) updEl.textContent = '⚠️ Yahoo Finance 연결 실패';
+                maSetBadge(badgeId, '조회 실패', '');
+            });
     }
     function renderCredit(data){
         if(!data||data.value===undefined||data.value===null){maNoData('maCreditValue','maCreditUpdated');maSetBadge('maCreditBadge','데이터없음','');return;}
-        const v=Number(data.value); document.getElementById('maCreditValue').textContent=v.toFixed(1); document.getElementById('maCreditUpdated').textContent='업데이트: '+(data.updated||'-');
+        const v=Number(data.value); document.getElementById('maCreditValue').textContent=v.toFixed(1); document.getElementById('maCreditUpdated').textContent='업데이트: '+fmtDateSlash(data.updated||'-');
         let label,colorClass,activeIdx; if(v<5){label='침체 바닥 🎯';colorClass='ma-panic';activeIdx=0;} else if(v<8){label='침체 📉';colorClass='ma-fear';activeIdx=1;} else if(v<11){label='정상 ✅';colorClass='ma-cool';activeIdx=2;} else if(v<14){label='과열 주의 ⚠️';colorClass='ma-warn';activeIdx=3;} else{label='과열 🔴';colorClass='ma-hot';activeIdx=4;}
         maSetCard('maCreditCard',colorClass); maSetBadge('maCreditBadge',label,colorClass); maHighlightRange('maCreditTable',activeIdx);
         const thumb=document.getElementById('maCreditThumb'); if(thumb) thumb.style.left=maThumbPos(v,0,18);
@@ -1860,12 +2018,12 @@
         if(sigEl){if(bothBuy){sigEl.textContent='🟢 동반 순매수';sigEl.className='ma-net-buy';}else if(bothSell){sigEl.textContent='🔴 동반 순매도';sigEl.className='ma-net-sell';}else{sigEl.textContent='⚪ 혼조세';sigEl.style.color='var(--text-sub)';}}
         maSetCard('maForeignCard',bothBuy?'ma-cool':(bothSell?'ma-hot':'ma-normal'));
         maSetBadge('maForeignBadge',bothBuy?'🎯 동반매수':(bothSell?'⚠️ 동반매도':'혼조'),bothBuy?'ma-cool':(bothSell?'ma-hot':'ma-normal'));
-        if(updEl){const dates=[ss&&ss.updated,sk&&sk.updated].filter(Boolean);updEl.textContent='업데이트: '+(dates[0]||'-');}
+        if(updEl){const dates=[ss&&ss.updated,sk&&sk.updated].filter(Boolean);updEl.textContent='업데이트: '+fmtDateSlash(dates[0]||'-');}
     }
     function renderADRatio(data){
         if(!data||(data.up===undefined&&data.down===undefined)){maNoData('maAdValue','maAdUpdated');maSetBadge('maAdBadge','데이터없음','');return;}
         const up=Number(data.up)||0,down=Number(data.down)||0,total=up+down,ratio=total>0?(up/total)*100:50;
-        document.getElementById('maAdValue').textContent=ratio.toFixed(1); document.getElementById('maAdUpdated').textContent='업데이트: '+(data.updated||'-');
+        document.getElementById('maAdValue').textContent=ratio.toFixed(1); document.getElementById('maAdUpdated').textContent='업데이트: '+fmtDateSlash(data.updated||'-');
         const upEl=document.getElementById('maAdUp'),downEl=document.getElementById('maAdDown');
         if(upEl) upEl.textContent='상승 '+up.toLocaleString()+'종목'; if(downEl) downEl.textContent='하락 '+down.toLocaleString()+'종목';
         const barEl=document.getElementById('maAdBar'); if(barEl) barEl.style.width=ratio+'%';
@@ -1876,21 +2034,51 @@
         const ma=(typeof LAST_FETCHED_DATA!=='undefined'&&LAST_FETCHED_DATA)?(LAST_FETCHED_DATA.marketAnalysis||null):null;
         if(!ma){document.getElementById('maSignalValueKR').textContent='데이터 없음';document.getElementById('maSignalDescKR').textContent='GAS market 시트에 데이터를 추가해주세요';return;}
         let score=0,signals=[];
+        // VKOSPI
         if(ma.vkospi&&ma.vkospi.value!==null){const v=Number(ma.vkospi.value);let s=v>=60?20:v>=40?15:v>=30?10:v>=20?5:0;score+=s;if(s>=15)signals.push('VKOSPI 패닉('+v.toFixed(0)+')');else if(s>=10)signals.push('VKOSPI 불안('+v.toFixed(0)+')');}
-        if(ma.kospiPer&&ma.kospiPer.value!==null){const v=Number(ma.kospiPer.value);let s=v<8?20:v<10?15:v<11?8:v<12?3:0;score+=s;if(s>=15)signals.push('PER 저평가('+v.toFixed(1)+'x)');}
+        // 신용융자잔고
         if(ma.creditBalance&&ma.creditBalance.value!==null){const v=Number(ma.creditBalance.value);let s=v<5?20:v<8?15:v<11?10:v<14?3:0;score+=s;if(s>=15)signals.push('신용잔고 침체('+v.toFixed(1)+'조)');}
+        // 외국인 수급
         if(ma.foreign){const ss=ma.foreign['005930'],sk=ma.foreign['000660'],bothBuy=ss&&Number(ss.net5d)>0&&sk&&Number(sk.net5d)>0;let s=bothBuy?20:10;score+=s;if(bothBuy)signals.push('외국인 동반매수');}
+        // A/D Ratio
         if(ma.adRatio&&ma.adRatio.up!==undefined){const up=Number(ma.adRatio.up)||0,dn=Number(ma.adRatio.down)||0,ratio=(up+dn)>0?up/(up+dn)*100:50;let s=ratio<20?20:ratio<35?15:ratio<55?8:ratio<70?3:0;score+=s;if(s>=15)signals.push('A/D '+ratio.toFixed(0)+'% 공포');}
+        // 코스피 이동평균선 (120일선 기준)
+        const market = (typeof LAST_FETCHED_DATA!=='undefined'&&LAST_FETCHED_DATA&&LAST_FETCHED_DATA.market)?LAST_FETCHED_DATA.market:[];
+        const kCloses = market.map(r=>Number(r[3])).filter(v=>v>0);
+        if(kCloses.length>=120){
+            const cur=kCloses[kCloses.length-1],prev=kCloses[kCloses.length-2];
+            const ma120=calcMA(kCloses,120),ma60=calcMA(kCloses,60),ma20=calcMA(kCloses,20);
+            const aboveAll=cur>ma20&&cur>ma60&&cur>ma120;
+            const belowAll=cur<ma20&&cur<ma60&&cur<ma120;
+            if(belowAll){score+=15;signals.push('코스피 전선 이탈');}
+            else if(aboveAll){score-=5;}
+            // 데드크로스 감지 (120일선 하향돌파)
+            if(prev>ma120&&cur<ma120){score+=10;signals.push('코스피 120일선 이탈');}
+        }
         _applySignalBanner(score,signals,'KR','linear-gradient(135deg,#1C1C2E 0%,#2C2C4E 100%)');
     }
     function renderSignalBannerUS(){
-        let score=0,signals=[],dataCount=0;
-        const vixVal=document.getElementById('maVixValue');
-        if(vixVal){const v=parseFloat(vixVal.textContent);if(!isNaN(v)&&vixVal.textContent!=='-'){dataCount++;let s=v>=40?20:v>=30?15:v>=20?8:v>=15?3:0;score+=s;if(s>=15)signals.push('VIX('+v.toFixed(0)+')');}}
-        const spyVal=document.getElementById('maSPYPERValue');
-        if(spyVal){const v=parseFloat(spyVal.textContent);if(!isNaN(v)&&spyVal.textContent!=='-'){dataCount++;let s=v<15?15:v<20?8:v<25?3:0;score+=s;if(s>=10)signals.push('SPY Fwd PER('+v.toFixed(0)+'x)');}}
-        // 데이터가 하나도 없으면 신호 표시 안 함
-        if(dataCount===0){document.getElementById('maScoreNumUS').textContent='-';return;}
+        // S&P500 이동평균선 기반 신호
+        const spxBadge = document.getElementById('maSPXMABadge');
+        const ndxBadge = document.getElementById('maNDXMABadge');
+        if (!spxBadge || spxBadge.textContent==='-') {
+            document.getElementById('maScoreNumUS').textContent='-';
+            return;
+        }
+        let score=0,signals=[];
+        // SPX MA 신호
+        const spxText = spxBadge.textContent;
+        if(spxText.includes('골든크로스')){score+=20;signals.push('SPX 골든크로스');}
+        else if(spxText.includes('데드크로스')){score+=15;signals.push('SPX 데드크로스');}
+        else if(spxText.includes('전선 아래')){score+=12;}
+        else if(spxText.includes('전선 위')){score+=0;}
+        // 개별 선 점검
+        ['maSPXMA200Signal','maSPXMA125Signal'].forEach(function(id){
+            const el=document.getElementById(id);
+            if(!el)return;
+            if(el.textContent.includes('상향돌파')){score-=5;signals.push(id.includes('200')?'SPX 200일선 탈환':'SPX 125일선 탈환');}
+            if(el.textContent.includes('하향돌파')){score+=12;signals.push(id.includes('200')?'SPX 200일선 붕괴':'SPX 125일선 붕괴');}
+        });
         _applySignalBanner(score,signals,'US','linear-gradient(135deg,#1C2E1C 0%,#2C4E2C 100%)');
     }
     function _applySignalBanner(score,signals,suffix,defaultGrad){
@@ -1909,87 +2097,6 @@
         const num=document.getElementById('maScoreNum'+suffix); if(num) num.textContent=score;
     }
 
-    // ====== 해외 시장 지표 렌더링 ======
-
-    // ① VIX 실시간 (Yahoo Finance ^VIX, allorigins)
-    function renderVIX() {
-        const valEl=document.getElementById('maVixValue'), badgeEl=document.getElementById('maVixBadge');
-        const updEl=document.getElementById('maVixUpdated'), thumbEl=document.getElementById('maVixThumb');
-        const cardEl=document.getElementById('maVixCard');
-        updEl.textContent = '실시간 조회 중...';
-        const enc = encodeURIComponent('https://query2.finance.yahoo.com/v8/finance/chart/%5EVIX?interval=1d&range=1d');
-        fetch('https://corsproxy.io/?' + enc)
-            .then(r=>r.json()).then(d=>{
-                const j=JSON.parse(d.contents);
-                const price = j.chart.result[0].meta.regularMarketPrice;
-                const v = Math.round(price*10)/10;
-                let color,kor,idx;
-                if(v<15){color='#34C759';kor='안정';idx=0;}
-                else if(v<20){color='#FFCC00';kor='보통';idx=1;}
-                else if(v<30){color='#FF9500';kor='불안';idx=2;}
-                else if(v<40){color='#FF3B30';kor='공포';idx=3;}
-                else{color='#5856D6';kor='패닉 🎯';idx=4;}
-                valEl.innerHTML='<span style="color:'+color+';">'+v+'</span>';
-                maSetBadge('maVixBadge', kor, color==='#34C759'?'ma-cool':color==='#FFCC00'?'ma-normal':color==='#FF9500'?'ma-warn':color==='#FF3B30'?'ma-hot':'ma-panic');
-                updEl.textContent = '업데이트: 실시간 (Yahoo Finance)';
-                if(thumbEl) thumbEl.style.left = maThumbPos(v,0,60);
-                if(cardEl) cardEl.style.borderColor = color+'55';
-                maHighlightRange('maVixTable', idx);
-            }).catch(()=>{ valEl.textContent='N/A'; updEl.textContent='⚠️ Yahoo Finance 연결 실패'; });
-    }
-
-    // ③ S&P500(SPY) / QQQ PER 실시간 (Yahoo Finance, allorigins)
-    function renderSPYQQQPER() {
-        const spyEl=document.getElementById('maSPYPERValue'), qqqEl=document.getElementById('maQQQPERValue');
-        const updEl=document.getElementById('maSPYPERUpdated'), badgeEl=document.getElementById('maSPYPERBadge');
-        updEl.textContent = '실시간 조회 중...';
-        // SPY/QQQ ETF는 Yahoo Finance PER 없음
-        // → GAS per_cache 우선, 없으면 Yahoo v8 quote API (모듈 없이) 시도
-        function fetchPER(ticker) {
-            // GAS 캐시 먼저 확인
-            const cache = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.perCache)
-                        ? LAST_FETCHED_DATA.perCache[ticker] : null;
-            if (cache && cache.perTTM) return Promise.resolve(cache.perTTM);
-            if (cache && cache.perForward) return Promise.resolve(cache.perForward);
-
-            // Yahoo Finance v8 quote (모듈 파라미터 없어서 CORS 안전)
-            const enc = encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/'+ticker+'?interval=1d&range=1d');
-            return fetch('https://api.allorigins.win/get?url='+enc)
-                .then(r=>r.json()).then(d=>{
-                    const j = JSON.parse(d.contents);
-                    const meta = j.chart.result[0].meta;
-                    // ETF PER은 meta에 없음 → null 반환
-                    return null;
-                }).catch(()=>null);
-        }
-
-        // GAS per_cache에서 SPY/QQQ PER 직접 읽기 (updateAllPER가 저장함)
-        const gasCache = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.perCache) ? LAST_FETCHED_DATA.perCache : {};
-        const spyCached = gasCache['SPY'];
-        const qqqCached = gasCache['QQQ'];
-
-        function perColor(p){if(!p)return'var(--text-main)';if(p<18)return'#34C759';if(p<22)return'#FFCC00';if(p<27)return'#FF9500';return'#FF3B30';}
-
-        if (spyCached || qqqCached) {
-            // Forward PER 우선, 없으면 TTM PER
-            const spy = spyCached ? (spyCached.perForward || spyCached.perTTM) : null;
-            const qqq = qqqCached ? (qqqCached.perForward || qqqCached.perTTM) : null;
-            spyEl.innerHTML = spy ? '<span style="color:'+perColor(spy)+';">'+spy+'x</span>' : '<span style="color:var(--text-sub);">N/A</span>';
-            qqqEl.innerHTML = qqq ? '<span style="color:'+perColor(qqq)+';">'+qqq+'x</span>' : '<span style="color:var(--text-sub);">N/A</span>';
-            const v = spy||0;
-            let kor,clr;
-            // Forward PER 구간 기준 (TTM보다 낮음)
-            if(v<15){kor='저평가';clr='ma-cool';} else if(v<20){kor='적정';clr='ma-normal';} else if(v<25){kor='고평가';clr='ma-warn';} else if(v>0){kor='매우 고평가';clr='ma-hot';} else{kor='데이터 없음';clr='ma-normal';}
-            maSetBadge('maSPYPERBadge', kor, clr);
-            updEl.textContent = spyCached ? 'Forward PER 기준 · ' + (spyCached.updated||'GAS 캐시') : '데이터 없음';
-            if(v>0) maHighlightRange('maSPYPERTable', v<15?0:v<20?1:v<25?2:3);
-        } else {
-            spyEl.innerHTML = '<span style="color:var(--text-sub);">N/A</span>';
-            qqqEl.innerHTML = '<span style="color:var(--text-sub);">N/A</span>';
-            updEl.textContent = '⚠️ 잠시 후 자동 수집됩니다';
-            maSetBadge('maSPYPERBadge', '데이터 없음', 'ma-normal');
-        }
-    }
 
     window.onclick = function(event) { const cashModal=document.getElementById('cashEditModal'); if(event.target===cashModal) closeCashEditModal(); }
 </script>
