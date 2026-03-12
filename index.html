@@ -137,16 +137,128 @@
         .btn-cancel { background: var(--border-color); color: var(--text-main); }
         .btn-save { background: var(--primary); color: white; }
         .btn-save:disabled { background: var(--border-color); cursor: not-allowed; opacity: 0.5; }
-        .chart-ticker-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+
+        /* ═══════════════════════════════════════════
+           차트 탭 — Terminal Minimal 디자인
+        ═══════════════════════════════════════════ */
+
+        /* 탭 컨테이너: 패딩 줄여서 차트가 꽉 차게 */
+        .chart-tab-container { padding: 12px 12px 0 !important; }
+
+        /* 종목 칩 바 */
+        .chart-chip-bar {
+            display: flex; gap: 7px;
+            overflow-x: auto; padding: 0 0 12px;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        .chart-chip-bar::-webkit-scrollbar { display: none; }
+
+        .ticker-btn {
+            flex-shrink: 0;
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1.5px solid var(--border-color);
+            background: var(--card-bg);
+            color: var(--text-sub);
+            font-size: 13px; font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+        .ticker-btn.active {
+            background: var(--text-main);
+            color: var(--bg);
+            border-color: var(--text-main);
+        }
+
+        /* 차트 카드 — 카드 느낌 없이 깔끔하게 */
+        .chart-card-new {
+            background: var(--card-bg);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+            position: relative;
+        }
+        body.dark-mode .chart-card-new {
+            box-shadow: 0 2px 20px rgba(0,0,0,0.35);
+        }
+
+        /* 헤더 오버레이 */
+        .chart-header-overlay {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 16px 0;
+            gap: 8px;
+        }
+        .chart-name-block {
+            display: flex; flex-direction: column; gap: 3px;
+            min-width: 0;
+        }
+        .chart-ticker-name {
+            font-size: 15px; font-weight: 700;
+            color: var(--text-main);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .chart-avg-tag {
+            display: inline-block;
+            font-size: 11px; font-weight: 600;
+            color: var(--primary);
+            white-space: nowrap;
+            opacity: 0.85;
+        }
+
+        /* 일/주/월 버튼 — 작은 세그먼트 */
+        .candle-type-btns {
+            display: flex; gap: 0;
+            background: var(--bg);
+            border-radius: 10px;
+            padding: 3px;
+            flex-shrink: 0;
+        }
+        .candle-type-btn {
+            padding: 5px 13px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: var(--text-sub);
+            font-size: 12px; font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            letter-spacing: 0.2px;
+        }
+        .candle-type-btn.active {
+            background: var(--card-bg);
+            color: var(--text-main);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+        }
+
+        /* MA 레전드 */
+        .ma-legend {
+            display: flex; gap: 10px; flex-wrap: wrap;
+            padding: 8px 16px 4px;
+            min-height: 0;
+        }
+        .ma-legend-item {
+            display: flex; align-items: center; gap: 4px;
+            font-size: 10px; font-weight: 600; color: var(--text-sub);
+        }
+        .ma-legend-dot {
+            width: 18px; height: 2px; border-radius: 1px;
+        }
+
+        /* 캔버스 래퍼 */
+        .candle-wrap {
+            position: relative; width: 100%; height: 360px;
+            touch-action: none; user-select: none;
+        }
+
+        /* 기타 */
+        .avg-price-badge { white-space: nowrap; }
+        .chart-info-bar { display: flex; justify-content: space-between; align-items: center; padding: 8px 0 10px; margin-bottom: 4px; }
+        .chart-ticker-scroll { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 10px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
         .chart-ticker-scroll::-webkit-scrollbar { display: none; }
-        .ticker-btn { flex-shrink: 0; padding: 8px 16px; border-radius: 20px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-main); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s ease; }
-        .ticker-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
-        .period-btns { display: flex; gap: 6px; margin: 12px 0; }
-        .period-btn { flex: 1; padding: 7px 0; border-radius: 8px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-sub); font-size: 12px; font-weight: 600; cursor: pointer; }
-        .period-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
-        .candle-wrap { position: relative; width: 100%; height: 340px; touch-action: none; user-select: none; }
-        .chart-info-bar { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 12px; color: var(--text-sub); border-bottom: 1px solid var(--border-color); margin-bottom: 8px; }
-        .avg-price-badge { display: inline-block; padding: 3px 10px; border-radius: 10px; background: rgba(0,122,255,0.12); color: var(--primary); font-weight: 700; font-size: 12px; }
         #chartLoadingMsg { text-align: center; padding: 60px 20px; color: var(--text-sub); font-size: 14px; }
 
         /* ====== 매수 경고 팝업 CSS ====== */
@@ -516,31 +628,28 @@
 </nav>
 
 <!-- 차트 탭 -->
-<div id="tab-chart" class="container">
-    <div class="card">
-        <h3>종목 차트</h3>
-        <div class="chart-ticker-scroll" id="tickerBtnList">
-            <span style="color:var(--text-sub); font-size:13px; padding:8px 0;">종목 로딩 중...</span>
-        </div>
+<div id="tab-chart" class="container chart-tab-container">
+    <div class="chart-chip-bar" id="tickerBtnList">
+        <span style="color:var(--text-sub); font-size:13px;">종목 로딩 중...</span>
     </div>
-    <div class="card" id="candleChartCard" style="display:none;">
-        <div class="chart-info-bar">
-            <span id="chartTickerLabel" style="font-weight:700; font-size:15px;"></span>
-            <span class="avg-price-badge" id="avgPriceBadge"></span>
+    <div class="chart-card-new" id="candleChartCard" style="display:none;">
+        <div class="chart-header-overlay">
+            <div class="chart-name-block">
+                <div class="chart-ticker-name" id="chartTickerLabel"></div>
+                <div class="chart-avg-tag" id="avgPriceBadge" style="display:none;"></div>
+            </div>
+            <div class="candle-type-btns">
+                <button class="candle-type-btn active" onclick="setCandleType('D')">일</button>
+                <button class="candle-type-btn" onclick="setCandleType('W')">주</button>
+                <button class="candle-type-btn" onclick="setCandleType('M')">월</button>
+            </div>
         </div>
-        <div class="period-btns">
-            <button class="period-btn" onclick="setPeriod(1)">1개월</button>
-            <button class="period-btn" onclick="setPeriod(3)">3개월</button>
-            <button class="period-btn active" onclick="setPeriod(6)">6개월</button>
-            <button class="period-btn" onclick="setPeriod(12)">1년</button>
-            <button class="period-btn" onclick="setPeriod(0)">전체</button>
-        </div>
+        <div class="ma-legend" id="maLegend"></div>
         <div class="candle-wrap"><canvas id="candleChart"></canvas></div>
-        <div style="margin-top:12px; font-size:11px; color:var(--text-sub); text-align:center;">👆 드래그로 이동 · 두 손가락으로 핀치 줌</div>
     </div>
     <div id="chartLoadingMsg" style="display:none;">
         <div class="spinner" style="margin:0 auto 10px;"></div>
-        <div>차트 데이터 로딩 중...</div>
+        <div style="font-size:13px; color:var(--text-sub);">차트 불러오는 중...</div>
     </div>
 </div>
 
@@ -1808,7 +1917,8 @@
         chartTickerMeta.forEach((meta, idx) => {
             let btn = document.createElement('button');
             btn.className = 'ticker-btn' + (idx === 0 ? ' active' : '');
-            btn.textContent = meta.ticker;
+            const isKr = /^\d{6}$/.test(meta.ticker);
+            btn.textContent = isKr ? meta.name : meta.ticker; // 한국=종목명, 미국=티커
             btn.onclick = () => selectTicker(meta.ticker, btn);
             btnList.appendChild(btn);
         });
@@ -1823,11 +1933,13 @@
         let meta = chartTickerMeta.find(m => m.ticker === ticker); if (!meta) return;
         chartTradeData = meta.trades; chartAvgPrice = meta.avgPrice;
         const labelEl = document.getElementById('chartTickerLabel'), badgeEl = document.getElementById('avgPriceBadge');
-        if (labelEl) labelEl.textContent = `${meta.name} (${ticker})`;
+        const isKorea = /^\d{6}$/.test(ticker);
+        if (labelEl) labelEl.textContent = isKorea ? meta.name : ticker;
         if (badgeEl) {
-            let isKorea = /^\d{6}$/.test(ticker);
-            if (chartAvgPrice > 0) { badgeEl.textContent = `평균매입가 ${isKorea ? Math.round(chartAvgPrice).toLocaleString()+'원' : '$'+chartAvgPrice.toFixed(2)}`; badgeEl.style.display = 'inline-block'; }
-            else badgeEl.style.display = 'none';
+            if (chartAvgPrice > 0) {
+                badgeEl.textContent = '평균매입가 ' + (isKorea ? Math.round(chartAvgPrice).toLocaleString()+'원' : '$'+chartAvgPrice.toFixed(2));
+                badgeEl.style.display = 'block';
+            } else badgeEl.style.display = 'none';
         }
         loadCandleData(ticker);
     }
@@ -1841,7 +1953,8 @@
             document.getElementById('chartLoadingMsg').style.display = 'none';
             if (data.error || !data.dates || data.dates.length === 0) { document.getElementById('candleChartCard').style.display = 'block'; showCandleEmpty(); return; }
             chartAllData = data.dates.map((d,i) => { let ts = new Date(d+'T00:00:00Z').getTime(); return { x:ts, o:Number(data.opens[i])||0, h:Number(data.highs[i])||0, l:Number(data.lows[i])||0, c:Number(data.closes[i])||0 }; }).filter(d => !isNaN(d.x) && d.h > 0);
-            document.getElementById('candleChartCard').style.display = 'block'; setPeriod(6);
+            currentCandleType = 'D';
+            document.getElementById('candleChartCard').style.display = 'block'; setCandleType('D');
         })
         .catch(err => { document.getElementById('chartLoadingMsg').style.display = 'none'; document.getElementById('candleChartCard').style.display = 'block'; showCandleEmpty(); });
     }
@@ -1854,88 +1967,340 @@
         ctx.fillText('차트 데이터가 없습니다.', canvas.offsetWidth/2, canvas.offsetHeight/2);
     }
 
-    function setPeriod(months) {
-        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
-        let periodMap = {1:'1개월',3:'3개월',6:'6개월',12:'1년',0:'전체'};
-        document.querySelectorAll('.period-btn').forEach(b => { if (b.textContent === (periodMap[months]||'')) b.classList.add('active'); });
+    // ── 일봉/주봉/월봉 타입
+    let currentCandleType = 'D'; // 'D' | 'W' | 'M'
+
+    function setCandleType(type) {
+        currentCandleType = type;
+        document.querySelectorAll('.candle-type-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.candle-type-btn').forEach(b => {
+            if ((type==='D'&&b.textContent==='일')||(type==='W'&&b.textContent==='주')||(type==='M'&&b.textContent==='월')) b.classList.add('active');
+        });
+        renderMALegend();
         if (!chartAllData || chartAllData.length === 0) return;
-        let endTs = chartAllData[chartAllData.length-1].x, startTs;
-        if (months === 0) startTs = chartAllData[0].x;
-        else { let d = new Date(endTs); d.setMonth(d.getMonth()-months); startTs = d.getTime(); if (startTs < chartAllData[0].x) startTs = chartAllData[0].x; }
-        renderCandleChart(startTs, endTs);
+        renderCandleChart();
+    }
+
+    function renderMALegend() {
+        const el = document.getElementById('maLegend'); if (!el) return;
+        const isKr = /^\d{6}$/.test(chartCurrentTicker);
+        const typeLabel = {D:'일', W:'주', M:'월'}[currentCandleType] || '일';
+        const periods = isKr
+            ? [{n:20,color:'#FF9500'},{n:60,color:'#AF52DE'},{n:120,color:'#30B0C7'}]
+            : [{n:20,color:'#FF9500'},{n:50,color:'#AF52DE'},{n:100,color:'#30B0C7'},{n:200,color:'#FF2D55'}];
+        el.innerHTML = periods.map(p =>
+            '<span class="ma-legend-item">' +
+            '<span class="ma-legend-dot" style="background:'+p.color+'"></span>' +
+            p.n + typeLabel +
+            '</span>'
+        ).join('');
+    }
+
+    // 주봉/월봉 집계
+    function aggregateCandles(data, type) {
+        if (type === 'D') return data;
+        const groups = {};
+        const groupKeys = [];
+        data.forEach(d => {
+            const dt = new Date(d.x);
+            let key;
+            if (type === 'W') {
+                const day = dt.getUTCDay();
+                const diff = (day === 0) ? -6 : 1 - day;
+                const mon = new Date(dt); mon.setUTCDate(dt.getUTCDate() + diff);
+                key = mon.getUTCFullYear() + '-' + String(mon.getUTCMonth()+1).padStart(2,'0') + '-' + String(mon.getUTCDate()).padStart(2,'0');
+            } else {
+                key = dt.getUTCFullYear() + '-' + String(dt.getUTCMonth()+1).padStart(2,'0');
+            }
+            if (!groups[key]) {
+                // 첫 일봉 → 시가(o) = 이 기간의 시가로 확정
+                groups[key] = { x: d.x, openFixed: d.o, h: d.h, l: d.l, c: d.c };
+                groupKeys.push(key);
+            } else {
+                groups[key].h = Math.max(groups[key].h, d.h);
+                groups[key].l = Math.min(groups[key].l, d.l);
+                groups[key].c = d.c; // 마지막 일봉 종가로 덮어씌움
+            }
+        });
+        // o = 기간 첫날 시가(openFixed), c = 마지막날 종가
+        // isUp(o >= c): 시가 >= 종가 = 하락봉 = 빨강 (일봉과 완전히 동일한 기준)
+        return groupKeys.map(k => {
+            const g = groups[k];
+            return { x: g.x, o: g.openFixed, h: g.h, l: g.l, c: g.c };
+        });
+    }
+
+    // 이동평균 계산 (일봉 원본 데이터 기반, n일)
+    // 차트 캔들용: {c} 객체 배열 → 각 인덱스의 MA값 배열 반환
+    function calcMAArray(rawData, n) {
+        const result = new Array(rawData.length).fill(null);
+        for (let i = n-1; i < rawData.length; i++) {
+            let sum = 0; for (let j = 0; j < n; j++) sum += rawData[i-j].c;
+            result[i] = sum / n;
+        }
+        return result;
     }
 
     let candleViewMin = 0, candleViewMax = 0, candleW_fixed = 0, candleH_fixed = 0;
+    let candleDisplayData = []; // 현재 표시 중인 봉 배열 (집계 후)
 
-    function renderCandleChart(startTime, endTime) {
-        candleViewMin = startTime; candleViewMax = endTime;
+    function renderCandleChart() {
         const canvas = document.getElementById('candleChart'); if (!canvas) return;
         const wrap = canvas.parentElement;
-        const W = wrap ? wrap.offsetWidth : (window.innerWidth-32), H = 340, dpr = window.devicePixelRatio || 1;
+        const W = wrap ? wrap.offsetWidth : (window.innerWidth-32), H = 360, dpr = window.devicePixelRatio || 1;
         canvas.style.width = W+'px'; canvas.style.height = H+'px';
         canvas.width = W*dpr; canvas.height = H*dpr;
         candleW_fixed = W; candleH_fixed = H;
+
+        candleDisplayData = aggregateCandles(chartAllData, currentCandleType);
+        // 기본 뷰: 일봉→최근 60개, 주봉→최근 52개, 월봉→전체
+        const showCount = currentCandleType === 'D' ? 60 : currentCandleType === 'W' ? 52 : candleDisplayData.length;
+        const startIdx = Math.max(0, candleDisplayData.length - showCount);
+        candleViewMin = candleDisplayData[startIdx].x;
+        candleViewMax = candleDisplayData[candleDisplayData.length-1].x;
+
         drawCandles(); attachCandleTouchEvents();
     }
 
+    // 크로스헤어 상태
+    let _crosshair = null; // { xi, visible }
+
     function drawCandles() {
         const canvas = document.getElementById('candleChart');
-        if (!canvas || !chartAllData || chartAllData.length === 0) return;
+        if (!canvas || !candleDisplayData || candleDisplayData.length === 0) return;
         const dpr = window.devicePixelRatio || 1;
         const W = candleW_fixed || canvas.offsetWidth, H = candleH_fixed || canvas.offsetHeight;
         if (W === 0 || H === 0) return;
         const ctx = canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
         const isDark = document.body.classList.contains('dark-mode');
-        const upColor='#FF3B30', downColor='#007AFF', gridColor=isDark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)', textColor=isDark?'#888':'#999', bgColor=isDark?'#1C1C1E':'#fff';
+        const upColor='#FF3B30', downColor='#007AFF'; // 상승=빨강, 하락=파랑
+        const gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)';
+        const textColor = isDark ? '#888' : '#999';
+        const bgColor   = isDark ? '#1C1C1E' : '#fff';
         ctx.fillStyle = bgColor; ctx.fillRect(0,0,W,H);
-        const PAD_L=8, PAD_R=58, PAD_T=12, PAD_B=28, chartW=W-PAD_L-PAD_R, chartH=H-PAD_T-PAD_B;
-        const visible = chartAllData.filter(d => d.x >= candleViewMin && d.x <= candleViewMax);
+
+        const PAD_L=4, PAD_R=62, PAD_T=14, PAD_B=36; // PAD_B 넉넉히 → MA가 X축 침범 방지
+        const chartW = W-PAD_L-PAD_R, chartH = H-PAD_T-PAD_B;
+
+        // visible: 인덱스 기반 (주말 공백 없음)
+        const visible = candleDisplayData.filter(d => d.x >= candleViewMin && d.x <= candleViewMax);
         if (visible.length === 0) return;
+
+        const n = visible.length;
+        // 인덱스 기반 X 좌표 (주말 공백 제거)
+        function toXi(i) { return PAD_L + (i + 0.5) * (chartW / n); }
+
         let yMin = Math.min(...visible.map(d=>d.l)), yMax = Math.max(...visible.map(d=>d.h));
         if (chartAvgPrice > 0) { yMin = Math.min(yMin, chartAvgPrice*0.99); yMax = Math.max(yMax, chartAvgPrice*1.01); }
-        const yPad = (yMax-yMin)*0.05||yMin*0.02; yMin -= yPad; yMax += yPad;
+        const yPad = (yMax-yMin)*0.06 || yMin*0.02; yMin -= yPad; yMax += yPad;
         const yRange = yMax - yMin;
-        function toX(ts) { return PAD_L+(ts-candleViewMin)/(candleViewMax-candleViewMin)*chartW; }
-        function toY(v)  { return PAD_T+(1-(v-yMin)/yRange)*chartH; }
+        function toY(v) { return PAD_T + (1-(v-yMin)/yRange)*chartH; }
+
         const isKorea = /^\d{6}$/.test(chartCurrentTicker);
         function fmtPrice(v) { return isKorea ? Math.round(v).toLocaleString()+'원' : '$'+Number(v).toFixed(2); }
-        ctx.strokeStyle = gridColor; ctx.lineWidth = 1;
-        for (let i = 0; i <= 5; i++) { const v = yMin+(yRange/5)*i; const y = toY(v); ctx.beginPath(); ctx.moveTo(PAD_L,y); ctx.lineTo(W-PAD_R,y); ctx.stroke(); ctx.fillStyle=textColor; ctx.font='10px -apple-system, sans-serif'; ctx.textAlign='left'; ctx.fillText(fmtPrice(v),W-PAD_R+4,y+4); }
-        ctx.font = '10px -apple-system, sans-serif'; ctx.textAlign = 'center';
-        let prevYear = null;
-        visible.forEach(d => {
-            const dt = new Date(d.x), yr = dt.getUTCFullYear();
-            if (prevYear !== null && yr !== prevYear) {
-                const x = toX(d.x); ctx.strokeStyle=isDark?'rgba(255,255,255,0.25)':'rgba(0,0,0,0.18)'; ctx.lineWidth=1; ctx.setLineDash([3,3]); ctx.beginPath(); ctx.moveTo(x,PAD_T); ctx.lineTo(x,H-PAD_B); ctx.stroke(); ctx.setLineDash([]);
-                ctx.fillStyle=isDark?'rgba(255,255,255,0.55)':'rgba(0,0,0,0.45)'; ctx.font='bold 10px -apple-system, sans-serif'; ctx.fillText(yr+'년',x+2,PAD_T+11); ctx.font='10px -apple-system, sans-serif';
-            }
-            prevYear = yr;
+
+        // 그리드 & Y축 레이블
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= 5; i++) {
+            const v = yMin+(yRange/5)*i, y = toY(v);
+            ctx.strokeStyle = gridColor; ctx.beginPath(); ctx.moveTo(PAD_L,y); ctx.lineTo(W-PAD_R,y); ctx.stroke();
+            ctx.fillStyle = textColor; ctx.font = '10px -apple-system, sans-serif'; ctx.textAlign = 'left';
+            ctx.fillText(fmtPrice(v), W-PAD_R+4, y+4);
+        }
+
+        // X축 날짜 레이블 (인덱스 기반)
+        ctx.font = '10px -apple-system, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = textColor;
+        const xTicks = Math.min(6, n);
+        for (let i = 0; i < xTicks; i++) {
+            const idx = Math.round(i/(xTicks-1)*(n-1));
+            const d = new Date(visible[idx].x);
+            let label;
+            if (currentCandleType === 'M') label = (d.getUTCFullYear()%100)+"'"+(d.getUTCMonth()+1).toString().padStart(2,'0');
+            else label = (d.getUTCMonth()+1).toString().padStart(2,'0')+'/'+d.getUTCDate().toString().padStart(2,'0');
+            ctx.fillText(label, toXi(idx), H-6);
+        }
+
+        // ── 이동평균선: 봉 타입에 맞는 주기 사용
+        const isKr = /^\d{6}$/.test(chartCurrentTicker);
+        // 일봉: 일선 | 주봉: 주선 | 월봉: 월선
+        const maPeriodsByType = {
+            D: isKr ? [{n:20,color:'#FF9500'},{n:60,color:'#AF52DE'},{n:120,color:'#30B0C7'}]
+                    : [{n:20,color:'#FF9500'},{n:50,color:'#AF52DE'},{n:100,color:'#30B0C7'},{n:200,color:'#FF2D55'}],
+            W: isKr ? [{n:20,color:'#FF9500'},{n:60,color:'#AF52DE'},{n:120,color:'#30B0C7'}]
+                    : [{n:20,color:'#FF9500'},{n:50,color:'#AF52DE'},{n:100,color:'#30B0C7'},{n:200,color:'#FF2D55'}],
+            M: isKr ? [{n:20,color:'#FF9500'},{n:60,color:'#AF52DE'},{n:120,color:'#30B0C7'}]
+                    : [{n:20,color:'#FF9500'},{n:50,color:'#AF52DE'},{n:100,color:'#30B0C7'},{n:200,color:'#FF2D55'}],
+        };
+        const maPeriods = maPeriodsByType[currentCandleType] || maPeriodsByType['D'];
+
+        // candleDisplayData(집계된 봉) 기반으로 MA 계산
+        maPeriods.forEach(({n: maN, color}) => {
+            const maVals = calcMAArray(candleDisplayData, maN); // 집계된 봉 배열 기반
+            const points = [];
+            visible.forEach((vd, vi) => {
+                // visible[vi]가 candleDisplayData 내 몇 번째인지 찾기
+                const globalIdx = candleDisplayData.findIndex(r => r.x === vd.x);
+                if (globalIdx >= 0 && maVals[globalIdx] !== null) {
+                    points.push({ xi: vi, v: maVals[globalIdx] });
+                }
+            });
+            if (points.length < 2) return;
+            // 차트 영역 밖(X축 아래)으로 MA선이 그려지지 않도록 클리핑
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(PAD_L, PAD_T, chartW, chartH);
+            ctx.clip();
+            ctx.strokeStyle = color; ctx.lineWidth = 1.4; ctx.setLineDash([]); ctx.beginPath();
+            points.forEach((p, i) => {
+                const x = toXi(p.xi), y = toY(p.v);
+                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+            ctx.restore();
         });
-        const xTicks = Math.min(6, visible.length); ctx.fillStyle = textColor;
-        for (let i = 0; i < xTicks; i++) { const idx = Math.round(i/(xTicks-1)*(visible.length-1)); const d = new Date(visible[idx].x); const label = (d.getUTCMonth()+1).toString().padStart(2,'0')+'/'+d.getUTCDate().toString().padStart(2,'0'); ctx.fillText(label,toX(visible[idx].x),H-6); }
-        const candleW = Math.max(1, Math.min(12, (chartW/visible.length)*0.7));
-        visible.forEach(d => {
-            const x = toX(d.x), isUp = d.o >= d.c;
-            ctx.strokeStyle = isUp ? upColor : downColor; ctx.fillStyle = isUp ? upColor : downColor; ctx.lineWidth = 1;
-            ctx.beginPath(); ctx.moveTo(x,toY(d.h)); ctx.lineTo(x,toY(d.l)); ctx.stroke();
+
+        // ── 캔들 그리기 (간격 조정: 0.55로 여유 있게)
+        const candleW = Math.max(1.5, Math.min(14, (chartW/n)*0.55));
+        visible.forEach((d, i) => {
+            // 일봉: o>=c=빨강(하락). 주봉/월봉: 집계된 o(첫날시가)>=c(마지막종가) 동일 기준
+            const isUp = d.o >= d.c;
+            const color = isUp ? upColor : downColor;
+            ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 1;
+            // 심지
+            ctx.beginPath(); ctx.moveTo(x, toY(d.h)); ctx.lineTo(x, toY(d.l)); ctx.stroke();
+            // 몸통
             const bodyTop = toY(Math.max(d.o,d.c)), bodyBot = toY(Math.min(d.o,d.c));
-            ctx.fillRect(x-candleW/2, bodyTop, candleW, Math.max(1,bodyBot-bodyTop));
+            const bodyH = Math.max(1.5, bodyBot-bodyTop);
+            ctx.fillRect(x-candleW/2, bodyTop, candleW, bodyH);
         });
-        if (chartAvgPrice > 0) { const avgY = toY(chartAvgPrice); ctx.strokeStyle='rgba(0,180,255,0.9)'; ctx.lineWidth=1.5; ctx.setLineDash([5,4]); ctx.beginPath(); ctx.moveTo(PAD_L,avgY); ctx.lineTo(W-PAD_R,avgY); ctx.stroke(); ctx.setLineDash([]); }
+
+        // ── 평균 매입가 라인
+        if (chartAvgPrice > 0) {
+            const avgY = toY(chartAvgPrice);
+            ctx.strokeStyle = 'rgba(0,180,255,0.85)'; ctx.lineWidth = 1.5; ctx.setLineDash([5,4]);
+            ctx.beginPath(); ctx.moveTo(PAD_L,avgY); ctx.lineTo(W-PAD_R,avgY); ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // ── 크로스헤어 (터치/마우스)
+        if (_crosshair && _crosshair.xi >= 0 && _crosshair.xi < visible.length) {
+            const ci = _crosshair.xi;
+            const cx = toXi(ci);
+            const vd = visible[ci];
+            // 세로 점선
+            ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.3)';
+            ctx.lineWidth = 1; ctx.setLineDash([4,3]);
+            ctx.beginPath(); ctx.moveTo(cx, PAD_T); ctx.lineTo(cx, H-PAD_B); ctx.stroke();
+            ctx.setLineDash([]);
+            // 날짜 말풍선
+            const dt = new Date(vd.x);
+            let dateStr;
+            if (currentCandleType === 'M') {
+                dateStr = dt.getUTCFullYear() + '.' + String(dt.getUTCMonth()+1).padStart(2,'0');
+            } else if (currentCandleType === 'W') {
+                dateStr = (dt.getUTCMonth()+1) + '/' + dt.getUTCDate() + '주';
+            } else {
+                dateStr = (dt.getUTCMonth()+1) + '/' + dt.getUTCDate();
+            }
+            ctx.font = 'bold 11px -apple-system, sans-serif';
+            const tw = ctx.measureText(dateStr).width;
+            const bw = tw + 14, bh = 18, br = 6;
+            let bx = cx - bw/2;
+            if (bx < PAD_L) bx = PAD_L;
+            if (bx + bw > W-PAD_R) bx = W-PAD_R-bw;
+            const by = H - PAD_B + 2;
+            ctx.fillStyle = isDark ? '#555' : '#333';
+            ctx.beginPath();
+            ctx.roundRect ? ctx.roundRect(bx, by, bw, bh, br) :
+                ctx.rect(bx, by, bw, bh);
+            ctx.fill();
+            ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(dateStr, bx + bw/2, by + bh/2);
+            ctx.textBaseline = 'alphabetic';
+        }
+
+        // ── 매수/매도 뱃지
         canvas._tradeHitMap = [];
         chartTradeData.forEach(trade => {
-            const nearestByDate = visible.find(d => { const dd = new Date(d.x); const ds = dd.getUTCFullYear()+'-'+String(dd.getUTCMonth()+1).padStart(2,'0')+'-'+String(dd.getUTCDate()).padStart(2,'0'); return ds === trade.date; });
             const ts = new Date(trade.date+'T00:00:00Z').getTime();
-            if (!nearestByDate && (ts < candleViewMin || ts > candleViewMax)) return;
-            if (nearestByDate && (nearestByDate.x < candleViewMin || nearestByDate.x > candleViewMax)) return;
-            const nearest = nearestByDate || visible.reduce((p,c) => Math.abs(c.x-ts)<Math.abs(p.x-ts)?c:p, visible[0]);
-            if (!nearest) return;
-            const x = toX(nearest.x), isBuy = trade.type === '매수', bgColor2 = isBuy?'#34C759':'#FF3B30', label = isBuy?'B':'S';
-            const r = Math.max(9, candleW*1.2), badgeY = isBuy ? toY(nearest.l)+r+4 : toY(nearest.h)-r-4;
-            ctx.strokeStyle=bgColor2; ctx.lineWidth=1; ctx.setLineDash([2,2]); ctx.beginPath(); ctx.moveTo(x,isBuy?toY(nearest.l):toY(nearest.h)); ctx.lineTo(x,badgeY+(isBuy?-r:r)); ctx.stroke(); ctx.setLineDash([]);
-            ctx.fillStyle=bgColor2; ctx.beginPath(); ctx.arc(x,badgeY,r,0,Math.PI*2); ctx.fill();
-            ctx.fillStyle='#fff'; ctx.font=`bold ${Math.max(9,r)}px -apple-system, sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(label,x,badgeY); ctx.textBaseline='alphabetic';
-            canvas._tradeHitMap.push({ x, y: badgeY, r, trade });
+            let nearestIdx = -1, nearestDiff = Infinity;
+            visible.forEach((vd, vi) => { const diff = Math.abs(vd.x - ts); if (diff < nearestDiff) { nearestDiff = diff; nearestIdx = vi; } });
+            if (nearestIdx < 0) return;
+            const vd = visible[nearestIdx];
+            if (vd.x < candleViewMin || vd.x > candleViewMax) return;
+
+            const x = toXi(nearestIdx);
+            const isBuy = trade.type === '매수';
+
+            // 미래에셋 스타일: 속 빈 윤곽선 화살표
+            // 매수: 빨간 위쪽 화살, 촉이 저가에 닿음
+            // 매도: 파란 아래쪽 화살, 촉이 고가에 닿음
+            const arrowColor = isBuy ? '#E8002D' : '#0057FF';
+            const tipY  = isBuy ? toY(vd.l)  : toY(vd.h);
+            const gap   = 3;                                  // 캔들과 화살 사이 여백
+            const aTipY = isBuy ? tipY + gap  : tipY - gap;  // 실제 화살촉 시작점
+
+            const hw    = Math.max(4.5, Math.min(8, candleW * 1.1));  // 화살머리 반폭
+            const headH = hw * 1.3;                                    // 화살머리 높이
+            const bodyH = Math.max(10, hw * 2.2);                      // 몸통 길이
+            const bodyW = Math.max(1.2, hw * 0.38);                    // 몸통 반폭
+
+            ctx.save();
+            ctx.setLineDash([]);
+
+            if (isBuy) {
+                // ▲ 위쪽 화살 (매수) — 촉이 아래, 꼬리가 위
+                const headBot = aTipY;
+                const headTop = aTipY + headH;
+                const bodyBot = headTop;
+                const bodyTop = bodyBot + bodyH;
+
+                // 외곽 경로 (시계방향)
+                ctx.beginPath();
+                ctx.moveTo(x,          headBot);           // 촉 끝
+                ctx.lineTo(x + hw,     headTop);           // 머리 오른쪽
+                ctx.lineTo(x + bodyW,  headTop);           // 어깨→몸통 오른쪽
+                ctx.lineTo(x + bodyW,  bodyTop);           // 몸통 위 오른쪽
+                ctx.lineTo(x - bodyW,  bodyTop);           // 몸통 위 왼쪽
+                ctx.lineTo(x - bodyW,  headTop);           // 어깨→몸통 왼쪽
+                ctx.lineTo(x - hw,     headTop);           // 머리 왼쪽
+                ctx.closePath();
+
+                ctx.fillStyle   = 'rgba(232,0,45,0.12)';
+                ctx.fill();
+                ctx.strokeStyle = arrowColor;
+                ctx.lineWidth   = 1.5;
+                ctx.stroke();
+
+            } else {
+                // ▼ 아래쪽 화살 (매도) — 촉이 위, 꼬리가 아래
+                const headTop = aTipY;
+                const headBot = aTipY - headH;
+                const bodyTop = headBot;
+                const bodyBot = bodyTop - bodyH;
+
+                ctx.beginPath();
+                ctx.moveTo(x,          headTop);
+                ctx.lineTo(x + hw,     headBot);
+                ctx.lineTo(x + bodyW,  headBot);
+                ctx.lineTo(x + bodyW,  bodyBot);
+                ctx.lineTo(x - bodyW,  bodyBot);
+                ctx.lineTo(x - bodyW,  headBot);
+                ctx.lineTo(x - hw,     headBot);
+                ctx.closePath();
+
+                ctx.fillStyle   = 'rgba(0,87,255,0.12)';
+                ctx.fill();
+                ctx.strokeStyle = arrowColor;
+                ctx.lineWidth   = 1.5;
+                ctx.stroke();
+            }
+
+            ctx.restore();
+
+            // 히트맵
+            const hitY = isBuy ? aTipY + headH + bodyH * 0.5 : aTipY - headH - bodyH * 0.5;
+            canvas._tradeHitMap.push({ x, y: hitY, r: hw + bodyH * 0.5, trade });
         });
     }
 
@@ -1943,12 +2308,95 @@
         const canvas = document.getElementById('candleChart'); if (!canvas || canvas._touchBound) return;
         canvas._touchBound = true;
         let isDragging=false, isPinching=false, lastTouchX=0, pinchStartDist=0, pinchStartMin=0, pinchStartMax=0;
+        let isCrosshairMode = false; // 롱프레스/단순탭 → 크로스헤어
+        let longPressTimer = null;
+
         function pinchDist(t) { const dx=t[0].clientX-t[1].clientX, dy=t[0].clientY-t[1].clientY; return Math.sqrt(dx*dx+dy*dy); }
-        function clamp(min,max) { const dataMin=chartAllData[0].x, dataMax=chartAllData[chartAllData.length-1].x, minSpan=10*86400000; let span=max-min; if(span<minSpan){const c=(min+max)/2;min=c-minSpan/2;max=c+minSpan/2;} if(min<dataMin){max+=dataMin-min;min=dataMin;} if(max>dataMax){min-=max-dataMax;max=dataMax;} return {min:Math.max(min,dataMin),max:Math.min(max,dataMax)}; }
+        function clamp(min,max) {
+            const data = candleDisplayData;
+            if (!data || data.length === 0) return {min, max};
+            const dataMin=data[0].x, dataMax=data[data.length-1].x;
+            const minSpan = currentCandleType==='M' ? 3*30*86400000 : currentCandleType==='W' ? 4*7*86400000 : 10*86400000;
+            let span=max-min;
+            if(span<minSpan){const c=(min+max)/2;min=c-minSpan/2;max=c+minSpan/2;}
+            if(min<dataMin){max+=dataMin-min;min=dataMin;}
+            if(max>dataMax){min-=max-dataMax;max=dataMax;}
+            return {min:Math.max(min,dataMin),max:Math.min(max,dataMax)};
+        }
         function applyRange(min,max) { const r=clamp(min,max); candleViewMin=r.min; candleViewMax=r.max; drawCandles(); }
-        canvas.addEventListener('touchstart', e => { if(e.touches.length===1){isDragging=true;isPinching=false;lastTouchX=e.touches[0].clientX;} else if(e.touches.length===2){isDragging=false;isPinching=true;pinchStartDist=pinchDist(e.touches);pinchStartMin=candleViewMin;pinchStartMax=candleViewMax;} }, {passive:true});
-        canvas.addEventListener('touchmove', e => { e.preventDefault(); if(isDragging&&e.touches.length===1){const dx=e.touches[0].clientX-lastTouchX;lastTouchX=e.touches[0].clientX;const span=candleViewMax-candleViewMin;const delta=-(dx/canvas.offsetWidth)*span;applyRange(candleViewMin+delta,candleViewMax+delta);} else if(isPinching&&e.touches.length===2){const ratio=pinchStartDist/pinchDist(e.touches);const center=(pinchStartMin+pinchStartMax)/2;const half=(pinchStartMax-pinchStartMin)/2*ratio;applyRange(center-half,center+half);} }, {passive:false});
-        canvas.addEventListener('touchend', () => { isDragging=false; isPinching=false; });
+
+        // 캔버스 X좌표 → visible 인덱스
+        function xToVisibleIdx(clientX) {
+            const rect = canvas.getBoundingClientRect();
+            const PAD_L=4, PAD_R=62, chartW=(candleW_fixed||canvas.offsetWidth)-PAD_L-PAD_R;
+            const cx = clientX - rect.left - PAD_L;
+            const visible = candleDisplayData.filter(d => d.x >= candleViewMin && d.x <= candleViewMax);
+            if (!visible.length) return -1;
+            const idx = Math.round(cx / chartW * (visible.length-1));
+            return Math.max(0, Math.min(visible.length-1, idx));
+        }
+
+        function setCrosshair(clientX) {
+            const idx = xToVisibleIdx(clientX);
+            _crosshair = { xi: idx };
+            drawCandles();
+        }
+        function clearCrosshair() { _crosshair = null; drawCandles(); }
+
+        canvas.addEventListener('touchstart', e => {
+            if (e.touches.length === 1) {
+                isDragging = false; isPinching = false;
+                lastTouchX = e.touches[0].clientX;
+                isCrosshairMode = false;
+                // 롱프레스 300ms → 크로스헤어 모드
+                longPressTimer = setTimeout(() => {
+                    isCrosshairMode = true;
+                    setCrosshair(e.touches[0].clientX);
+                }, 300);
+            } else if (e.touches.length === 2) {
+                clearTimeout(longPressTimer);
+                isDragging = false; isPinching = true; isCrosshairMode = false;
+                pinchStartDist = pinchDist(e.touches);
+                pinchStartMin = candleViewMin; pinchStartMax = candleViewMax;
+                clearCrosshair();
+            }
+        }, {passive:true});
+
+        canvas.addEventListener('touchmove', e => {
+            e.preventDefault();
+            clearTimeout(longPressTimer);
+            if (isCrosshairMode && e.touches.length === 1) {
+                setCrosshair(e.touches[0].clientX);
+            } else if (e.touches.length === 1 && !isPinching) {
+                if (!isDragging) isDragging = true;
+                const dx = e.touches[0].clientX - lastTouchX;
+                lastTouchX = e.touches[0].clientX;
+                const span = candleViewMax - candleViewMin;
+                const delta = -(dx / canvas.offsetWidth) * span;
+                applyRange(candleViewMin+delta, candleViewMax+delta);
+            } else if (isPinching && e.touches.length === 2) {
+                const ratio = pinchStartDist / pinchDist(e.touches);
+                const center = (pinchStartMin + pinchStartMax) / 2;
+                const half = (pinchStartMax - pinchStartMin) / 2 * ratio;
+                applyRange(center-half, center+half);
+            }
+        }, {passive:false});
+
+        canvas.addEventListener('touchend', e => {
+            clearTimeout(longPressTimer);
+            if (isCrosshairMode) {
+                // 크로스헤어는 잠깐 유지 후 사라짐
+                setTimeout(clearCrosshair, 2000);
+            }
+            isDragging = false; isPinching = false;
+        });
+
+        // 마우스 hover (데스크탑)
+        canvas.addEventListener('mousemove', e => {
+            setCrosshair(e.clientX);
+        });
+        canvas.addEventListener('mouseleave', () => { clearCrosshair(); });
+
         function checkTradeHit(clientX,clientY) { const rect=canvas.getBoundingClientRect(); const cx=clientX-rect.left, cy=clientY-rect.top; if (!canvas._tradeHitMap) return; for (const hit of canvas._tradeHitMap) { const dx=cx-hit.x, dy=cy-hit.y; if(Math.sqrt(dx*dx+dy*dy)<=hit.r+6){showTradePopup(hit.trade,clientX,clientY);return;} } hideTradePopup(); }
         canvas.addEventListener('click', e => { checkTradeHit(e.clientX, e.clientY); });
         let tapStartX=0, tapStartY=0;
