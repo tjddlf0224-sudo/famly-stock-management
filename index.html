@@ -2013,20 +2013,19 @@
                 key = dt.getUTCFullYear() + '-' + String(dt.getUTCMonth()+1).padStart(2,'0');
             }
             if (!groups[key]) {
-                // 첫 일봉: 기간 시작 종가(firstC)를 o로 사용 → 일봉과 동일한 isUp(o>=c) 기준
                 groups[key] = { x: d.x, firstC: d.c, h: d.h, l: d.l, c: d.c };
                 groupKeys.push(key);
             } else {
                 groups[key].h = Math.max(groups[key].h, d.h);
                 groups[key].l = Math.min(groups[key].l, d.l);
-                groups[key].c = d.c; // 마지막 일봉 종가
+                groups[key].c = d.c;
             }
         });
-        // o = 기간 첫날 종가(firstC), c = 마지막날 종가
-        // isUp(o >= c): 첫날종가 >= 마지막종가 = 하락 = 빨강 (일봉과 동일 기준)
+        // o = 마지막날 종가, c = 첫날 종가
+        // → isUp(o >= c): 마지막종가 >= 첫날종가 = 상승 = 빨강 (일봉 색상과 일치)
         return groupKeys.map(k => {
             const g = groups[k];
-            return { x: g.x, o: g.firstC, h: g.h, l: g.l, c: g.c };
+            return { x: g.x, o: g.c, h: g.h, l: g.l, c: g.firstC };
         });
     }
 
