@@ -2013,20 +2013,20 @@
                 key = dt.getUTCFullYear() + '-' + String(dt.getUTCMonth()+1).padStart(2,'0');
             }
             if (!groups[key]) {
-                // 첫 일봉 → 시가(o) = 이 기간의 시가로 확정
-                groups[key] = { x: d.x, openFixed: d.o, h: d.h, l: d.l, c: d.c };
+                // 첫 일봉: 기간 시작 종가(firstC)를 o로 사용 → 일봉과 동일한 isUp(o>=c) 기준
+                groups[key] = { x: d.x, firstC: d.c, h: d.h, l: d.l, c: d.c };
                 groupKeys.push(key);
             } else {
                 groups[key].h = Math.max(groups[key].h, d.h);
                 groups[key].l = Math.min(groups[key].l, d.l);
-                groups[key].c = d.c; // 마지막 일봉 종가로 덮어씌움
+                groups[key].c = d.c; // 마지막 일봉 종가
             }
         });
-        // o = 기간 첫날 시가(openFixed), c = 마지막날 종가
-        // isUp(o >= c): 시가 >= 종가 = 하락봉 = 빨강 (일봉과 완전히 동일한 기준)
+        // o = 기간 첫날 종가(firstC), c = 마지막날 종가
+        // isUp(o >= c): 첫날종가 >= 마지막종가 = 하락 = 빨강 (일봉과 동일 기준)
         return groupKeys.map(k => {
             const g = groups[k];
-            return { x: g.x, o: g.openFixed, h: g.h, l: g.l, c: g.c };
+            return { x: g.x, o: g.firstC, h: g.h, l: g.l, c: g.c };
         });
     }
 
@@ -2166,6 +2166,7 @@
         // ── 캔들 그리기 (간격 조정: 0.55로 여유 있게)
         const candleW = Math.max(1.5, Math.min(14, (chartW/n)*0.55));
         visible.forEach((d, i) => {
+            const x = toXi(i);
             // 일봉: o>=c=빨강(하락). 주봉/월봉: 집계된 o(첫날시가)>=c(마지막종가) 동일 기준
             const isUp = d.o >= d.c;
             const color = isUp ? upColor : downColor;
@@ -2178,8 +2179,8 @@
             ctx.fillRect(x-candleW/2, bodyTop, candleW, bodyH);
         });
 
-        // ── 평균 매입가 라인
-        if (chartAvgPrice > 0) {
+        // ── 평균 매입가 라인 (차트 가격 범위 안에 있을 때만 표시)
+        if (chartAvgPrice > 0 && chartAvgPrice >= yMin && chartAvgPrice <= yMax) {
             const avgY = toY(chartAvgPrice);
             ctx.strokeStyle = 'rgba(0,180,255,0.85)'; ctx.lineWidth = 1.5; ctx.setLineDash([5,4]);
             ctx.beginPath(); ctx.moveTo(PAD_L,avgY); ctx.lineTo(W-PAD_R,avgY); ctx.stroke();
@@ -2236,61 +2237,65 @@
             const x = toXi(nearestIdx);
             const isBuy = trade.type === '매수';
 
-            // 미래에셋 스타일: 속 빈 윤곽선 화살표
-            // 매수: 빨간 위쪽 화살, 촉이 저가에 닿음
-            // 매도: 파란 아래쪽 화살, 촉이 고가에 닿음
-            const arrowColor = isBuy ? '#E8002D' : '#0057FF';
-            const tipY  = isBuy ? toY(vd.l)  : toY(vd.h);
-            const gap   = 3;                                  // 캔들과 화살 사이 여백
-            const aTipY = isBuy ? tipY + gap  : tipY - gap;  // 실제 화살촉 시작점
+            // 날짜가 현재 뷰포트 봉 간격의 1.5배 이상 벗어나면 표시 안 함
+            const slotMs = (candleViewMax - candleViewMin) / Math.max(1, visible.length - 1);
+            if (nearestDiff > slotMs * 1.5) return;
 
-            const hw    = Math.max(4.5, Math.min(8, candleW * 1.1));  // 화살머리 반폭
-            const headH = hw * 1.3;                                    // 화살머리 높이
-            const bodyH = Math.max(10, hw * 2.2);                      // 몸통 길이
-            const bodyW = Math.max(1.2, hw * 0.38);                    // 몸통 반폭
+            // 미래에셋 스타일: 속 빈 윤곽선 화살표 (크기 고정으로 항상 통일)
+            const arrowColor = isBuy ? '#E8002D' : '#0057FF';
+            const tipY  = isBuy ? toY(vd.l) : toY(vd.h);
+            const gap   = 2;
+            const aTipY = isBuy ? tipY + gap : tipY - gap;
+
+            // 크기 고정 (캔들 너비와 무관하게 항상 일정)
+            const hw    = 5;    // 화살머리 반폭
+            const headH = 7;    // 화살머리 높이
+            const bodyH = 6;    // 몸통 길이
+            const bodyW = 2;    // 몸통 반폭
 
             ctx.save();
             ctx.setLineDash([]);
+            // 화살표가 차트 영역 밖으로 나가지 않도록 클리핑
+            ctx.beginPath();
+            ctx.rect(PAD_L, PAD_T, chartW, chartH);
+            ctx.clip();
 
             if (isBuy) {
-                // ▲ 위쪽 화살 (매수) — 촉이 아래, 꼬리가 위
                 const headBot = aTipY;
                 const headTop = aTipY + headH;
                 const bodyBot = headTop;
                 const bodyTop = bodyBot + bodyH;
 
-                // 외곽 경로 (시계방향)
                 ctx.beginPath();
-                ctx.moveTo(x,          headBot);           // 촉 끝
-                ctx.lineTo(x + hw,     headTop);           // 머리 오른쪽
-                ctx.lineTo(x + bodyW,  headTop);           // 어깨→몸통 오른쪽
-                ctx.lineTo(x + bodyW,  bodyTop);           // 몸통 위 오른쪽
-                ctx.lineTo(x - bodyW,  bodyTop);           // 몸통 위 왼쪽
-                ctx.lineTo(x - bodyW,  headTop);           // 어깨→몸통 왼쪽
-                ctx.lineTo(x - hw,     headTop);           // 머리 왼쪽
+                ctx.moveTo(x,         headBot);
+                ctx.lineTo(x + hw,    headTop);
+                ctx.lineTo(x + bodyW, headTop);
+                ctx.lineTo(x + bodyW, bodyTop);
+                ctx.lineTo(x - bodyW, bodyTop);
+                ctx.lineTo(x - bodyW, headTop);
+                ctx.lineTo(x - hw,    headTop);
                 ctx.closePath();
 
-                ctx.fillStyle   = 'rgba(232,0,45,0.12)';
+                ctx.fillStyle   = 'rgba(232,0,45,0.15)';
                 ctx.fill();
                 ctx.strokeStyle = arrowColor;
                 ctx.lineWidth   = 1.5;
                 ctx.stroke();
 
             } else {
-                // ▼ 아래쪽 화살 (매도) — 촉이 위, 꼬리가 아래
                 const headTop = aTipY;
                 const headBot = aTipY - headH;
                 const bodyTop = headBot;
                 const bodyBot = bodyTop - bodyH;
 
                 ctx.beginPath();
-                ctx.moveTo(x,          headTop);
-                ctx.lineTo(x + hw,     headBot);
-                ctx.lineTo(x + bodyW,  headBot);
-                ctx.lineTo(x + bodyW,  bodyBot);
-                ctx.lineTo(x - bodyW,  bodyBot);
-                ctx.lineTo(x - bodyW,  headBot);
-                ctx.lineTo(x - hw,     headBot);
+                ctx.moveTo(x,         headTop);
+                ctx.lineTo(x + hw,    headBot);
+                ctx.lineTo(x + bodyW, headBot);
+                ctx.lineTo(x + bodyW, bodyBot);
+                ctx.lineTo(x - bodyW, bodyBot);
+                ctx.lineTo(x - bodyW, headBot);
+                ctx.lineTo(x - hw,    headBot);
                 ctx.closePath();
 
                 ctx.fillStyle   = 'rgba(0,87,255,0.12)';
