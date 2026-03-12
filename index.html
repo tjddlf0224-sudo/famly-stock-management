@@ -1956,7 +1956,7 @@
             currentCandleType = 'D';
             document.getElementById('candleChartCard').style.display = 'block'; setCandleType('D');
         })
-        .catch(err => { document.getElementById('chartLoadingMsg').style.display = 'none'; document.getElementById('candleChartCard').style.display = 'block'; showCandleEmpty(); });
+        .catch(err => { console.error('[차트오류]', err); document.getElementById('chartLoadingMsg').style.display = 'none'; document.getElementById('candleChartCard').style.display = 'block'; showCandleEmpty(); });
     }
 
     function showCandleEmpty() {
@@ -2045,6 +2045,7 @@
     let candleDisplayData = []; // 현재 표시 중인 봉 배열 (집계 후)
 
     function renderCandleChart() {
+        try {
         const canvas = document.getElementById('candleChart'); if (!canvas) return;
         const wrap = canvas.parentElement;
         const W = wrap ? wrap.offsetWidth : (window.innerWidth-32), H = 360, dpr = window.devicePixelRatio || 1;
@@ -2053,6 +2054,8 @@
         candleW_fixed = W; candleH_fixed = H;
 
         candleDisplayData = aggregateCandles(chartAllData, currentCandleType);
+        console.log('[차트] candleDisplayData 길이:', candleDisplayData ? candleDisplayData.length : 'null');
+        if (!candleDisplayData || candleDisplayData.length === 0) { showCandleEmpty(); return; }
         // 기본 뷰: 일봉→최근 60개, 주봉→최근 52개, 월봉→전체
         const showCount = currentCandleType === 'D' ? 60 : currentCandleType === 'W' ? 52 : candleDisplayData.length;
         const startIdx = Math.max(0, candleDisplayData.length - showCount);
@@ -2060,6 +2063,7 @@
         candleViewMax = candleDisplayData[candleDisplayData.length-1].x;
 
         drawCandles(); attachCandleTouchEvents();
+        } catch(e) { console.error('[renderCandleChart 오류]', e); showCandleEmpty(); }
     }
 
     // 크로스헤어 상태
