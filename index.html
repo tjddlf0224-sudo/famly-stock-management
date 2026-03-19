@@ -3451,6 +3451,8 @@
                 tableId: 'maFedRateTable', unit: '%', decimals: 2,
                 // 범위 0~7% (5.5% 이상 = 강한긴축)
                 thumbFn: v => Math.max(2, Math.min(98, (v / 7) * 100)),
+                classify: v => {
+                    if (v < 1)   return ['완화적 🎯',     'ma-panic', 0];
                     if (v < 2.5) return ['성장 우호 ✅',  'ma-fear',  1];
                     if (v < 4)   return ['중립 😐',       'ma-cool',  2];
                     if (v < 5.5) return ['긴축 ⚠️',       'ma-warn',  3];
