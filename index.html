@@ -999,192 +999,52 @@
             <div class="ma-chart-wrap"><canvas id="maSPXMAChart"></canvas></div>
         </div>
 
-        <!-- ② 하이일드 스프레드 BAMLH0A0HYM2 — FRED 선행지표 (20%) -->
-        <div class="ma-card" id="maHYCard">
+        <!-- ② 나스닥 이동평균선 -->
+        <div class="ma-card" id="maNASMACard">
             <div class="ma-card-top">
-                <div class="ma-card-name">💀 하이일드 스프레드 <span style="font-size:10px;color:#007AFF;font-weight:700;margin-left:4px;">선행지표</span></div>
-                <div class="ma-card-badge" id="maHYBadge">-</div>
+                <div class="ma-card-name">📈 나스닥 이동평균선 분석</div>
+                <div class="ma-card-badge" id="maNASMABadge">-</div>
             </div>
-            <div class="ma-card-value-row">
-                <div class="ma-card-value" id="maHYValue">-</div>
-                <div class="ma-card-unit">%p</div>
+            <div id="maNASMAList" class="ma-ma-list">
+                <div class="ma-ma-row"><span class="ma-ma-label">20일선</span><span class="ma-ma-price" id="maNASMA20Price">-</span><span class="ma-ma-signal nodata" id="maNASMA20Signal">-</span></div>
+                <div class="ma-ma-row"><span class="ma-ma-label">50일선</span><span class="ma-ma-price" id="maNASMA50Price">-</span><span class="ma-ma-signal nodata" id="maNASMA50Signal">-</span></div>
+                <div class="ma-ma-row"><span class="ma-ma-label">100일선</span><span class="ma-ma-price" id="maNASMA100Price">-</span><span class="ma-ma-signal nodata" id="maNASMA100Signal">-</span></div>
+                <div class="ma-ma-row"><span class="ma-ma-label">125일선</span><span class="ma-ma-price" id="maNASMA125Price">-</span><span class="ma-ma-signal nodata" id="maNASMA125Signal">-</span></div>
+                <div class="ma-ma-row"><span class="ma-ma-label">200일선</span><span class="ma-ma-price" id="maNASMA200Price">-</span><span class="ma-ma-signal nodata" id="maNASMA200Signal">-</span></div>
             </div>
-            <div class="ma-card-updated" id="maHYUpdated">FRED에서 불러오는 중...</div>
-            <div class="rsi-bar-wrap" style="margin:10px 0 4px;">
-                <div class="rsi-bar-thumb" id="maHYThumb" style="left:50%"></div>
-            </div>
-            <div class="rsi-labels"><span>낮음 (안전)</span><span>중립 (5%)</span><span>위험 (↑8%)</span></div>
-            <div class="rsi-detail-row">
-                <span>전일 대비</span><span class="rsi-detail-val" id="maHYChg">-</span>
-                <span>20일 평균</span><span class="rsi-detail-val" id="maHYMA20">-</span>
-                <span>추세</span><span class="rsi-detail-val" id="maHYTrend">-</span>
-            </div>
-            <table class="ma-range-table" style="margin-top:12px;" id="maHYTable">
-                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>~3%</td><td>극도 낙관</td><td>🎯 신용 최우호적</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#007AFF"></span>3~5%</td><td>정상</td><td>✅ 신용 안정</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>5~6%</td><td>경계</td><td>리스크 증가</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>6~8%</td><td>스트레스</td><td>⚠️ 신용위기 주의</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>8%↑</td><td>위기</td><td>🔴 신용경색 — 주식 위험</td></tr>
-            </table>
-            <div style="margin-top:10px;font-size:11px;color:var(--text-sub);line-height:1.5;">
-                💡 정크본드와 국채의 금리차. 기업 신용 스트레스를 주가보다 먼저 반영. 2008·2020 폭락 모두 선행. FRED 일별.
-            </div>
+            <div class="ma-ma-updated" id="maNASMAUpdated">차트 데이터 불러오는 중...</div>
+            <div class="ma-ma-summary" id="maNASMASummary">💡 나스닥 지수의 이동평균선 돌파 여부를 분석합니다</div>
+            <div class="ma-chart-wrap"><canvas id="maNASMAChart"></canvas></div>
         </div>
 
-        <!-- ③ 장단기 금리차 T10Y2Y — FRED 선행지표 (20%) -->
-        <div class="ma-card" id="maYieldCurveCard">
+        <!-- ③ CNN 공포탐욕지수 -->
+        <div class="ma-card" id="maFNGCard">
             <div class="ma-card-top">
-                <div class="ma-card-name">📉 장단기 금리차 <span style="font-size:10px;color:#007AFF;font-weight:700;margin-left:4px;">선행지표</span></div>
-                <div class="ma-card-badge" id="maYieldCurveBadge">-</div>
+                <div class="ma-card-name">😱 CNN 공포탐욕지수</div>
+                <div class="ma-card-badge" id="maFNGBadge">-</div>
             </div>
             <div class="ma-card-value-row">
-                <div class="ma-card-value" id="maYieldCurveValue">-</div>
-                <div class="ma-card-unit">%p</div>
+                <div class="ma-card-value" id="maFNGValue">-</div>
+                <div class="ma-card-unit">/ 100</div>
             </div>
-            <div class="ma-card-updated" id="maYieldCurveUpdated">FRED에서 불러오는 중...</div>
+            <div class="ma-card-updated" id="maFNGUpdated">CNN에서 불러오는 중...</div>
             <div class="rsi-bar-wrap" style="margin:10px 0 4px;">
-                <div class="rsi-bar-thumb" id="maYieldCurveThumb" style="left:50%"></div>
+                <div class="rsi-bar-thumb" id="maFNGThumb" style="left:50%"></div>
             </div>
-            <div class="rsi-labels"><span>역전 (위험)</span><span>제로</span><span>정상 (안전)</span></div>
+            <div class="rsi-labels"><span>극단 공포 (0)</span><span>중립 (50)</span><span>극단 탐욕 (100)</span></div>
             <div class="rsi-detail-row">
-                <span>전일 대비</span><span class="rsi-detail-val" id="maYieldCurveChg">-</span>
-                <span>20일 평균</span><span class="rsi-detail-val" id="maYieldCurveMA">-</span>
-                <span>추세</span><span class="rsi-detail-val" id="maYieldCurveTrend">-</span>
+                <span>분류</span><span class="rsi-detail-val" id="maFNGRating">-</span>
+                <span>업데이트</span><span class="rsi-detail-val" id="maFNGDate">-</span>
             </div>
-            <table class="ma-range-table" style="margin-top:12px;" id="maYieldCurveTable">
-                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>-1.0%p↓</td><td>심각한 역전</td><td>🔴 경기침체 강한 신호</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>-1.0~0%p</td><td>역전 구간</td><td>⚠️ 경기둔화 경고</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>0~0.5%p</td><td>정상화 중</td><td>경기회복 신호</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#007AFF"></span>0.5~1.5%p</td><td>정상</td><td>✅ 건전한 성장</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>1.5%p↑</td><td>가파른 정상</td><td>🎯 강한 성장 기대</td></tr>
+            <table class="ma-range-table" style="margin-top:12px;" id="maFNGTable">
+                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>0~24</td><td>극단적 공포</td><td>🎯 역발상 매수 기회</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>25~44</td><td>공포</td><td>⚠️ 투자심리 위축</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>45~55</td><td>중립</td><td>😐 관망 구간</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#007AFF"></span>56~74</td><td>탐욕</td><td>시장 과열 주의</td></tr>
+                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>75~100</td><td>극단적 탐욕</td><td>🔴 과매수 — 조정 가능성</td></tr>
             </table>
             <div style="margin-top:10px;font-size:11px;color:var(--text-sub);line-height:1.5;">
-                💡 10년물 - 2년물 금리차. 역전 후 평균 12~18개월 뒤 침체. 1960년 이후 9/9 적중. FRED 일별.
-            </div>
-        </div>
-
-        <!-- ④ 실질금리 DFII10 — FRED 선행지표 (15%) -->
-        <div class="ma-card" id="maRealRateCard">
-            <div class="ma-card-top">
-                <div class="ma-card-name">🔬 10년 실질금리 (TIPS) <span style="font-size:10px;color:#007AFF;font-weight:700;margin-left:4px;">선행지표</span></div>
-                <div class="ma-card-badge" id="maRealRateBadge">-</div>
-            </div>
-            <div class="ma-card-value-row">
-                <div class="ma-card-value" id="maRealRateValue">-</div>
-                <div class="ma-card-unit">%</div>
-            </div>
-            <div class="ma-card-updated" id="maRealRateUpdated">FRED에서 불러오는 중...</div>
-            <div class="rsi-bar-wrap" style="margin:10px 0 4px;">
-                <div class="rsi-bar-thumb" id="maRealRateThumb" style="left:50%"></div>
-            </div>
-            <div class="rsi-labels"><span>마이너스 (유리)</span><span>0%</span><span>고실질금리 (불리)</span></div>
-            <div class="rsi-detail-row">
-                <span>전일 대비</span><span class="rsi-detail-val" id="maRealRateChg">-</span>
-                <span>20일 평균</span><span class="rsi-detail-val" id="maRealRateMA20">-</span>
-                <span>추세</span><span class="rsi-detail-val" id="maRealRateTrend">-</span>
-            </div>
-            <table class="ma-range-table" style="margin-top:12px;" id="maRealRateTable">
-                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>~-1%</td><td>마이너스 실질금리</td><td>🎯 성장주 최우호</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#007AFF"></span>-1~0%</td><td>완화적</td><td>✅ 주식 우호적</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>0~1%</td><td>중립</td><td>밸류에이션 중립</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>1~2.5%</td><td>부담</td><td>⚠️ 성장주 할인율 상승</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>2.5%↑</td><td>고실질금리</td><td>🔴 주식 밸류에이션 압박</td></tr>
-            </table>
-            <div style="margin-top:10px;font-size:11px;color:var(--text-sub);line-height:1.5;">
-                💡 명목금리 - 기대인플레이션. 실질금리 상승 = 미래이익 현재가치 하락 = 나스닥/성장주 압박. FRED 일별.
-            </div>
-        </div>
-
-        <!-- ⑤ 신규실업수당 ICSA — FRED 선행지표 (15%) -->
-        <div class="ma-card" id="maICSACard">
-            <div class="ma-card-top">
-                <div class="ma-card-name">👷 신규실업수당 청구건수 <span style="font-size:10px;color:#007AFF;font-weight:700;margin-left:4px;">선행지표</span></div>
-                <div class="ma-card-badge" id="maICSABadge">-</div>
-            </div>
-            <div class="ma-card-value-row">
-                <div class="ma-card-value" id="maICSAValue">-</div>
-                <div class="ma-card-unit">천건</div>
-            </div>
-            <div class="ma-card-updated" id="maICSAUpdated">FRED에서 불러오는 중...</div>
-            <div class="rsi-bar-wrap" style="margin:10px 0 4px;">
-                <div class="rsi-bar-thumb" id="maICSAThumb" style="left:50%"></div>
-            </div>
-            <div class="rsi-labels"><span>호황 (↓200k)</span><span>정상 (250k)</span><span>위험 (↑350k)</span></div>
-            <div class="rsi-detail-row">
-                <span>전주 대비</span><span class="rsi-detail-val" id="maICSAChg">-</span>
-                <span>4주 평균</span><span class="rsi-detail-val" id="maICSAMA4">-</span>
-                <span>추세</span><span class="rsi-detail-val" id="maICSATrend">-</span>
-            </div>
-            <table class="ma-range-table" style="margin-top:12px;" id="maICSATable">
-                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>~200k</td><td>극도 호황</td><td>🎯 노동시장 매우 강함</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#007AFF"></span>200~230k</td><td>호황</td><td>✅ 노동시장 강함</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>230~280k</td><td>정상</td><td>안정적</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>280~350k</td><td>주의</td><td>⚠️ 고용 악화 신호</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>350k↑</td><td>위험</td><td>🔴 경기침체 경고</td></tr>
-            </table>
-            <div style="margin-top:10px;font-size:11px;color:var(--text-sub);line-height:1.5;">
-                💡 주간 신규 실업급여 신청자수. 노동시장 건전성 선행지표. FRED 주간 데이터 (목요일 발표).
-            </div>
-        </div>
-
-        <!-- ⑥ VIX 공포지수 (15%) -->
-        <div class="ma-card" id="maVIXCard">
-            <div class="ma-card-top">
-                <div class="ma-card-name">😱 VIX 공포지수</div>
-                <div class="ma-card-badge" id="maVIXBadge">-</div>
-            </div>
-            <div class="ma-card-value-row">
-                <div class="ma-card-value" id="maVIXValue">-</div>
-                <div class="ma-card-unit"></div>
-            </div>
-            <div class="ma-card-updated" id="maVIXUpdated">Stooq에서 불러오는 중...</div>
-            <div class="rsi-bar-wrap" style="margin:10px 0 4px;">
-                <div class="rsi-bar-thumb" id="maVIXThumb" style="left:50%"></div>
-            </div>
-            <div class="rsi-labels"><span>안도 (↓15)</span><span>중립 (20)</span><span>공포 (↑30)</span></div>
-            <div class="rsi-detail-row">
-                <span>전일 대비</span><span class="rsi-detail-val" id="maVIXChg">-</span>
-                <span>20일 평균</span><span class="rsi-detail-val" id="maVIXMA20">-</span>
-                <span>추세</span><span class="rsi-detail-val" id="maVIXTrend">-</span>
-            </div>
-            <table class="ma-range-table" style="margin-top:12px;" id="maVIXTable">
-                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>~12</td><td>극도 안도</td><td>🎯 역발상 — 하락 전 과잉낙관 주의</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#007AFF"></span>12~20</td><td>안정</td><td>✅ 정상 시장</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>20~25</td><td>경계</td><td>변동성 주의</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>25~35</td><td>공포</td><td>⚠️ 시장 불안</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>35↑</td><td>패닉</td><td>🔴 극단적 공포 — 역발상 저점 기회</td></tr>
-            </table>
-            <div style="margin-top:10px;font-size:11px;color:var(--text-sub);line-height:1.5;">
-                💡 VIX 12↓ 과잉낙관도 위험. VIX 35↑ 극단 공포는 역발상 매수 기회일 수 있음. Stooq 실시간.
-            </div>
-        </div>
-
-        <!-- ⑦ SPY 거래량 신뢰도 승수 -->
-        <div class="ma-card" id="maSPYVolCard">
-            <div class="ma-card-top">
-                <div class="ma-card-name">📊 미국 시장 거래량 신뢰도</div>
-                <div class="ma-card-badge" id="maSPYVolBadge">-</div>
-            </div>
-            <div class="ma-card-value-row">
-                <div class="ma-card-value" id="maSPYVolValue">-</div>
-                <div class="ma-card-unit">%</div>
-            </div>
-            <div class="ma-card-updated" id="maSPYVolUpdated">Stooq SPY에서 불러오는 중...</div>
-            <div class="rsi-bar-wrap" style="margin:10px 0 4px;">
-                <div class="rsi-bar-thumb" id="maSPYVolThumb" style="left:50%"></div>
-            </div>
-            <div class="rsi-labels"><span>침체 (60%↓)</span><span>정상 (100%)</span><span>폭증 (150%↑)</span></div>
-            <div id="maSPYVolMult" style="font-size:12px;color:var(--text-sub);margin:8px 0 4px;font-weight:600;"></div>
-            <table class="ma-range-table" style="margin-top:8px;" id="maSPYVolTable">
-                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>~60%</td><td>거래 침체</td><td>신호 약화 ×0.78</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#007AFF"></span>60~85%</td><td>거래 저조</td><td>신호 약화 ×0.90</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>85~120%</td><td>거래 정상</td><td>변화 없음 ×1.00</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>120~150%</td><td>거래 활발</td><td>신호 강화 ×1.08</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>150%+</td><td>거래 폭증</td><td>신호 강화 ×1.15</td></tr>
-            </table>
-            <div style="margin-top:10px;font-size:11px;color:var(--text-sub);line-height:1.5;">
-                💡 거래량은 직접 점수에 반영되지 않고 <b style="color:var(--primary);">각 지표의 신뢰도 승수</b>로 작동합니다.<br>
-                SPY ETF 20일 평균 대비 · Stooq 실시간
+                💡 CNN Money에서 집계하는 투자심리 지수. 극단 공포 구간은 역발상 매수 기회, 극단 탐욕 구간은 과열 주의. 미국 장 마감 후 업데이트.
             </div>
         </div>
 
@@ -3013,19 +2873,38 @@
         }
         ctx.stroke();
 
-        // 범례 (우상단)
+        // 범례 — 우→좌 역순 배치로 200일선 짤림 방지
         const legendItems = [{ label:'종가', color: closeColor }, ...periods.map(p=>({ label:p+'일선', color: MA_COLORS[p]||'#888', dash: p>=100 }))];
-        let lx = PAD_L + 4;
         ctx.font = '10px -apple-system, sans-serif'; ctx.textAlign = 'left';
-        legendItems.forEach(item => {
-            ctx.strokeStyle = item.color; ctx.lineWidth = 1.5;
-            if (item.dash) ctx.setLineDash([4,3]); else ctx.setLineDash([]);
-            ctx.beginPath(); ctx.moveTo(lx, PAD_T - 10); ctx.lineTo(lx + 16, PAD_T - 10); ctx.stroke();
-            ctx.setLineDash([]);
-            ctx.fillStyle = textColor;
-            ctx.fillText(item.label, lx + 19, PAD_T - 6);
-            lx += ctx.measureText(item.label).width + 32;
-        });
+        const itemWidths = legendItems.map(item => ctx.measureText(item.label).width + 32);
+        const totalLegW = itemWidths.reduce((a,b)=>a+b,0);
+        const availLegW = W - PAD_L - PAD_R;
+        if (totalLegW > availLegW) {
+            // 역순(우→좌) 배치: 200일선부터 왼쪽으로
+            let rx = W - PAD_R - 4;
+            for (let i = legendItems.length - 1; i >= 0; i--) {
+                const item = legendItems[i];
+                const tw = ctx.measureText(item.label).width;
+                rx -= tw + 32;
+                ctx.strokeStyle = item.color; ctx.lineWidth = 1.5;
+                if (item.dash) ctx.setLineDash([4,3]); else ctx.setLineDash([]);
+                ctx.beginPath(); ctx.moveTo(rx, PAD_T - 10); ctx.lineTo(rx + 16, PAD_T - 10); ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillStyle = textColor;
+                ctx.fillText(item.label, rx + 19, PAD_T - 6);
+            }
+        } else {
+            let lx = PAD_L + 4;
+            legendItems.forEach(item => {
+                ctx.strokeStyle = item.color; ctx.lineWidth = 1.5;
+                if (item.dash) ctx.setLineDash([4,3]); else ctx.setLineDash([]);
+                ctx.beginPath(); ctx.moveTo(lx, PAD_T - 10); ctx.lineTo(lx + 16, PAD_T - 10); ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillStyle = textColor;
+                ctx.fillText(item.label, lx + 19, PAD_T - 6);
+                lx += ctx.measureText(item.label).width + 32;
+            });
+        }
     }
 
     function attachMAChartTouch(canvas) {
@@ -3195,6 +3074,8 @@
                        ? LAST_FETCHED_DATA.market : [];
         const spRows   = market.filter(r => Number(r[1]) > 0);
         const spCloses = spRows.map(r => Number(r[1]));
+        const nasRows  = market.filter(r => Number(r[2]) > 0);
+        const nasCloses= nasRows.map(r => Number(r[2]));
         const _toMD_us = (v) => {
             if (!v) return '-';
             const d = (v instanceof Date) ? v : new Date(v);
@@ -3202,408 +3083,155 @@
             const kst = new Date(d.getTime() + 9*60*60*1000);
             return String(kst.getUTCMonth()+1).padStart(2,'0') + '-' + String(kst.getUTCDate()).padStart(2,'0');
         };
-        const lastDate = spRows.length > 0 ? _toMD_us(spRows[spRows.length-1][0]) : '-';
+        const lastDateSP  = spRows.length  > 0 ? _toMD_us(spRows[spRows.length-1][0])   : '-';
+        const lastDateNAS = nasRows.length > 0 ? _toMD_us(nasRows[nasRows.length-1][0]) : '-';
 
+        // ① S&P500 이동평균선
         if (spCloses.length < 5) {
             const el = document.getElementById('maSPXMAUpdated');
             if (el) el.textContent = '⚠️ MarketData 시트에 데이터가 없습니다';
             maSetBadge('maSPXMABadge', '데이터 없음', '');
-            return;
-        }
-
-        const spCur  = spCloses[spCloses.length-1];
-        const spPrev = spCloses.length >= 2 ? spCloses[spCloses.length-2] : null;
-
-        // ① S&P500 이동평균선
-        renderMACard('maSPXMACard','maSPXMABadge','maSPXMA','maSPXMAUpdated','maSPXMASummary',
-            spCloses,[20,50,100,125,200],spCur,spPrev,'S&P500',lastDate,market);
-
-        // ② S&P500 RSI
-        renderRSICard({
-            cardId:'maSPXRSICard', badgeId:'maSPXRSIBadge', valueId:'maSPXRSIValue',
-            updatedId:'maSPXRSIUpdated', thumbId:'maSPXRSIThumb',
-            prevId:'maSPXRSIPrev', avgUId:'maSPXRSIAvgU', avgDId:'maSPXRSIAvgD'
-        }, spCloses, 'S&P500', lastDate);
-
-        // ②③④⑤ FRED 선행지표 fetch
-        fetchFREDHY();          // 하이일드 스프레드
-        fetchFREDYieldCurve();  // 장단기 금리차
-        fetchFREDRealRate();    // 실질금리
-        fetchFREDICSA();        // 신규실업수당
-
-        // ⑥⑦ Stooq fetch (VIX + SPY 거래량)
-        fetchVIX();
-        fetchSPYVolume();
-    }
-
-    // ── FRED 공통 fetch 헬퍼 (corsproxy.io 경유)
-    function _fetchFRED(seriesId, callback, errCallback) {
-        const url = 'https://fred.stlouisfed.org/graph/fredgraph.csv?id=' + seriesId;
-        const proxy = 'https://corsproxy.io/?' + encodeURIComponent(url);
-        fetch(proxy)
-            .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
-            .then(csv => {
-                const lines = csv.trim().split('\n').filter(l => l && !l.startsWith('DATE'));
-                if (lines.length < 5) throw new Error('데이터 부족');
-                const data = [];
-                lines.forEach(line => {
-                    const [date, val] = line.split(',');
-                    const v = parseFloat(val);
-                    if (!isNaN(v)) data.push({ date: date.trim(), value: v });
-                });
-                callback(data);
-            })
-            .catch(err => { console.warn('[FRED ' + seriesId + ' 실패]', err); errCallback(err); });
-    }
-
-    // ── ② 하이일드 스프레드 (BAMLH0A0HYM2)
-    let _hyCache = null;
-    function fetchFREDHY() {
-        if (_hyCache && _hyCache.ts && (Date.now() - _hyCache.ts < 3600000)) {
-            renderHYCard(_hyCache); renderSignalBannerUS(); return;
-        }
-        document.getElementById('maHYUpdated').textContent = 'FRED에서 불러오는 중...';
-        _fetchFRED('BAMLH0A0HYM2', data => {
-            const valid = data.filter(d => !isNaN(d.value) && d.value > 0);
-            _hyCache = { data: valid, ts: Date.now() };
-            renderHYCard(_hyCache);
-            renderSignalBannerUS();
-        }, () => {
-            document.getElementById('maHYUpdated').textContent = '⚠️ FRED 데이터 불러오기 실패';
-            maSetBadge('maHYBadge', '데이터 없음', '');
-        });
-    }
-
-    function renderHYCard(cache) {
-        const data = cache.data;
-        if (!data || data.length < 2) return;
-        const cur  = data[data.length-1].value;
-        const prev = data[data.length-2].value;
-        const chg  = cur - prev;
-        const slice20 = data.slice(-20).map(d => d.value);
-        const ma20 = slice20.reduce((a,b)=>a+b,0) / slice20.length;
-        const trend = cur > ma20 ? '▲ 스프레드 확대' : '▼ 스프레드 축소';
-
-        document.getElementById('maHYValue').textContent = cur.toFixed(2);
-        document.getElementById('maHYUpdated').textContent = '업데이트: ' + data[data.length-1].date + ' · FRED BAMLH0A0HYM2';
-        const chgEl = document.getElementById('maHYChg');
-        if (chgEl) { chgEl.textContent = (chg>=0?'+':'') + chg.toFixed(2) + '%p'; chgEl.style.color = chg>0?'#FF3B30':'#34C759'; }
-        const maEl = document.getElementById('maHYMA20');
-        if (maEl) maEl.textContent = ma20.toFixed(2) + '%p';
-        const trendEl = document.getElementById('maHYTrend');
-        if (trendEl) { trendEl.textContent = trend; trendEl.style.color = cur > ma20 ? '#FF3B30' : '#34C759'; }
-        const thumbEl = document.getElementById('maHYThumb');
-        if (thumbEl) thumbEl.style.left = Math.max(2, Math.min(98, ((cur - 2) / 9) * 100)) + '%';
-
-        let label, colorClass, activeIdx;
-        if      (cur < 3)  { label='신용 최우호🎯'; colorClass='ma-panic'; activeIdx=0; }
-        else if (cur < 5)  { label='신용 안정✅';    colorClass='ma-fear';  activeIdx=1; }
-        else if (cur < 6)  { label='리스크 증가😐';  colorClass='ma-cool';  activeIdx=2; }
-        else if (cur < 8)  { label='신용 스트레스⚠️'; colorClass='ma-warn'; activeIdx=3; }
-        else               { label='신용위기🔴';     colorClass='ma-hot';   activeIdx=4; }
-        maSetCard('maHYCard', colorClass);
-        maSetBadge('maHYBadge', label, colorClass);
-        maHighlightRange('maHYTable', activeIdx);
-    }
-
-    // ── ④ 10년 실질금리 (DFII10)
-    let _realRateCache = null;
-    function fetchFREDRealRate() {
-        if (_realRateCache && _realRateCache.ts && (Date.now() - _realRateCache.ts < 3600000)) {
-            renderRealRateCard(_realRateCache); renderSignalBannerUS(); return;
-        }
-        document.getElementById('maRealRateUpdated').textContent = 'FRED에서 불러오는 중...';
-        _fetchFRED('DFII10', data => {
-            const valid = data.filter(d => !isNaN(d.value));
-            _realRateCache = { data: valid, ts: Date.now() };
-            renderRealRateCard(_realRateCache);
-            renderSignalBannerUS();
-        }, () => {
-            document.getElementById('maRealRateUpdated').textContent = '⚠️ FRED 데이터 불러오기 실패';
-            maSetBadge('maRealRateBadge', '데이터 없음', '');
-        });
-    }
-
-    function renderRealRateCard(cache) {
-        const data = cache.data;
-        if (!data || data.length < 2) return;
-        const cur  = data[data.length-1].value;
-        const prev = data[data.length-2].value;
-        const chg  = cur - prev;
-        const slice20 = data.slice(-20).map(d => d.value);
-        const ma20 = slice20.reduce((a,b)=>a+b,0) / slice20.length;
-        const trend = cur > ma20 ? '▲ 실질금리 상승' : '▼ 실질금리 하락';
-
-        document.getElementById('maRealRateValue').textContent = (cur>=0?'+':'') + cur.toFixed(2);
-        document.getElementById('maRealRateUpdated').textContent = '업데이트: ' + data[data.length-1].date + ' · FRED DFII10 (TIPS 10년)';
-        const chgEl = document.getElementById('maRealRateChg');
-        if (chgEl) { chgEl.textContent = (chg>=0?'+':'') + chg.toFixed(3) + '%'; chgEl.style.color = chg>0?'#FF3B30':'#34C759'; }
-        const maEl = document.getElementById('maRealRateMA20');
-        if (maEl) maEl.textContent = (ma20>=0?'+':'') + ma20.toFixed(2) + '%';
-        const trendEl = document.getElementById('maRealRateTrend');
-        if (trendEl) { trendEl.textContent = trend; trendEl.style.color = cur > ma20 ? '#FF3B30' : '#34C759'; }
-        const thumbEl = document.getElementById('maRealRateThumb');
-        if (thumbEl) thumbEl.style.left = Math.max(2, Math.min(98, ((cur + 2) / 5) * 100)) + '%';
-
-        let label, colorClass, activeIdx;
-        if      (cur < -1)  { label='성장주 최우호🎯'; colorClass='ma-panic'; activeIdx=0; }
-        else if (cur < 0)   { label='주식 우호적✅';    colorClass='ma-fear';  activeIdx=1; }
-        else if (cur < 1)   { label='중립 😐';          colorClass='ma-cool';  activeIdx=2; }
-        else if (cur < 2.5) { label='밸류에이션 부담⚠️'; colorClass='ma-warn'; activeIdx=3; }
-        else                { label='고실질금리🔴';     colorClass='ma-hot';   activeIdx=4; }
-        maSetCard('maRealRateCard', colorClass);
-        maSetBadge('maRealRateBadge', label, colorClass);
-        maHighlightRange('maRealRateTable', activeIdx);
-    }
-
-    // ── ③ 장단기 금리차 (T10Y2Y)
-    let _yieldCurveCache = null;
-    function fetchFREDYieldCurve() {
-        if (_yieldCurveCache && _yieldCurveCache.ts && (Date.now() - _yieldCurveCache.ts < 3600000)) {
-            renderYieldCurveCard(_yieldCurveCache); renderSignalBannerUS(); return;
-        }
-        document.getElementById('maYieldCurveUpdated').textContent = 'FRED에서 불러오는 중...';
-        _fetchFRED('T10Y2Y', data => {
-            // FRED는 결측값(.) 포함 — 유효값만 사용
-            const valid = data.filter(d => !isNaN(d.value));
-            _yieldCurveCache = { data: valid, ts: Date.now() };
-            renderYieldCurveCard(_yieldCurveCache);
-            renderSignalBannerUS();
-        }, () => {
-            document.getElementById('maYieldCurveUpdated').textContent = '⚠️ FRED 데이터 불러오기 실패';
-            maSetBadge('maYieldCurveBadge', '데이터 없음', '');
-        });
-    }
-
-    function renderYieldCurveCard(cache) {
-        const data = cache.data;
-        if (!data || data.length < 2) return;
-        const cur  = data[data.length-1].value;
-        const prev = data[data.length-2].value;
-        const chg  = cur - prev;
-        const slice20 = data.slice(-20).map(d => d.value);
-        const ma20 = slice20.reduce((a,b)=>a+b,0) / slice20.length;
-        const trend = cur > ma20 ? '▲ 정상화 중' : '▼ 역전 심화';
-
-        document.getElementById('maYieldCurveValue').textContent = (cur >= 0?'+':'') + cur.toFixed(2);
-        document.getElementById('maYieldCurveUpdated').textContent = '업데이트: ' + data[data.length-1].date + ' · FRED T10Y2Y';
-        const chgEl = document.getElementById('maYieldCurveChg');
-        if (chgEl) { chgEl.textContent = (chg>=0?'+':'') + chg.toFixed(3) + '%p'; chgEl.style.color = chg>0?'#34C759':'#FF3B30'; }
-        const maEl = document.getElementById('maYieldCurveMA');
-        if (maEl) maEl.textContent = (ma20>=0?'+':'') + ma20.toFixed(2) + '%p';
-        const trendEl = document.getElementById('maYieldCurveTrend');
-        if (trendEl) { trendEl.textContent = trend; trendEl.style.color = cur >= 0 ? '#34C759' : '#FF3B30'; }
-        const thumbEl = document.getElementById('maYieldCurveThumb');
-        if (thumbEl) thumbEl.style.left = Math.max(2, Math.min(98, ((cur + 2) / 4) * 100)) + '%';
-
-        let label, colorClass, activeIdx;
-        if      (cur < -1.0) { label='심각한 역전🔴'; colorClass='ma-hot';   activeIdx=0; }
-        else if (cur <  0.0) { label='역전 구간⚠️';   colorClass='ma-warn';  activeIdx=1; }
-        else if (cur <  0.5) { label='정상화 중😐';   colorClass='ma-cool';  activeIdx=2; }
-        else if (cur <  1.5) { label='정상 ✅';        colorClass='ma-fear';  activeIdx=3; }
-        else                 { label='가파른 정상🎯'; colorClass='ma-panic'; activeIdx=4; }
-
-        maSetCard('maYieldCurveCard', colorClass);
-        maSetBadge('maYieldCurveBadge', label, colorClass);
-        maHighlightRange('maYieldCurveTable', activeIdx);
-    }
-
-    // ── ④ 신규실업수당청구건수 (ICSA)
-    let _icsaCache = null;
-    function fetchFREDICSA() {
-        if (_icsaCache && _icsaCache.ts && (Date.now() - _icsaCache.ts < 3600000)) {
-            renderICSACard(_icsaCache); renderSignalBannerUS(); return;
-        }
-        document.getElementById('maICSAUpdated').textContent = 'FRED에서 불러오는 중...';
-        _fetchFRED('ICSA', data => {
-            const valid = data.filter(d => !isNaN(d.value) && d.value > 0);
-            _icsaCache = { data: valid, ts: Date.now() };
-            renderICSACard(_icsaCache);
-            renderSignalBannerUS();
-        }, () => {
-            document.getElementById('maICSAUpdated').textContent = '⚠️ FRED 데이터 불러오기 실패';
-            maSetBadge('maICSABadge', '데이터 없음', '');
-        });
-    }
-
-    function renderICSACard(cache) {
-        const data = cache.data;
-        if (!data || data.length < 5) return;
-        const cur   = data[data.length-1].value;
-        const prev  = data[data.length-2].value;
-        const chg   = cur - prev;
-        const slice4 = data.slice(-4).map(d => d.value);
-        const ma4   = slice4.reduce((a,b)=>a+b,0) / slice4.length;
-        const trend = cur < ma4 ? '▼ 개선 중' : '▲ 악화 중';
-        const curK  = (cur / 1000).toFixed(1); // 천건 단위
-
-        document.getElementById('maICSAValue').textContent = curK;
-        document.getElementById('maICSAUpdated').textContent = '업데이트: ' + data[data.length-1].date + ' · FRED ICSA (주간)';
-        const chgEl = document.getElementById('maICSAChg');
-        if (chgEl) { chgEl.textContent = (chg>=0?'+':'') + (chg/1000).toFixed(1) + 'k'; chgEl.style.color = chg<0?'#34C759':'#FF3B30'; }
-        const maEl = document.getElementById('maICSAMA4');
-        if (maEl) maEl.textContent = (ma4/1000).toFixed(1) + 'k';
-        const trendEl = document.getElementById('maICSATrend');
-        if (trendEl) { trendEl.textContent = trend; trendEl.style.color = cur < ma4 ? '#34C759' : '#FF3B30'; }
-        const thumbEl = document.getElementById('maICSAThumb');
-        if (thumbEl) thumbEl.style.left = Math.max(2, Math.min(98, ((cur - 150000) / 300000) * 100)) + '%';
-
-        let label, colorClass, activeIdx;
-        if      (cur < 200000) { label='노동시장 강함🎯'; colorClass='ma-panic'; activeIdx=0; }
-        else if (cur < 230000) { label='호황 ✅';          colorClass='ma-fear';  activeIdx=1; }
-        else if (cur < 280000) { label='정상 😐';          colorClass='ma-cool';  activeIdx=2; }
-        else if (cur < 350000) { label='주의 ⚠️';          colorClass='ma-warn';  activeIdx=3; }
-        else                   { label='위험 🔴';          colorClass='ma-hot';   activeIdx=4; }
-
-        maSetCard('maICSACard', colorClass);
-        maSetBadge('maICSABadge', label, colorClass);
-        maHighlightRange('maICSATable', activeIdx);
-    }
-
-    // ── ⑥ VIX 공포지수
-    let _vixCache = null;
-    function fetchVIX() {
-        if (_vixCache && _vixCache.ts && (Date.now() - _vixCache.ts < 3600000)) {
-            renderVIXCard(_vixCache); renderSignalBannerUS(); return;
-        }
-        const url = 'https://stooq.com/q/d/l/?s=%5Evix&i=d';
-        const proxy = 'https://corsproxy.io/?' + encodeURIComponent(url);
-        document.getElementById('maVIXUpdated').textContent = 'Stooq에서 불러오는 중...';
-        fetch(proxy)
-            .then(r => r.text())
-            .then(csv => {
-                const lines = csv.trim().split('\n').filter(l => l && !l.startsWith('Date'));
-                if (lines.length < 5) throw new Error('데이터 부족');
-                const closes = []; let lastDate = '-';
-                lines.forEach(line => {
-                    const cols = line.split(',');
-                    const c = parseFloat(cols[4]);
-                    if (!isNaN(c) && c > 0) { closes.push(c); lastDate = cols[0]; }
-                });
-                _vixCache = { closes, lastDate, ts: Date.now() };
-                renderVIXCard(_vixCache);
-                renderSignalBannerUS();
-            })
-            .catch(err => {
-                console.warn('[VIX fetch 실패]', err);
-                document.getElementById('maVIXUpdated').textContent = '⚠️ 데이터 불러오기 실패';
-                maSetBadge('maVIXBadge', '데이터 없음', '');
-            });
-    }
-
-    function renderVIXCard(cache) {
-        const closes = cache.closes;
-        if (!closes || closes.length < 2) return;
-        const cur  = closes[closes.length-1];
-        const prev = closes[closes.length-2];
-        const chg  = cur - prev;
-        const ma20 = closes.length >= 20 ? closes.slice(-20).reduce((a,b)=>a+b,0)/20 : null;
-        const trend = ma20 ? (cur > ma20 ? '▲ 공포 증가' : '▼ 안정화') : '-';
-
-        document.getElementById('maVIXValue').textContent = cur.toFixed(2);
-        document.getElementById('maVIXUpdated').textContent = '업데이트: ' + cache.lastDate + ' · Stooq ^VIX';
-        const chgEl = document.getElementById('maVIXChg');
-        if (chgEl) { chgEl.textContent = (chg>=0?'+':'') + chg.toFixed(2); chgEl.style.color = chg>0?'#FF3B30':'#34C759'; }
-        const maEl = document.getElementById('maVIXMA20');
-        if (maEl) maEl.textContent = ma20 ? ma20.toFixed(2) : '-';
-        const trendEl = document.getElementById('maVIXTrend');
-        if (trendEl) { trendEl.textContent = trend; trendEl.style.color = cur > (ma20||cur) ? '#FF3B30' : '#34C759'; }
-        const thumbEl = document.getElementById('maVIXThumb');
-        if (thumbEl) thumbEl.style.left = Math.max(2, Math.min(98, ((cur - 8) / 47) * 100)) + '%';
-
-        let label, colorClass, activeIdx;
-        if      (cur < 12) { label='극도 안도🎯'; colorClass='ma-panic'; activeIdx=0; }
-        else if (cur < 20) { label='안정 ✅';      colorClass='ma-fear';  activeIdx=1; }
-        else if (cur < 25) { label='경계 😐';      colorClass='ma-cool';  activeIdx=2; }
-        else if (cur < 35) { label='공포 ⚠️';      colorClass='ma-warn';  activeIdx=3; }
-        else               { label='패닉 🔴';      colorClass='ma-hot';   activeIdx=4; }
-
-        maSetCard('maVIXCard', colorClass);
-        maSetBadge('maVIXBadge', label, colorClass);
-        maHighlightRange('maVIXTable', activeIdx);
-    }
-
-    let _spyVolCache = null; // SPY 거래량 캐시
-
-    function fetchSPYVolume() {
-        if (_spyVolCache && _spyVolCache.ts && (Date.now() - _spyVolCache.ts < 3600000)) {
-            renderSPYVolCard(_spyVolCache);
-            renderSignalBannerUS();
-            return;
-        }
-        const url = 'https://stooq.com/q/d/l/?s=spy.us&i=d';
-        const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(url);
-        document.getElementById('maSPYVolUpdated').textContent = 'Stooq SPY에서 불러오는 중...';
-        fetch(proxyUrl)
-            .then(r => r.text())
-            .then(csv => {
-                const lines = csv.trim().split('\n').filter(l => l && !l.startsWith('Date'));
-                if (lines.length < 5) throw new Error('데이터 부족');
-                const vols = [];
-                let lastDateStr = '-';
-                lines.forEach(line => {
-                    const cols = line.split(',');
-                    const v = parseFloat(cols[5]); // Volume = 6번째 컬럼
-                    if (!isNaN(v) && v > 0) { vols.push(v); lastDateStr = cols[0]; }
-                });
-                _spyVolCache = { vols, lastDate: lastDateStr, ts: Date.now() };
-                renderSPYVolCard(_spyVolCache);
-                renderSignalBannerUS();
-            })
-            .catch(err => {
-                console.warn('[SPY 거래량 fetch 실패]', err);
-                document.getElementById('maSPYVolUpdated').textContent = '⚠️ 데이터 불러오기 실패';
-                maSetBadge('maSPYVolBadge', '데이터 없음', '');
-            });
-    }
-
-    function getSPYVolMultiplier() {
-        if (!_spyVolCache || !_spyVolCache.vols || _spyVolCache.vols.length < 2) return 1.0;
-        const vols = _spyVolCache.vols;
-        const cur = vols[vols.length - 1];
-        const window = vols.slice(Math.max(0, vols.length - 21), vols.length - 1);
-        const avg20 = window.length > 0 ? window.reduce((a,b)=>a+b,0)/window.length : cur;
-        const ratio = avg20 > 0 ? (cur / avg20) * 100 : 100;
-        if (ratio >= 150) return 1.15;
-        if (ratio >= 120) return 1.08;
-        if (ratio >= 85)  return 1.00;
-        if (ratio >= 60)  return 0.90;
-        return 0.78;
-    }
-
-    function renderSPYVolCard(cache) {
-        const vols = cache.vols;
-        if (!vols || vols.length < 2) return;
-        const cur = vols[vols.length - 1];
-        const window = vols.slice(Math.max(0, vols.length - 21), vols.length - 1);
-        const avg20 = window.length > 0 ? window.reduce((a,b)=>a+b,0)/window.length : cur;
-        const ratio = avg20 > 0 ? (cur / avg20) * 100 : 100;
-
-        const valEl = document.getElementById('maSPYVolValue');
-        if (valEl) valEl.textContent = ratio.toFixed(1);
-        const updEl = document.getElementById('maSPYVolUpdated');
-        if (updEl) updEl.textContent = '기준일: ' + cache.lastDate + ' · SPY ETF 20일 평균 대비';
-
-        let mult, label, colorClass, thumbPct, activeIdx;
-        if (ratio >= 150) {
-            mult='×1.15'; label='거래 폭증 — 신호 15% 강화'; colorClass='ma-hot'; thumbPct=95; activeIdx=4;
-        } else if (ratio >= 120) {
-            mult='×1.08'; label='거래 활발 — 신호 8% 강화'; colorClass='ma-warn'; thumbPct=75; activeIdx=3;
-        } else if (ratio >= 85) {
-            mult='×1.00'; label='거래 정상 — 신호 변화 없음'; colorClass='ma-cool'; thumbPct=50; activeIdx=2;
-        } else if (ratio >= 60) {
-            mult='×0.90'; label='거래 저조 — 신호 10% 약화'; colorClass='ma-fear'; thumbPct=25; activeIdx=1;
         } else {
-            mult='×0.78'; label='거래 침체 — 신호 22% 약화'; colorClass='ma-panic'; thumbPct=5; activeIdx=0;
+            const spCur  = spCloses[spCloses.length-1];
+            const spPrev = spCloses.length >= 2 ? spCloses[spCloses.length-2] : null;
+            renderMACard('maSPXMACard','maSPXMABadge','maSPXMA','maSPXMAUpdated','maSPXMASummary',
+                spCloses,[20,50,100,125,200],spCur,spPrev,'S&P500',lastDateSP,market);
         }
-        maSetCard('maSPYVolCard', colorClass);
-        maSetBadge('maSPYVolBadge', '승수 ' + mult, colorClass);
-        const thumbEl = document.getElementById('maSPYVolThumb');
-        if (thumbEl) thumbEl.style.left = thumbPct + '%';
-        const multEl = document.getElementById('maSPYVolMult');
-        if (multEl) multEl.textContent = '현재 거래량 신뢰도 승수: ' + mult + ' (' + label + ')';
-        maHighlightRange('maSPYVolTable', activeIdx);
+
+        // ② 나스닥 이동평균선
+        if (nasCloses.length < 5) {
+            const el = document.getElementById('maNASMAUpdated');
+            if (el) el.textContent = '⚠️ MarketData 시트에 나스닥 데이터가 없습니다';
+            maSetBadge('maNASMABadge', '데이터 없음', '');
+        } else {
+            const nasCur  = nasCloses[nasCloses.length-1];
+            const nasPrev = nasCloses.length >= 2 ? nasCloses[nasCloses.length-2] : null;
+            renderMACard('maNASMACard','maNASMABadge','maNASMA','maNASMAUpdated','maNASMASummary',
+                nasCloses,[20,50,100,125,200],nasCur,nasPrev,'나스닥',lastDateNAS,market);
+        }
+
+        // ③ CNN 공포탐욕지수
+        fetchFearGreed();
     }
+
+
+    // ── CNN 공포탐욕지수
+    // 우선순위: ① GAS 서버 캐시 → ② 브라우저 직접(프록시 순차시도)
+    let _fngCache = null;
+
+    function _parseFNG(data) {
+        // CNN API 응답 파싱 → { value, rating, dateStr }
+        const fng = data && data.fear_and_greed;
+        if (!fng || fng.score === undefined) return null;
+        const value = Math.round(Number(fng.score));
+        if (isNaN(value)) return null;
+        const ratingMap = {
+            'extreme fear': '극단적 공포', 'fear': '공포',
+            'neutral': '중립', 'greed': '탐욕', 'extreme greed': '극단적 탐욕'
+        };
+        const raw = String(fng.rating || '');
+        const rating = ratingMap[raw.toLowerCase()] || raw;
+        const ts = String(fng.timestamp || '');
+        let dateStr = '-';
+        if (ts.includes('T')) {
+            try { const d = new Date(ts); dateStr = (d.getMonth()+1) + '/' + d.getDate(); } catch(e) {}
+        }
+        return { value, rating, dateStr };
+    }
+
+    function fetchFearGreed() {
+        // ① GAS가 미리 가져온 데이터 우선 사용
+        const gasData = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.fearGreed)
+                        ? LAST_FETCHED_DATA.fearGreed : null;
+        if (gasData && gasData.value !== undefined && gasData.value !== null) {
+            _fngCache = { value: gasData.value, rating: gasData.rating || '', dateStr: gasData.dateStr || '-', ts: Date.now() };
+            renderFearGreedCard(_fngCache);
+            renderSignalBannerUS();
+            return;
+        }
+
+        // 캐시 유효하면 재사용
+        if (_fngCache && _fngCache.ts && (Date.now() - _fngCache.ts < 3600000)) {
+            renderFearGreedCard(_fngCache); renderSignalBannerUS(); return;
+        }
+
+        const el = document.getElementById('maFNGUpdated');
+        if (el) el.textContent = 'CNN에서 불러오는 중...';
+
+        const CNN_URL = 'https://production.dataviz.cnn.io/index/fearandgreed/graphdata';
+
+        // ② 프록시 순차 시도 목록
+        const proxies = [
+            u => 'https://corsproxy.io/?' + encodeURIComponent(u),
+            u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+            u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
+        ];
+
+        function tryProxy(idx) {
+            if (idx >= proxies.length) {
+                // 모든 프록시 실패 → 직접 fetch 시도 (GitHub Pages에선 될 수도)
+                fetch(CNN_URL)
+                    .then(r => { if (!r.ok) throw new Error('direct ' + r.status); return r.json(); })
+                    .then(data => { onSuccess(data); })
+                    .catch(() => onFail());
+                return;
+            }
+            const proxyUrl = proxies[idx](CNN_URL);
+            fetch(proxyUrl)
+                .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+                .then(data => {
+                    const parsed = _parseFNG(data);
+                    if (parsed) { onSuccess(data); }
+                    else { console.warn('[FNG] 프록시' + idx + ' 파싱 실패, 다음 시도'); tryProxy(idx + 1); }
+                })
+                .catch(err => {
+                    console.warn('[FNG] 프록시' + idx + ' 실패:', err.message, '→ 다음 시도');
+                    tryProxy(idx + 1);
+                });
+        }
+
+        function onSuccess(data) {
+            const parsed = _parseFNG(data);
+            if (!parsed) { onFail(); return; }
+            _fngCache = { ...parsed, ts: Date.now() };
+            renderFearGreedCard(_fngCache);
+            renderSignalBannerUS();
+        }
+
+        function onFail() {
+            console.warn('[FNG] 모든 경로 실패');
+            if (el) el.textContent = '⚠️ 데이터 불러오기 실패 (GitHub Pages 배포 후 정상 작동)';
+            maSetBadge('maFNGBadge', '데이터 없음', '');
+        }
+
+        tryProxy(0);
+    }
+
+    function renderFearGreedCard(cache) {
+        const v = cache.value;
+        const valEl = document.getElementById('maFNGValue');
+        if (valEl) valEl.textContent = v;
+        const updEl = document.getElementById('maFNGUpdated');
+        if (updEl) updEl.textContent = '업데이트: ' + cache.dateStr + ' · CNN Fear & Greed Index';
+        const ratingEl = document.getElementById('maFNGRating');
+        if (ratingEl) ratingEl.textContent = cache.rating;
+        const dateEl = document.getElementById('maFNGDate');
+        if (dateEl) dateEl.textContent = cache.dateStr;
+        const thumbEl = document.getElementById('maFNGThumb');
+        if (thumbEl) thumbEl.style.left = Math.max(2, Math.min(98, v)) + '%';
+
+        let label, colorClass, activeIdx;
+        if      (v < 25) { label='극단적 공포 🎯'; colorClass='ma-hot';   activeIdx=0; }
+        else if (v < 45) { label='공포 ⚠️';        colorClass='ma-warn';  activeIdx=1; }
+        else if (v < 56) { label='중립 😐';         colorClass='ma-cool';  activeIdx=2; }
+        else if (v < 75) { label='탐욕 📈';         colorClass='ma-fear';  activeIdx=3; }
+        else             { label='극단적 탐욕 🔴';  colorClass='ma-panic'; activeIdx=4; }
+
+        maSetCard('maFNGCard', colorClass);
+        maSetBadge('maFNGBadge', label, colorClass);
+        maHighlightRange('maFNGTable', activeIdx);
+    }
+
 
     function renderCredit(data){
         if(!data||data.value===undefined||data.value===null){maNoData('maCreditValue','maCreditUpdated');maSetBadge('maCreditBadge','데이터없음','');return;}
@@ -3656,6 +3284,7 @@
     // US 지표 (각 25점):
     //   ① S&P500 이동평균선 : 0(전선 위) ~ 25(전선 아래+돌파)
     //   ② 나스닥 이동평균선  : 0(전선 위) ~ 25(전선 아래+돌파)
+    //   ③ CNN 공포탐욕지수  : 0(극단탐욕) ~ 25(극단공포 역발상)
     //
     // 판정 기준 (0~100):
     //   75+ : 🎯 강한 바닥 신호
@@ -3780,84 +3409,53 @@
     }
 
     function renderSignalBannerUS() {
+        // US 지표 (각 가중치):
+        //   ① S&P500 이동평균선 (40%)
+        //   ② 나스닥 이동평균선  (40%)
+        //   ③ CNN 공포탐욕지수  (20%) — 역발상: 극단공포=강세, 극단탐욕=약세
         const market = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.market)
                        ? LAST_FETCHED_DATA.market : [];
 
         let weightedSum = 0, weightTotal = 0, signals = [];
-        const volMult = getSPYVolMultiplier(); // SPY 거래량 승수 (MA에만 적용)
 
-        const spCloses = market.filter(r => Number(r[1]) > 0).map(r => Number(r[1]));
+        const spCloses  = market.filter(r => Number(r[1]) > 0).map(r => Number(r[1]));
+        const nasCloses = market.filter(r => Number(r[2]) > 0).map(r => Number(r[2]));
 
-        // ① S&P500 이동평균선 (15%) + 거래량 승수
+        // ① S&P500 이동평균선 (40%)
         if (spCloses.length >= 20) {
             const res = _calcMAScore(spCloses, [20, 50, 100, 125, 200]);
             if (res.score !== null) {
                 const s = 100 - Math.round((res.score / 25) * 100);
-                const w = 15 * volMult;
-                weightedSum += s * w; weightTotal += w;
+                weightedSum += s * 40; weightTotal += 40;
                 if (res.crossDownCount > 0) signals.push('S&P500 MA 하향돌파🔴');
                 else if (res.belowCount === 0) signals.push('S&P500 전선 위✅');
                 else if (res.belowCount === res.total) signals.push('S&P500 전선 아래📉');
             }
         }
 
-        // ② 하이일드 스프레드 (20%) — 선행, 거래량 승수 미적용
-        // 낮을수록 신용 안정 = 주식 우호 → 점수 반전
-        // 2%~11% → 100~0 선형 반전
-        if (_hyCache && _hyCache.data && _hyCache.data.length >= 2) {
-            const hy = _hyCache.data[_hyCache.data.length-1].value;
-            const s = Math.max(0, Math.min(100, ((11 - hy) / 9) * 100));
-            weightedSum += s * 20; weightTotal += 20;
-            if (hy >= 8)   signals.push('하이일드 신용위기🔴(' + hy.toFixed(2) + '%)');
-            else if (hy >= 6) signals.push('하이일드 스트레스⚠️(' + hy.toFixed(2) + '%)');
-            else if (hy < 3)  signals.push('하이일드 낙관🎯(' + hy.toFixed(2) + '%)');
-        }
-
-        // ③ 장단기 금리차 T10Y2Y (20%) — 선행, 거래량 승수 미적용
-        // -2%p~+2%p → 0~100 선형
-        if (_yieldCurveCache && _yieldCurveCache.data && _yieldCurveCache.data.length >= 2) {
-            const yc = _yieldCurveCache.data[_yieldCurveCache.data.length-1].value;
-            const s = Math.max(0, Math.min(100, ((yc + 2) / 4) * 100));
-            weightedSum += s * 20; weightTotal += 20;
-            if (yc < -1.0) signals.push('금리차 심각한 역전🔴(' + yc.toFixed(2) + '%p)');
-            else if (yc < 0)   signals.push('금리차 역전⚠️(' + yc.toFixed(2) + '%p)');
-            else if (yc > 1.0) signals.push('금리차 정상화✅(' + yc.toFixed(2) + '%p)');
-        }
-
-        // ④ 실질금리 DFII10 (15%) — 선행, 거래량 승수 미적용
-        // 높을수록 주식 압박 → 점수 반전
-        // -2%~+4% → 100~0 선형 반전
-        if (_realRateCache && _realRateCache.data && _realRateCache.data.length >= 2) {
-            const rr = _realRateCache.data[_realRateCache.data.length-1].value;
-            const s = Math.max(0, Math.min(100, ((4 - rr) / 6) * 100));
-            weightedSum += s * 15; weightTotal += 15;
-            if (rr >= 2.5) signals.push('실질금리 고위험🔴(' + rr.toFixed(2) + '%)');
-            else if (rr < 0) signals.push('실질금리 우호적✅(' + rr.toFixed(2) + '%)');
-        }
-
-        // ⑤ 신규실업수당 ICSA (15%) — 선행, 거래량 승수 미적용
-        // 낮을수록 노동시장 강함 → 점수 반전 (150k~450k → 100~0)
-        if (_icsaCache && _icsaCache.data && _icsaCache.data.length >= 2) {
-            const icsa = _icsaCache.data[_icsaCache.data.length-1].value;
-            const s = Math.max(0, Math.min(100, ((450000 - icsa) / 300000) * 100));
-            weightedSum += s * 15; weightTotal += 15;
-            if (icsa >= 350000) signals.push('실업수당 위험🔴(' + (icsa/1000).toFixed(0) + 'k)');
-            else if (icsa <= 200000) signals.push('노동시장 강함🎯(' + (icsa/1000).toFixed(0) + 'k)');
-        }
-
-        // ⑥ VIX (15%) — 역발상: 정상구간 낮을수록 강세, 35↑ 극단 공포는 역발상 저점
-        if (_vixCache && _vixCache.closes && _vixCache.closes.length >= 2) {
-            const vix = _vixCache.closes[_vixCache.closes.length-1];
-            let s;
-            if (vix >= 35) {
-                s = Math.min(100, 50 + (vix - 35) * 1.5); // 극단 공포 = 역발상 상승
-            } else {
-                s = Math.max(0, Math.min(100, ((35 - vix) / 27) * 80)); // 정상구간 반전
+        // ② 나스닥 이동평균선 (40%)
+        if (nasCloses.length >= 20) {
+            const res = _calcMAScore(nasCloses, [20, 50, 100, 125, 200]);
+            if (res.score !== null) {
+                const s = 100 - Math.round((res.score / 25) * 100);
+                weightedSum += s * 40; weightTotal += 40;
+                if (res.crossDownCount > 0) signals.push('나스닥 MA 하향돌파🔴');
+                else if (res.belowCount === 0) signals.push('나스닥 전선 위✅');
+                else if (res.belowCount === res.total) signals.push('나스닥 전선 아래📉');
             }
-            weightedSum += s * 15; weightTotal += 15;
-            if (vix >= 35)      signals.push('VIX 패닉🎯역발상(' + vix.toFixed(1) + ')');
-            else if (vix >= 25) signals.push('VIX 공포⚠️(' + vix.toFixed(1) + ')');
-            else if (vix < 12)  signals.push('VIX 극도안도(' + vix.toFixed(1) + ')');
+        }
+
+        // ③ CNN 공포탐욕지수 (20%) — 역발상
+        // 극단공포(0~24) = 매수기회(높은점수), 극단탐욕(75~100) = 과열(낮은점수)
+        // 0→100점(극공포=강세), 100→0점(극탐욕=약세) 선형 반전
+        if (_fngCache && _fngCache.value !== undefined) {
+            const fng = _fngCache.value;
+            const s = Math.max(0, Math.min(100, 100 - fng));
+            weightedSum += s * 20; weightTotal += 20;
+            if (fng < 25)      signals.push('극단 공포🎯역발상(' + fng + ')');
+            else if (fng < 45) signals.push('공포 구간⚠️(' + fng + ')');
+            else if (fng >= 75) signals.push('극단 탐욕🔴과열(' + fng + ')');
+            else if (fng >= 56) signals.push('탐욕 구간📈(' + fng + ')');
         }
 
         const score = weightTotal > 0 ? Math.round(weightedSum / weightTotal) : 50;
@@ -3926,18 +3524,12 @@
         US: {
             title: '🇺🇸 미국 시장 종합신호 — 가중치',
             items: [
-                { icon: '📈', name: 'S&P500 이동평균선', pct: 15, max: 15,
-                  desc: '후행지표. 20/50/100/125/200일선 기준. 전선 위 비율 점수화. 거래량 승수 적용', volApplied: true },
-                { icon: '💀', name: '하이일드 스프레드', pct: 20, max: 20,
-                  desc: '선행지표. 정크본드-국채 금리차. 낮을수록 신용 안정. 2008·2020 폭락 선행 검증. FRED 일별. 거래량 승수 미적용', volApplied: false },
-                { icon: '📉', name: '장단기 금리차 (T10Y2Y)', pct: 20, max: 20,
-                  desc: '선행지표. 10년-2년 금리차. 역전(-) = 경기침체 신호. 1960년 이후 9/9 적중. FRED 일별. 거래량 승수 미적용', volApplied: false },
-                { icon: '🔬', name: '10년 실질금리 (TIPS)', pct: 15, max: 15,
-                  desc: '선행지표. 명목금리-기대인플레이션. 높을수록 성장주 할인율 상승. FRED 일별. 거래량 승수 미적용', volApplied: false },
-                { icon: '👷', name: '신규실업수당 (ICSA)', pct: 15, max: 15,
-                  desc: '선행지표. 낮을수록 노동시장 강함. FRED 주간 데이터. 거래량 승수 미적용', volApplied: false },
-                { icon: '😱', name: 'VIX 공포지수', pct: 15, max: 15,
-                  desc: '역발상 지표. 정상구간 낮을수록 강세. VIX 35+ 극단 공포는 역발상 저점 신호. Stooq 실시간. 거래량 승수 미적용', volApplied: false },
+                { icon: '📈', name: 'S&P500 이동평균선', pct: 40, max: 40,
+                  desc: '후행지표. 20/50/100/125/200일선 기준. 전선 위 비율 점수화. MarketData 시트', volApplied: false },
+                { icon: '📊', name: '나스닥 이동평균선', pct: 40, max: 40,
+                  desc: '후행지표. 20/50/100/125/200일선 기준. 전선 위 비율 점수화. MarketData 시트', volApplied: false },
+                { icon: '😱', name: 'CNN 공포탐욕지수', pct: 20, max: 20,
+                  desc: '역발상 지표. 극단 공포(0~24) = 역발상 매수 기회. 극단 탐욕(75~100) = 과열 주의. CNN 비공식 API 일별', volApplied: false },
             ]
         }
     };
