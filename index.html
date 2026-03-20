@@ -1793,7 +1793,9 @@
         listDiv.innerHTML = '';
         REALIZED_EVENTS = [];
         let realizedMap = {}, portfolio = {}, totalDeposit = 0, totalWithdraw = 0;
-        let myLogs = RAW_DATA.filter(r => r[0] === currentUser);
+        let myLogs = currentUser === '가족 전체'
+            ? RAW_DATA.filter(r => r[0] && String(r[0]).trim() !== '가족 전체' && String(r[0]).trim() !== '')
+            : RAW_DATA.filter(r => r[0] === currentUser);
         myLogs.sort((a,b) => new Date(a[1])-new Date(b[1]));
         myLogs.forEach(row => {
             let date = new Date(row[1]); if (isNaN(date)) return;
@@ -1824,10 +1826,41 @@
             } else if (type === '액면분할출고') { if (portfolio[ticker]) portfolio[ticker].qty -= qty; }
             else if (type === '액면분할입고') { if (!portfolio[ticker]) portfolio[ticker] = { qty: 0, totalCost: 0 }; portfolio[ticker].qty += qty; }
         });
-        const myPerfData = PERFORMANCE_DATA.filter(row => row[1] === currentUser);
-        const yearlyResults = typeof calculateYearlyProfit === 'function' ? calculateYearlyProfit(myPerfData) : [];
+        // 가족 전체: 모든 구성원 성과분석 데이터 합산으로 연도별 손익 계산
+        const myPerfData = currentUser === '가족 전체'
+            ? PERFORMANCE_DATA.filter(row => row[1] && row[1] !== '가족 전체')
+            : PERFORMANCE_DATA.filter(row => row[1] === currentUser);
+        // 연도별 손익: 가족 전체는 구성원별 합산
+        let yearlyResults;
+        if (currentUser === '가족 전체') {
+            // 구성원별 연도별 손익을 합산
+            const memberNames = [...new Set(myPerfData.map(r => r[1]).filter(Boolean))];
+            let yearProfitMap = {};
+            memberNames.forEach(member => {
+                const memberPerf = myPerfData.filter(r => r[1] === member);
+                const results = typeof calculateYearlyProfit === 'function' ? calculateYearlyProfit(memberPerf) : [];
+                results.forEach(r => {
+                    if (!yearProfitMap[r.year]) yearProfitMap[r.year] = 0;
+                    yearProfitMap[r.year] += r.profit;
+                });
+            });
+            yearlyResults = Object.keys(yearProfitMap).map(year => ({
+                year, profit: yearProfitMap[year], roi: 0
+            }));
+        } else {
+            yearlyResults = typeof calculateYearlyProfit === 'function' ? calculateYearlyProfit(myPerfData) : [];
+        }
         let currentTotalAsset = 0;
-        if (myPerfData.length > 0) { myPerfData.sort((a,b)=>new Date(b[0])-new Date(a[0])); currentTotalAsset = Number(myPerfData[0][3]); }
+        if (currentUser === '가족 전체') {
+            // 가족 전체는 cashInfo의 현재 총자산 사용
+            if (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.cashInfo && LAST_FETCHED_DATA.cashInfo['가족 전체']) {
+                currentTotalAsset = Number(LAST_FETCHED_DATA.cashInfo['가족 전체'].totalAsset) || 0;
+            }
+        } else if (myPerfData.length > 0) {
+            myPerfData.sort((a,b)=>new Date(b[0])-new Date(a[0]));
+            currentTotalAsset = Number(myPerfData[0][3]);
+        }
+        // 가족 전체 총손익 = 구성원 전체 입출금 기반 계산
         let grandTotalProfit = (currentTotalAsset + totalWithdraw) - totalDeposit;
         let grandRealizedProfit = Object.values(realizedMap).reduce((a,b)=>a+b,0);
         let yearSet = new Set();
@@ -1931,7 +1964,7 @@
         myLineChart = new Chart(context, {
             type: 'line',
             data: { labels, datasets: [
-                { label: userLabel === '가족 전체' ? '🏆 가족 전체 수익률' : '🏆 내 수익률', data: dataMy, borderColor: '#FF3B30', backgroundColor: '#FF3B30', borderWidth: 3, pointRadius: 0, spanGaps: true, tension: 0.1, fill: false },
+                { label: userLabel === '가족 전체' ? '🏆 가족 전체' : '🏆 내 수익률', data: dataMy, borderColor: '#FF3B30', backgroundColor: '#FF3B30', borderWidth: 3, pointRadius: 0, spanGaps: true, tension: 0.1, fill: false },
                 { label: 'S&P500', data: dataS, borderColor: '#36A2EB', backgroundColor: '#36A2EB', borderWidth: 1, pointRadius: 0, fill: false },
                 { label: 'NASDAQ', data: dataN, borderColor: '#9966FF', backgroundColor: '#9966FF', borderWidth: 1, pointRadius: 0, fill: false },
                 { label: 'KOSPI', data: dataK, borderColor: '#FF9F40', backgroundColor: '#FF9F40', borderWidth: 1, pointRadius: 0, fill: false }
