@@ -2992,7 +2992,7 @@
         ctx.fillStyle = bgColor;
         ctx.fillRect(0, 0, W, H);
 
-        const PAD_L = 8, PAD_R = 58, PAD_T = 24, PAD_B = 28;
+        const PAD_L = 8, PAD_R = 58, PAD_T = 36, PAD_B = 28;
         const chartW = W - PAD_L - PAD_R, chartH = H - PAD_T - PAD_B;
 
         const vMin = Math.round(viewMin), vMax = Math.round(viewMax);
@@ -3085,36 +3085,44 @@
         }
         ctx.stroke();
 
-        // 범례 — 우→좌 역순 배치로 200일선 짤림 방지
+        // 범례 — 공간 부족 시 2줄로 자동 분할
         const legendItems = [{ label:'종가', color: closeColor }, ...periods.map(p=>({ label:p+'일선', color: MA_COLORS[p]||'#888', dash: p>=100 }))];
         ctx.font = '10px -apple-system, sans-serif'; ctx.textAlign = 'left';
-        const itemWidths = legendItems.map(item => ctx.measureText(item.label).width + 32);
+        const itemWidths = legendItems.map(item => ctx.measureText(item.label).width + 30);
         const totalLegW = itemWidths.reduce((a,b)=>a+b,0);
         const availLegW = W - PAD_L - PAD_R;
-        if (totalLegW > availLegW) {
-            // 역순(우→좌) 배치: 200일선부터 왼쪽으로
-            let rx = W - PAD_R - 4;
-            for (let i = legendItems.length - 1; i >= 0; i--) {
-                const item = legendItems[i];
-                const tw = ctx.measureText(item.label).width;
-                rx -= tw + 32;
-                ctx.strokeStyle = item.color; ctx.lineWidth = 1.5;
-                if (item.dash) ctx.setLineDash([4,3]); else ctx.setLineDash([]);
-                ctx.beginPath(); ctx.moveTo(rx, PAD_T - 10); ctx.lineTo(rx + 16, PAD_T - 10); ctx.stroke();
-                ctx.setLineDash([]);
-                ctx.fillStyle = textColor;
-                ctx.fillText(item.label, rx + 19, PAD_T - 6);
-            }
-        } else {
+
+        if (totalLegW <= availLegW) {
+            // 1줄: 좌→우
             let lx = PAD_L + 4;
-            legendItems.forEach(item => {
+            legendItems.forEach((item, idx) => {
                 ctx.strokeStyle = item.color; ctx.lineWidth = 1.5;
                 if (item.dash) ctx.setLineDash([4,3]); else ctx.setLineDash([]);
                 ctx.beginPath(); ctx.moveTo(lx, PAD_T - 10); ctx.lineTo(lx + 16, PAD_T - 10); ctx.stroke();
                 ctx.setLineDash([]);
                 ctx.fillStyle = textColor;
                 ctx.fillText(item.label, lx + 19, PAD_T - 6);
-                lx += ctx.measureText(item.label).width + 32;
+                lx += itemWidths[idx];
+            });
+        } else {
+            // 2줄: 절반씩 나눠서
+            const half = Math.ceil(legendItems.length / 2);
+            const row1 = legendItems.slice(0, half);
+            const row2 = legendItems.slice(half);
+            const rows = [row1, row2];
+            rows.forEach((rowItems, rowIdx) => {
+                let lx = PAD_L + 4;
+                const y = PAD_T - 18 + rowIdx * 13;
+                rowItems.forEach(item => {
+                    const tw = ctx.measureText(item.label).width;
+                    ctx.strokeStyle = item.color; ctx.lineWidth = 1.5;
+                    if (item.dash) ctx.setLineDash([4,3]); else ctx.setLineDash([]);
+                    ctx.beginPath(); ctx.moveTo(lx, y); ctx.lineTo(lx + 14, y); ctx.stroke();
+                    ctx.setLineDash([]);
+                    ctx.fillStyle = textColor;
+                    ctx.fillText(item.label, lx + 17, y + 4);
+                    lx += tw + 26;
+                });
             });
         }
     }
