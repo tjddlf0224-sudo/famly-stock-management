@@ -2415,11 +2415,12 @@
             const slotMs = (candleViewMax - candleViewMin) / Math.max(1, visible.length - 1);
             if (nearestDiff > slotMs * 1.5) return;
 
-            // 미래에셋 스타일: 속 빈 윤곽선 화살표 (크기 고정으로 항상 통일)
+            // 화살표 끝(tip)을 실제 거래 단가 y좌표에 맞춤
             const arrowColor = isBuy ? '#E8002D' : '#0057FF';
-            const tipY  = isBuy ? toY(vd.l) : toY(vd.h);
+            const tradePrice = Number(trade.price) || 0;
+            const tradePriceY = tradePrice > 0 ? toY(tradePrice) : (isBuy ? toY(vd.l) : toY(vd.h));
             const gap   = 2;
-            const aTipY = isBuy ? tipY + gap : tipY - gap;
+            const aTipY = isBuy ? tradePriceY + gap : tradePriceY - gap;
 
             // 크기 고정 (캔들 너비와 무관하게 항상 일정)
             const hw    = 5;    // 화살머리 반폭
