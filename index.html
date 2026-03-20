@@ -495,7 +495,7 @@
             <option value="윤성일">윤성일 (아빠)</option>
             <option value="윤채현">윤채현 (딸)</option>
             <option value="윤시환">윤시환 (아들)</option>
-            <option value="가족전체">👨‍👩‍👧‍👦 가족 전체</option>
+            <option value="가족 전체">👨‍👩‍👧‍👦 가족 전체</option>
         </select>
         <button onclick="toggleTheme()" id="themeToggle" style="background:none; border:none; font-size:18px; cursor:pointer; padding:5px; display:flex; align-items:center; justify-content:center;" title="테마 변경">🌓</button>
         <button onclick="forceRefresh()" style="background:none; border:none; font-size:18px; cursor:pointer; padding:5px; display:flex; align-items:center; justify-content:center; color:var(--primary);" title="새로고침">🔄</button>
@@ -1492,7 +1492,7 @@
         const select = document.getElementById('userSelect'); if (!select) return;
         currentUser = select.value;
         const inputUser = document.getElementById('inputUser');
-        if (inputUser) inputUser.value = currentUser === '가족전체' ? '윤성일' : currentUser;
+        if (inputUser) inputUser.value = currentUser === '가족 전체' ? '윤성일' : currentUser;
         if (typeof processData === 'function' && RAW_DATA && RAW_DATA.length > 0) {
             chartTabInited = false;
             processData(RAW_DATA);
@@ -1540,7 +1540,7 @@
             let qty = safeFloat(row[5]), price = safeFloat(row[6]);
             let fx = safeFloat(row[7]); if (fx === 0) fx = 1;
             let amount = price * qty * fx, amountOrigin = price * qty;
-            let isTargetUser = (currentUser === '가족 전체' || currentUser === '가족전체' || name === currentUser);
+            let isTargetUser = (currentUser === '가족 전체' || name === currentUser);
             if (isTargetUser) {
                 userLogs.push({ date, ticker, name: logName, type, amount, price, qty, userName: name });
                 if (type === '입금') totalDeposit += price;
@@ -1571,7 +1571,7 @@
             }
         });
         let finalPortfolio = {};
-        let targetUsers = (currentUser === '가족 전체' || currentUser === '가족전체') ? Object.keys(userPortfolios) : [currentUser];
+        let targetUsers = (currentUser === '가족 전체') ? Object.keys(userPortfolios) : [currentUser];
         targetUsers.forEach(uName => {
             let uPort = userPortfolios[uName]; if (!uPort) return;
             for (let t in uPort) {
@@ -2025,7 +2025,7 @@
             if (isNaN(d.getTime())) return null;
             return d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0') + '-' + String(d.getUTCDate()).padStart(2,'0');
         }
-        const targetUser = (currentUser === '가족 전체' || currentUser === '가족전체') ? null : currentUser;
+        const targetUser = currentUser === '가족 전체' ? null : currentUser;
         let holdings = {};
         if (typeof RAW_DATA !== 'undefined' && RAW_DATA.length > 0) {
             let userLogs = targetUser ? RAW_DATA.filter(r => String(r[0]).trim() === targetUser) : RAW_DATA;
