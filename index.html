@@ -2576,7 +2576,17 @@
         const memberSet = new Set();
         RAW_DATA.forEach(row => { const name = String(row[0]).trim(); if (name && name !== '가족 전체') memberSet.add(name); });
         const members = Array.from(memberSet);
-        function toKRW(row) { const price=Number(row[6])||0, fxRate=Number(row[7])||1; return fxRate > 100 ? price * usdRate : price; }
+        function toKRW(row) {
+            const price = Number(row[6]) || 0;
+            const fxRate = Number(row[7]) || 0;
+            // fxRate가 없거나 1 이하면 달러 배당인지 티커로 판단
+            // 달러 배당: fxRate > 100이거나, fxRate 없고 티커가 영문(미국주식)
+            const ticker = String(row[2]).trim().toUpperCase();
+            const isKorean = /^\d{6}$/.test(ticker);
+            if (fxRate > 100) return price * fxRate;           // fxRate 명시된 경우
+            if (!isKorean && fxRate <= 1) return price * usdRate; // 미국주식인데 fxRate 없음 → 현재환율 적용
+            return price;                                        // 국내주식 배당 (원화)
+        }
         const memberStats = {};
         members.forEach(m => { memberStats[m] = { totalKRW: 0, count: 0 }; });
         dividendRows.forEach(row => { const name=String(row[0]).trim(); if(!memberStats[name]) return; memberStats[name].totalKRW += toKRW(row); memberStats[name].count++; });
@@ -3449,8 +3459,9 @@
                 valId: 'maFedRateValue', updId: 'maFedRateUpdated',
                 prevId: 'maFedRatePrev', chgId: 'maFedRateChg', thumbId: 'maFedRateThumb',
                 tableId: 'maFedRateTable', unit: '%', decimals: 2,
-                // 범위 0~7% (5.5% 이상 = 강한긴축)
-                thumbFn: v => Math.max(2, Math.min(98, (v / 7) * 100)),
+                // 라벨: 완화(~1%), 중립(3%), 긴축(5%↑) → 3%=50% 기준, 범위 0~6%
+                // 라벨: 목표이하, 목표(2%), 고인플레(4%↑) → 2%=50% 비선형
+                thumbFn: v => Math.max(2, Math.min(98, (v / 6) * 100)),
                 classify: v => {
                     if (v < 1)   return ['완화적 🎯',     'ma-panic', 0];
                     if (v < 2.5) return ['성장 우호 ✅',  'ma-fear',  1];
@@ -3465,7 +3476,8 @@
                 valId: 'maCPIValue', updId: 'maCPIUpdated',
                 prevId: 'maCPIPrev', chgId: 'maCPIChg', thumbId: 'maCPIThumb',
                 tableId: 'maCPITable', unit: '%', decimals: 2,
-                thumbFn: v => Math.max(2, Math.min(98, ((v + 1) / 9) * 100)),  // 범위 -1~8%
+                // 라벨: 디플레위험, 목표(2%), 고인플레(5%↑) → 2%=50% 비선형
+                thumbFn: v => Math.max(2, Math.min(98, v <= 2 ? (v / 2) * 50 : 50 + ((v - 2) / 3) * 50)),
                 classify: v => {
                     if (v < 0)   return ['디플레이션 🔴', 'ma-hot',   0];
                     if (v < 2)   return ['목표 이하 ✅',  'ma-fear',  1];
@@ -3480,7 +3492,8 @@
                 valId: 'maUnrateValue', updId: 'maUnrateUpdated',
                 prevId: 'maUnratePrev', chgId: 'maUnrateChg', thumbId: 'maUnrateThumb',
                 tableId: 'maUnrateTable', unit: '%', decimals: 1,
-                thumbFn: v => Math.max(2, Math.min(98, ((v - 2) / 7) * 100)),
+                // 라벨: 완전고용(~3.5%), 중립, 침체신호(6%↑) → 범위 2~8%
+                thumbFn: v => Math.max(2, Math.min(98, ((v - 2) / 6) * 100)),
                 classify: v => {
                     if (v < 3.5) return ['완전고용 🎯',  'ma-panic', 0];
                     if (v < 4.5) return ['건전 ✅',      'ma-fear',  1];
@@ -3495,7 +3508,7 @@
                 valId: 'maPCEValue', updId: 'maPCEUpdated',
                 prevId: 'maPCEPrev', chgId: 'maPCEChg', thumbId: 'maPCEThumb',
                 tableId: 'maPCETable', unit: '%', decimals: 2,
-                thumbFn: v => Math.max(2, Math.min(98, (v / 6) * 100)),
+                thumbFn: v => Math.max(2, Math.min(98, v <= 2 ? (v / 2) * 50 : 50 + ((v - 2) / 2) * 50)),
                 classify: v => {
                     if (v < 2)   return ['목표 이하 ✅',  'ma-fear',  0];
                     if (v < 2.5) return ['목표 근접 😐',  'ma-cool',  1];
@@ -3509,7 +3522,8 @@
                 valId: 'maGDPValue', updId: 'maGDPUpdated',
                 prevId: 'maGDPPrev', chgId: 'maGDPChg', thumbId: 'maGDPThumb',
                 tableId: 'maGDPTable', unit: '%', decimals: 1,
-                thumbFn: v => Math.max(2, Math.min(98, ((v + 3) / 9) * 100)),  // 범위 -3~6%
+                // 라벨: 침체(음수), 잠재성장(2%), 과열(4%↑) → 0%=25%, 2%=50%, 4%=75%
+                thumbFn: v => Math.max(2, Math.min(98, v <= 0 ? Math.max(0, 25 + v * 8.33) : v <= 2 ? 25 + (v / 2) * 25 : v <= 4 ? 50 + ((v - 2) / 2) * 25 : Math.min(98, 75 + (v - 4) * 12.5))),
                 classify: v => {
                     if (v < 0)   return ['마이너스 성장 🔴','ma-hot',  0];
                     if (v < 1)   return ['저성장 ⚠️',      'ma-warn',  1];
@@ -3524,7 +3538,8 @@
                 valId: 'maTsy10Value', updId: 'maTsy10Updated',
                 prevId: 'maTsy10Prev', chgId: 'maTsy10Chg', thumbId: 'maTsy10Thumb',
                 tableId: 'maTsy10Table', unit: '%', decimals: 2,
-                thumbFn: v => Math.max(2, Math.min(98, (v / 7) * 100)),
+                // 라벨: 저금리(~2%), 중립(4%), 고금리(5%↑) → 4%=50% 비선형
+                thumbFn: v => Math.max(2, Math.min(98, v <= 4 ? (v / 4) * 50 : 50 + ((v - 4) / 3) * 50)),
                 classify: v => {
                     if (v < 2)   return ['저금리 🎯',    'ma-panic', 0];
                     if (v < 3.5) return ['정상 ✅',      'ma-fear',  1];
