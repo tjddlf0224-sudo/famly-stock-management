@@ -2735,6 +2735,24 @@
         document.getElementById('maBtnKR').classList.toggle('active', isKR);
         document.getElementById('maBtnUS').classList.toggle('active', !isKR);
         if (!isKR) { renderUSMA(); renderSignalBannerUS(); }
+        // 탭 전환 후 차트 크기 재설정 (display:none → block 후 offsetWidth 확보)
+        requestAnimationFrame(() => {
+            ['maKospiMAChart','maSPXMAChart','maNASMAChart'].forEach(cid => {
+                const s = _maChartState[cid];
+                if (!s) return;
+                const canvas = document.getElementById(cid);
+                if (!canvas) return;
+                const wrap = canvas.parentElement;
+                const W = wrap ? wrap.offsetWidth : 0;
+                if (W > 10 && W !== s.W) {
+                    const dpr = window.devicePixelRatio || 1;
+                    canvas.style.width = W + 'px';
+                    canvas.width = W * dpr;
+                    s.W = W;
+                    drawMALineChart(cid);
+                }
+            });
+        });
     }
 
     function renderMarketTab() {
@@ -2951,37 +2969,49 @@
 
     function initMALineChart(canvas, closes, periods, market) {
         const id = canvas.id;
-        // 날짜 배열 추출 (market 배열 r[0])
-        // closes는 이미 filter(v>0) 적용된 배열 — market에서 날짜도 동일하게 필터링
-        // closes가 어떤 컬럼인지 판단: 첫 번째 유효값으로 컬럼 역추적
-        // 단순하게: market 행 중 Date가 있고 첫번째 숫자 컬럼이 0이 아닌 행의 날짜만 추출
-        // → closes.length와 맞추기 위해 market에서 Date만 추출 후 뒤에서 closes.length개 사용
         const allDates = market.map(r => String(r[0])).filter(d => d && d !== 'Date' && !/^\s*$/.test(d));
-        // closes와 dates 길이 맞추기 (closes가 filter로 줄었을 수 있으므로 뒤에서 맞춤)
         const len = Math.min(closes.length, allDates.length);
         const dates  = allDates.slice(allDates.length - len);
         const cls    = closes.slice(closes.length - len);
 
         _maChartState[id] = {
             closes: cls, periods, dates,
-            viewMin: Math.max(0, len - 180), // 기본 180일 보여주기
+            viewMin: Math.max(0, len - 180),
             viewMax: len - 1,
             totalLen: len
         };
 
-        // 사이즈 설정
-        const wrap = canvas.parentElement;
-        const W = wrap ? wrap.offsetWidth : (window.innerWidth - 32);
-        const H = 280, dpr = window.devicePixelRatio || 1;
-        canvas.style.width  = W + 'px';
-        canvas.style.height = H + 'px';
-        canvas.width  = W * dpr;
-        canvas.height = H * dpr;
-        _maChartState[id].W = W;
-        _maChartState[id].H = H;
+        // 사이즈 설정 — W=0이면 부모가 hidden 상태, requestAnimationFrame으로 재시도
+        function doInit() {
+            const wrap = canvas.parentElement;
+            const W = wrap ? wrap.offsetWidth : 0;
+            if (W < 10) {
+                // 아직 렌더링 안 됨 → 다음 프레임 재시도 (최대 20회)
+                const retries = (canvas._maInitRetry || 0) + 1;
+                canvas._maInitRetry = retries;
+                if (retries < 20) { requestAnimationFrame(doInit); return; }
+                // 최후 fallback: 화면 너비로 추정
+                const fallbackW = window.innerWidth - 64;
+                setSize(fallbackW);
+            } else {
+                canvas._maInitRetry = 0;
+                setSize(W);
+            }
+        }
 
-        drawMALineChart(id);
-        attachMAChartTouch(canvas);
+        function setSize(W) {
+            const H = 280, dpr = window.devicePixelRatio || 1;
+            canvas.style.width  = W + 'px';
+            canvas.style.height = H + 'px';
+            canvas.width  = W * dpr;
+            canvas.height = H * dpr;
+            _maChartState[id].W = W;
+            _maChartState[id].H = H;
+            drawMALineChart(id);
+            attachMAChartTouch(canvas);
+        }
+
+        doInit();
     }
 
     function drawMALineChart(id) {
