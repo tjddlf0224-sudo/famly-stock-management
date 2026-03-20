@@ -536,7 +536,7 @@
     <div class="card">
         <h3>연도별 손익</h3>
         <select id="yearSelect" onchange="renderRealizedDetail()" style="margin-bottom:10px; padding:5px;">
-            <option value="2025">2025년</option>
+            <option value="">로딩 중...</option>
         </select>
         <div id="realizedProfitList"></div>
     </div>
@@ -1846,10 +1846,19 @@
         listDiv.innerHTML = tableHtml;
         const yearSelect = document.getElementById('yearSelect');
         if (yearSelect) {
-            let currentSelect = yearSelect.value; yearSelect.innerHTML = '';
+            let currentSelect = yearSelect.value;
+            // 현재 선택이 비어있거나 로딩중 placeholder면 무시
+            if (!currentSelect || currentSelect === '' || currentSelect === '로딩 중...') currentSelect = '';
+            yearSelect.innerHTML = '';
             let allOpt = document.createElement('option'); allOpt.value = 'all'; allOpt.text = '전체 내역'; yearSelect.add(allOpt);
             displayYears.forEach(y => { let opt = document.createElement('option'); opt.value = y; opt.text = y + '년 상세'; if(Number(y)==Number(currentSelect)) opt.selected = true; yearSelect.add(opt); });
-            if (!currentSelect && displayYears.length > 0) yearSelect.value = displayYears[0];
+            // 선택값 없으면 올해 연도 우선, 없으면 가장 최근 연도(내림차순 정렬이라 [0]이 최신)
+            if (!currentSelect || !displayYears.includes(currentSelect)) {
+                const thisYear = String(new Date().getFullYear());
+                if (displayYears.map(String).includes(thisYear)) yearSelect.value = thisYear;
+                else if (displayYears.length > 0) yearSelect.value = displayYears[0];
+                else yearSelect.value = 'all';
+            }
         }
         if (typeof renderRealizedDetail === 'function') renderRealizedDetail();
     }
