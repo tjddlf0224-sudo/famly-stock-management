@@ -118,6 +118,16 @@
         .history-filter input { border: 1px solid var(--border-color); padding: 8px; border-radius: 4px; font-size: 13px; width: 110px; background: var(--bg); color: var(--text-main); }
         .history-filter button { background: #333; color: #fff; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
         .badge { display: inline-block; padding: 3px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 6px; color: white; min-width: 30px; text-align: center; }
+        /* ── 종목 자동완성 드롭다운 ── */
+        .autocomplete-wrap { position: relative; }
+        .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); z-index: 500; max-height: 220px; overflow-y: auto; margin-top: 2px; }
+        .autocomplete-list:empty { display: none; }
+        .autocomplete-item { padding: 10px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--divider-color); font-size: 14px; }
+        .autocomplete-item:last-child { border-bottom: none; }
+        .autocomplete-item:active, .autocomplete-item.hovered { background: var(--bg); }
+        .autocomplete-item .ac-ticker { font-weight: 700; min-width: 64px; font-size: 13px; color: var(--primary); }
+        .autocomplete-item .ac-name { color: var(--text-main); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .autocomplete-item .ac-market { font-size: 11px; color: var(--text-sub); flex-shrink: 0; }
         .badge.buy { background-color: #ff3b30; }
         .badge.sell { background-color: #007aff; }
         .badge.deposit { background-color: #ff9500; }
@@ -573,7 +583,7 @@
         </div>
         <div class="form-group">
             <div style="display:flex; gap:10px;">
-                <div style="flex:1;"><label>티커</label><input type="text" id="inputTicker" placeholder="AAPL" oninput="this.value = this.value.toUpperCase()"></div>
+                <div style="flex:1;" class="autocomplete-wrap"><label>티커</label><input type="text" id="inputTicker" placeholder="AAPL 또는 SK하이닉스" autocomplete="off" oninput="if(/^[A-Za-z]/.test(this.value))this.value=this.value.toUpperCase();onTickerInput(this)"><div id="acListTicker" class="autocomplete-list"></div></div>
                 <div style="flex:1;">
                     <label>유형</label>
                     <select id="inputType" onchange="onTypeChange()">
@@ -588,7 +598,7 @@
                 </div>
             </div>
         </div>
-        <div class="form-group"><label>종목명</label><input type="text" id="inputName" placeholder="애플"></div>
+        <div class="form-group autocomplete-wrap"><label>종목명</label><input type="text" id="inputName" placeholder="애플" autocomplete="off" oninput="onNameInput(this)"><div id="acListName" class="autocomplete-list"></div></div>
         <div class="form-group" id="qtyRow">
             <div style="display:flex; gap:10px;">
                 <div style="flex:1;" id="qtyWrap"><label>수량</label><input type="number" id="inputQty" placeholder="0"></div>
@@ -1437,8 +1447,119 @@
         if (data.market) MARKET_DATA = processMarketData(data.market);
         else MARKET_DATA = [];
         PERFORMANCE_DATA = data.performance || [];
+        // ── 종목 자동완성용 목록 저장 ──
+        if (data.stockList)   STOCK_LIST_KR = data.stockList;
+        if (data.stockListUs) STOCK_LIST_US = data.stockListUs;
         if (RAW_DATA.length > 0) processData(RAW_DATA);
     }
+
+    // ── 종목 자동완성 전역 변수 ──
+    let STOCK_LIST_KR = [];
+    let STOCK_LIST_US = [];
+
+    // 미국 종목명 단축: 괄호·뒤쪽 법인형태·긴 설명 제거
+    function shortenUsName(name) {
+        if (!name) return name;
+        // 괄호 내용 제거 (예: "Apple Inc. (AAPL)" → "Apple Inc.")
+        let s = name.replace(/\s*\(.*?\)/g, '').trim();
+        // 법인 형태 약어 이후 자르기 (Inc, Corp, Ltd, plc, Co., ETF, Fund 등)
+        s = s.replace(/,?\s*(Inc\.?|Corp\.?|Corporation|Ltd\.?|Limited|plc|PLC|Co\.?|L\.P\.?|LLC|N\.V\.|S\.A\.|AG|SE|Holdings?|Group|Enterprises?|International|Technologies?|Technology|Solutions?|Systems?|Services?|Industries?|Pharmaceuticals?|Therapeutics?|Biosciences?|Bancorp|Bancshares|Financial|Capital|Investments?|Management|Partners?|Trust|Fund|ETF|Index|Portfolio|Class [A-Z])\b.*/i, '').trim();
+        // 그래도 20자 넘으면 20자에서 자르기
+        if (s.length > 20) s = s.slice(0, 20).trim();
+        return s || name.slice(0, 20);
+    }
+
+    // 표시용 이름 반환 (국내: 원본, 미국: 단축)
+    function displayName(item) {
+        if (item.market === 'KOSPI' || item.market === 'KOSDAQ') return item.name;
+        return shortenUsName(item.name);
+    }
+
+    // 저장용 이름 반환 (국내: 원본, 미국: 단축 — 거래내역에는 단축명 저장)
+    function saveName(item) {
+        return displayName(item);
+    }
+
+    // 티커 입력 → 자동완성 (숫자: KR, 알파벳: US, 한글/혼합: KR 종목명으로도 검색)
+    function onTickerInput(el) {
+        const q = el.value.trim();
+        const list = document.getElementById('acListTicker');
+        if (!q || q.length < 1) { list.innerHTML = ''; return; }
+
+        let results = [];
+        if (/^\d+$/.test(q)) {
+            // 숫자 → 국내 종목코드 앞 일치
+            results = STOCK_LIST_KR.filter(s => s.ticker.startsWith(q));
+        } else if (/^[A-Za-z]+$/.test(q)) {
+            // 영문 → 미국 티커 앞 일치 우선, 이어서 미국 종목명 포함
+            const qU = q.toUpperCase();
+            const byTicker = STOCK_LIST_US.filter(s => s.ticker.startsWith(qU));
+            const byName   = STOCK_LIST_US.filter(s => !s.ticker.startsWith(qU) && s.name.toUpperCase().includes(qU));
+            results = byTicker.concat(byName);
+        } else {
+            // 한글 혼합 → 국내 종목명 포함 검색
+            const qU = q.toUpperCase();
+            results = STOCK_LIST_KR.filter(s => s.name.toUpperCase().includes(qU) || s.ticker.startsWith(qU));
+        }
+
+        renderAcList(list, results.slice(0, 20), function(item) {
+            document.getElementById('inputTicker').value = item.ticker;
+            document.getElementById('inputName').value   = saveName(item);
+            list.innerHTML = '';
+        });
+    }
+
+    // 종목명 입력 → 자동완성 (KR+US 통합 검색)
+    function onNameInput(el) {
+        const q = el.value.trim();
+        const list = document.getElementById('acListName');
+        if (!q || q.length < 1) { list.innerHTML = ''; return; }
+        const qU = q.toUpperCase();
+
+        // 국내: 종목명 포함 / 미국: 단축명 포함 + 원본명 포함
+        const krResults = STOCK_LIST_KR.filter(s => s.name.toUpperCase().includes(qU));
+        const usResults = STOCK_LIST_US.filter(s =>
+            shortenUsName(s.name).toUpperCase().includes(qU) ||
+            s.name.toUpperCase().includes(qU) ||
+            s.ticker.toUpperCase().startsWith(qU)
+        );
+        const combined = krResults.concat(usResults).slice(0, 20);
+
+        renderAcList(list, combined, function(item) {
+            document.getElementById('inputTicker').value = item.ticker;
+            document.getElementById('inputName').value   = saveName(item);
+            list.innerHTML = '';
+        });
+    }
+
+    // 드롭다운 렌더링
+    function renderAcList(listEl, items, onSelect) {
+        if (!items.length) { listEl.innerHTML = ''; return; }
+        listEl.innerHTML = items.map((item, i) =>
+            `<div class="autocomplete-item" data-idx="${i}">`+
+            `<span class="ac-ticker">${item.ticker}</span>`+
+            `<span class="ac-name">${displayName(item)}</span>`+
+            `<span class="ac-market">${item.market || ''}</span>`+
+            `</div>`
+        ).join('');
+        listEl.querySelectorAll('.autocomplete-item').forEach((el, i) => {
+            el.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+                onSelect(items[i]);
+            });
+            el.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                onSelect(items[i]);
+            });
+        });
+    }
+
+    // 다른 곳 클릭 시 드롭다운 닫기
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.autocomplete-wrap')) {
+            document.querySelectorAll('.autocomplete-list').forEach(el => el.innerHTML = '');
+        }
+    });
 
     function fetchDataFromServer(isBackground = false) {
         if (!isBackground) showLoading();
