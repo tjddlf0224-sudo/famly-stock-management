@@ -74,6 +74,13 @@
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-size: 13px; color: var(--text-sub); }
         input, select, textarea { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 16px; box-sizing: border-box; background: var(--card-bg); color: var(--text-main); }
+        input[type="date"] {
+            -webkit-appearance: none;
+            appearance: none;
+            padding: 12px;
+            font-size: 16px;
+            min-height: 48px;
+        }
         button.btn-primary { width: 100%; background: var(--primary); color: white; padding: 15px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; }
         button.btn-primary:active { opacity: 0.9; }
         nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card-bg); height: var(--nav-height); border-top: 1px solid var(--border-color); display: flex; justify-content: flex-start; align-items: center; z-index: 100; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: env(safe-area-inset-bottom, 8px); box-sizing: content-box; touch-action: pan-x; }
@@ -264,7 +271,7 @@
             touch-action: none; user-select: none;
         }
         .volume-wrap {
-            position: relative; width: 100%; height: 70px;
+            position: relative; width: 100%; height: 160px;
             touch-action: none; user-select: none;
             border-top: 1px solid var(--divider-color);
             margin-top: 2px;
@@ -2636,7 +2643,7 @@
         if (!canvas || !candleDisplayData || candleDisplayData.length === 0) return;
         const dpr = window.devicePixelRatio || 1;
         const W = candleW_fixed || canvas.offsetWidth;
-        const H = 70;
+        const H = 160;
         canvas.style.width = W+'px'; canvas.style.height = H+'px';
         canvas.width = W*dpr; canvas.height = H*dpr;
         const ctx = canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
@@ -2702,8 +2709,9 @@ function attachCandleTouchEvents() {
             const minSpan = currentCandleType==='M' ? 3*30*86400000 : currentCandleType==='W' ? 4*7*86400000 : 10*86400000;
             let span=max-min;
             if(span<minSpan){const c=(min+max)/2;min=c-minSpan/2;max=c+minSpan/2;}
-            if(min<dataMin){max+=dataMin-min;min=dataMin;}
+            // max 먼저 고정 → min 보정 순서 변경으로 오른쪽 이탈 방지
             if(max>dataMax){min-=max-dataMax;max=dataMax;}
+            if(min<dataMin){max=Math.min(dataMax,max+(dataMin-min));min=dataMin;}
             return {min:Math.max(min,dataMin),max:Math.min(max,dataMax)};
         }
         function applyRange(min,max) { const r=clamp(min,max); candleViewMin=r.min; candleViewMax=r.max; drawCandles(); }
@@ -2760,8 +2768,11 @@ function attachCandleTouchEvents() {
             } else if (isPinching && e.touches.length === 2) {
                 const ratio = pinchStartDist / pinchDist(e.touches);
                 const center = (pinchStartMin + pinchStartMax) / 2;
-                const half = (pinchStartMax - pinchStartMin) / 2 * ratio;
-                applyRange(center-half, center+half);
+                const half = Math.max(
+                    (candleViewMax - candleViewMin) * 0.05,
+                    (pinchStartMax - pinchStartMin) / 2 * ratio
+                );
+                applyRange(center - half, center + half);
             }
         }, {passive:false});
 
@@ -2802,12 +2813,33 @@ function attachCandleTouchEvents() {
     function hideTradePopup() { const popup = document.getElementById('tradePopup'); if (popup) popup.style.display = 'none'; }
 
     function onTypeChange() {
-        const type = document.getElementById('inputType').value, isFx = (type==='환전매입'||type==='환전매도');
+        const type = document.getElementById('inputType').value;
+        const isFx = (type==='환전매입'||type==='환전매도');
+        const isDividend = (type === '배당');
         const qtyWrap=document.getElementById('qtyWrap'), priceLabel=document.getElementById('priceLabel'), fxLabel=document.getElementById('fxLabel');
         const tickerInput=document.getElementById('inputTicker'), nameInput=document.getElementById('inputName');
         const priceInput=document.getElementById('inputPrice'), fxInput=document.getElementById('inputFx');
-        if (isFx) { qtyWrap.style.display='none'; priceLabel.textContent='달러 금액 ($)'; priceInput.placeholder='예: 1000'; fxLabel.textContent='환전 환율 ★ 필수'; fxInput.placeholder='예: 1380'; tickerInput.value=''; nameInput.value='환전매입/매도'; }
-        else { qtyWrap.style.display=''; priceLabel.textContent='단가/금액'; priceInput.placeholder='USD/KRW'; fxLabel.textContent='환율 (입력 안하면 자동)'; fxInput.placeholder='예: 1400'; if(nameInput.value==='환전매입/매도') nameInput.value=''; }
+        const qtyInput=document.getElementById('inputQty');
+        if (isFx) {
+            qtyWrap.style.display='none';
+            priceLabel.textContent='달러 금액 ($)'; priceInput.placeholder='예: 1000';
+            fxLabel.textContent='환전 환율 ★ 필수'; fxInput.placeholder='예: 1380';
+            tickerInput.value=''; nameInput.value='환전매입/매도';
+        } else {
+            qtyWrap.style.display='';
+            priceLabel.textContent='단가/금액'; priceInput.placeholder='USD/KRW';
+            fxLabel.textContent='환율 (입력 안하면 자동)'; fxInput.placeholder='예: 1400';
+            if(nameInput.value==='환전매입/매도') nameInput.value='';
+        }
+        // 배당은 수량 불필요 — 비활성화
+        if (isDividend) {
+            qtyInput.disabled = true; qtyInput.value = '';
+            qtyInput.placeholder = '배당은 불필요';
+            qtyInput.style.cssText = 'background:var(--border-color);color:var(--text-sub);cursor:not-allowed;opacity:0.6;';
+        } else {
+            qtyInput.disabled = false; qtyInput.placeholder = '0';
+            qtyInput.style.cssText = '';
+        }
     }
 
     // ====== 배당 탭 ======
@@ -3442,7 +3474,10 @@ function attachCandleTouchEvents() {
             } else if (isPinching && e.touches.length === 2) {
                 const ratio = pinchStartDist / pinchDist(e.touches);
                 const center = (pinchStartMin + pinchStartMax) / 2;
-                const half = (pinchStartMax - pinchStartMin) / 2 * ratio;
+                const half = Math.max(
+                    (candleViewMax - candleViewMin) * 0.05,
+                    (pinchStartMax - pinchStartMin) / 2 * ratio
+                );
                 applyRange(center - half, center + half);
             }
         }, { passive: false });
