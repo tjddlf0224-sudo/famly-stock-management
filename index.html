@@ -2166,9 +2166,15 @@
 
     // ====== 차트 탭 ======
     let myCandleChart = null, chartAllData = [], chartTradeData = [], chartAvgPrice = 0;
+    const CHART_DATA_CACHE = {}; // { ticker: { data, ts } } — 10분 캐시
+    
     let chartCurrentTicker = null, chartTickerMeta = [], chartTabInited = false;
 
-    function initChartTab() { buildTickerButtons(); }
+    function initChartTab() {
+        // 이미 버튼이 만들어져 있으면 재진입 시 재요청 안 함
+        if (chartTabInited) return;
+        buildTickerButtons();
+    }
 
     function buildTickerButtons() {
         const btnList = document.getElementById('tickerBtnList'); if (!btnList) return;
@@ -2219,7 +2225,73 @@
             btnList.appendChild(btn);
         });
         chartTabInited = true;
-        if (chartTickerMeta.length > 0) selectTicker(chartTickerMeta[0].ticker, btnList.querySelector('.ticker-btn'));
+        // ▼ 여기서부터 수정 (중괄호 { } 가 추가되고 setTimeout이 들어갑니다)
+        if (chartTickerMeta.length > 0) {
+            selectTicker(chartTickerMeta[0].ticker, btnList.querySelector('.ticker-btn'));
+            
+            // 🚀 첫 화면이 뜨고 3초 뒤에 백그라운드 몰래 로딩 시작
+            setTimeout(preloadOtherCharts, 3000); 
+        }
+    } // <-- buildTickerButtons 함수 끝
+
+    // 🚀 보유 종목 백그라운드 미리 불러오기 (Pre-fetching)
+    function preloadOtherCharts() {
+        // 보유 종목이 없거나 1개뿐이면 프리로드할 필요 없음
+        if (!chartTickerMeta || chartTickerMeta.length <= 1) return;
+
+        // 첫 번째 종목은 이미 로딩했으므로 제외하고 나머지 티커 목록 추출
+        const tickersToLoad = chartTickerMeta.slice(1).map(m => m.ticker);
+        let currentIndex = 0;
+
+        // 재귀 함수로 하나씩 순차적으로 조용히 불러옴 (서버 과부하 방지)
+        function loadNextSilent() {
+            if (currentIndex >= tickersToLoad.length) {
+                console.log('✅ 모든 보유 종목 백그라운드 프리로드 완료!');
+                return; 
+            }
+            
+            const ticker = tickersToLoad[currentIndex];
+            currentIndex++;
+
+            // 이미 로컬 캐시에 있거나 현재 보고 있는 종목이면 패스하고 다음으로
+            if (CHART_DATA_CACHE[ticker] || chartCurrentTicker === ticker) {
+                loadNextSilent();
+                return;
+            }
+
+            console.log(`[프리로드 진행 중...] ${ticker}`);
+            const url = `${GOOGLE_SCRIPT_URL}?authKey=${currentAuthKey}&action=getChartData&ticker=${encodeURIComponent(ticker)}&limit=${CHUNK_SIZE}&offset=0`;
+            
+            // 화면 UI(스피너 등)를 전혀 건드리지 않고 fetch만 수행
+            fetch(url)
+            .then(res => res.text())
+            .then(text => {
+                if (!text.trim().startsWith('<')) {
+                    const data = JSON.parse(text);
+                    if (!data.error && data.dates && data.dates.length > 0) {
+                        const parsed = data.dates.map((d,i) => {
+                            let ts = new Date(d+'T00:00:00Z').getTime();
+                            return { x:ts, o:Number(data.opens[i])||0, h:Number(data.highs[i])||0, l:Number(data.lows[i])||0, c:Number(data.closes[i])||0 };
+                        }).filter(d => !isNaN(d.x) && d.h > 0);
+                        
+                        // ★ 핵심: 화면을 그리지 않고 오직 CHART_DATA_CACHE 에만 데이터를 저장해둠
+                        CHART_DATA_CACHE[ticker] = { 
+                            data: parsed, 
+                            ts: Date.now(), 
+                            hasMore: data.hasMore !== undefined ? data.hasMore : (data.dates.length >= CHUNK_SIZE * 0.9) 
+                        };
+                    }
+                }
+            })
+            .catch(err => console.error(`[프리로드 실패] ${ticker}:`, err))
+            .finally(() => {
+                // 하나 다운로드가 끝나면 구글 서버가 힘들어하지 않게 1.5초 쉬었다가 다음 종목 시작
+                setTimeout(loadNextSilent, 1500); 
+            });
+        }
+
+        // 백그라운드 다운로드 릴레이 시작
+        loadNextSilent();
     }
 
     function selectTicker(ticker, btnEl) {
@@ -2240,53 +2312,104 @@
         loadCandleData(ticker);
     }
 
-    // 🚨 함수 바깥에 방어막 변수를 선언해 줍니다.
-    let isCandleLoading = false; 
+    // 페이징(무한 스크롤) 관리를 위한 전역 변수 추가
+    let chartIsLoadingMore = false; 
+    let chartHasMoreData = true;    
+    const CHUNK_SIZE = 800; // 한 번에 가져올 일수 (약 3년치)
 
-    function loadCandleData(ticker) {
-        // 🚨 1. 이미 로딩 중이라면 무시하고 튕겨냄 (중복 실행 방지)
-        if (isCandleLoading) return; 
-        isCandleLoading = true; // 문 잠금!
+    // 진행 중인 fetch를 취소하기 위한 AbortController
+    let _chartAbortCtrl = null;
 
-        document.getElementById('candleChartCard').style.display = 'none';
-        document.getElementById('chartLoadingMsg').style.display = 'block';
+    // ★ isLoadMore 파라미터 추가 (과거 데이터 스와이프 시 true)
+    function loadCandleData(ticker, isLoadMore = false) {
+        if (!isLoadMore) {
+            // 새 종목 로딩 시 초기화
+            if (_chartAbortCtrl) _chartAbortCtrl.abort();
+            _chartAbortCtrl = new AbortController();
+            
+            chartAllData = [];
+            chartHasMoreData = true;
+            chartIsLoadingMore = false;
+
+            // 캐시 확인 (10분) - 초기 로딩 시에만 적용
+            const cached = CHART_DATA_CACHE[ticker];
+            if (cached && (Date.now() - cached.ts) < 10 * 60 * 1000) {
+                document.getElementById('chartLoadingMsg').style.display = 'none';
+                document.getElementById('candleChartCard').style.display = 'block';
+                chartAllData = cached.data;
+                chartHasMoreData = cached.hasMore !== false; // 캐시된 페이징 상태 복원
+                currentCandleType = 'D';
+                setCandleType('D');
+                return;
+            }
+
+            document.getElementById('candleChartCard').style.display = 'none';
+            document.getElementById('chartLoadingMsg').style.display = 'block';
+        } else {
+            // 과거 데이터 로딩 중이거나 더 이상 데이터가 없으면 중복 실행 방지
+            if (chartIsLoadingMore || !chartHasMoreData) return;
+            chartIsLoadingMore = true;
+        }
+
+        const signal = _chartAbortCtrl ? _chartAbortCtrl.signal : null;
         
-        const url = `${GOOGLE_SCRIPT_URL}?authKey=${currentAuthKey}&action=getChartData&ticker=${encodeURIComponent(ticker)}`;
+        // ★ 백엔드로 offset(지금까지 로딩된 개수)과 limit 전송
+        const currentOffset = isLoadMore ? chartAllData.length : 0;
+        const url = `${GOOGLE_SCRIPT_URL}?authKey=${currentAuthKey}&action=getChartData&ticker=${encodeURIComponent(ticker)}&limit=${CHUNK_SIZE}&offset=${currentOffset}`;
         
-        fetch(url)
+        fetch(url, { signal })
         .then(res => res.text())
-        .then(text => { 
-            if (text.trim().startsWith('<')) throw new Error('서버 응답 오류'); 
-            return JSON.parse(text); 
+        .then(text => {
+            if (text.trim().startsWith('<')) throw new Error('서버 응답 오류');
+            return JSON.parse(text);
         })
         .then(data => {
-            document.getElementById('chartLoadingMsg').style.display = 'none';
-            
-            if (data.error || !data.dates || data.dates.length === 0) { 
-                document.getElementById('candleChartCard').style.display = 'block'; 
-                showCandleEmpty(); 
-                isCandleLoading = false; // 🚨 2-1. 데이터가 없어서 끝날 때 문 열기
-                return; 
+            chartIsLoadingMore = false;
+            if (!isLoadMore) document.getElementById('chartLoadingMsg').style.display = 'none';
+
+            if (data.error || !data.dates || data.dates.length === 0) {
+                if (!isLoadMore) {
+                    document.getElementById('candleChartCard').style.display = 'block';
+                    showCandleEmpty();
+                } else {
+                    chartHasMoreData = false; // 과거 데이터 바닥남
+                }
+                return;
             }
-            
-            chartAllData = data.dates.map((d,i) => { 
-                let ts = new Date(d+'T00:00:00Z').getTime(); 
-                return { x:ts, o:Number(data.opens[i])||0, h:Number(data.highs[i])||0, l:Number(data.lows[i])||0, c:Number(data.closes[i])||0 }; 
+
+            // 서버에서 넘겨준 hasMore 플래그 저장
+            chartHasMoreData = data.hasMore !== undefined ? data.hasMore : (data.dates.length >= CHUNK_SIZE * 0.9);
+
+            const parsed = data.dates.map((d,i) => {
+                let ts = new Date(d+'T00:00:00Z').getTime();
+                return { x:ts, o:Number(data.opens[i])||0, h:Number(data.highs[i])||0, l:Number(data.lows[i])||0, c:Number(data.closes[i])||0 };
             }).filter(d => !isNaN(d.x) && d.h > 0);
-            
-            currentCandleType = 'D';
-            document.getElementById('candleChartCard').style.display = 'block'; 
-            setCandleType('D');
-            
-            isCandleLoading = false; // 🚨 2-2. 정상적으로 차트 세팅이 끝났을 때 문 열기
+
+            if (isLoadMore) {
+                // 🚀 스와이프 로딩: 과거 데이터를 기존 데이터 배열 '앞'에 합침
+                chartAllData = parsed.concat(chartAllData);
+                CHART_DATA_CACHE[ticker] = { data: chartAllData, ts: Date.now(), hasMore: chartHasMoreData };
+                
+                renderCandleChart(true); // 차트 화면 영역을 유지하면서 다시 그리기
+            } else {
+                // 🚀 최초 로딩
+                chartAllData = parsed;
+                CHART_DATA_CACHE[ticker] = { data: chartAllData, ts: Date.now(), hasMore: chartHasMoreData };
+                
+                currentCandleType = 'D';
+                document.getElementById('candleChartCard').style.display = 'block';
+                setCandleType('D'); // 내부에서 renderCandleChart() 호출함
+            }
         })
-        .catch(err => { 
-            console.error('[차트오류]', err); 
-            document.getElementById('chartLoadingMsg').style.display = 'none'; 
-            document.getElementById('candleChartCard').style.display = 'block'; 
-            showCandleEmpty(); 
-            
-            isCandleLoading = false; // 🚨 2-3. 에러가 났을 때도 다음을 위해 문 열기
+        .catch(err => {
+            if (err.name === 'AbortError') return; 
+            console.error('[차트오류]', err);
+            chartIsLoadingMore = false;
+            if (!isLoadMore) {
+                document.getElementById('chartLoadingMsg').style.display = 'none';
+                document.getElementById('candleChartCard').style.display = 'block';
+                showCandleEmpty();
+            }
         });
     }
 
@@ -2309,7 +2432,9 @@
         });
         renderMALegend();
         if (!chartAllData || chartAllData.length === 0) return;
-        renderCandleChart();
+        
+        // 타입 변경 시에는 무조건 화면 뷰 리셋
+        renderCandleChart(false); 
     }
 
     function renderMALegend() {
@@ -2374,25 +2499,30 @@
     let candleViewMin = 0, candleViewMax = 0, candleW_fixed = 0, candleH_fixed = 0;
     let candleDisplayData = []; // 현재 표시 중인 봉 배열 (집계 후)
 
-    function renderCandleChart() {
+    // ★ isLoadMore 플래그 추가
+    function renderCandleChart(isLoadMore = false) {
         try {
-        const canvas = document.getElementById('candleChart'); if (!canvas) return;
-        const wrap = canvas.parentElement;
-        const W = wrap ? wrap.offsetWidth : (window.innerWidth-32), H = 360, dpr = window.devicePixelRatio || 1;
-        canvas.style.width = W+'px'; canvas.style.height = H+'px';
-        canvas.width = W*dpr; canvas.height = H*dpr;
-        candleW_fixed = W; candleH_fixed = H;
+            const canvas = document.getElementById('candleChart'); if (!canvas) return;
+            const wrap = canvas.parentElement;
+            const W = wrap ? wrap.offsetWidth : (window.innerWidth-32), H = 360, dpr = window.devicePixelRatio || 1;
+            canvas.style.width = W+'px'; canvas.style.height = H+'px';
+            canvas.width = W*dpr; canvas.height = H*dpr;
+            candleW_fixed = W; candleH_fixed = H;
 
-        candleDisplayData = aggregateCandles(chartAllData, currentCandleType);
-        console.log('[차트] candleDisplayData 길이:', candleDisplayData ? candleDisplayData.length : 'null');
-        if (!candleDisplayData || candleDisplayData.length === 0) { showCandleEmpty(); return; }
-        // 기본 뷰: 일봉→최근 60개, 주봉→최근 52개, 월봉→전체
-        const showCount = currentCandleType === 'D' ? 60 : currentCandleType === 'W' ? 52 : candleDisplayData.length;
-        const startIdx = Math.max(0, candleDisplayData.length - showCount);
-        candleViewMin = candleDisplayData[startIdx].x;
-        candleViewMax = candleDisplayData[candleDisplayData.length-1].x;
+            candleDisplayData = aggregateCandles(chartAllData, currentCandleType);
+            console.log('[차트] candleDisplayData 길이:', candleDisplayData ? candleDisplayData.length : 'null');
+            if (!candleDisplayData || candleDisplayData.length === 0) { showCandleEmpty(); return; }
+            
+            // ★ 과거 데이터를 이어붙일 때(isLoadMore=true)는 보고 있던 화면(candleViewMin/Max)을 강제 초기화하지 않음!
+            if (!isLoadMore || candleViewMax === 0) {
+                // 기본 뷰: 일봉→최근 60개, 주봉→최근 52개, 월봉→전체
+                const showCount = currentCandleType === 'D' ? 60 : currentCandleType === 'W' ? 52 : candleDisplayData.length;
+                const startIdx = Math.max(0, candleDisplayData.length - showCount);
+                candleViewMin = candleDisplayData[startIdx].x;
+                candleViewMax = candleDisplayData[candleDisplayData.length-1].x;
+            }
 
-        drawCandles(); attachCandleTouchEvents();
+            drawCandles(); attachCandleTouchEvents();
         } catch(e) { console.error('[renderCandleChart 오류]', e); showCandleEmpty(); }
     }
 
@@ -2720,12 +2850,34 @@
             const minSpan = currentCandleType==='M' ? 3*30*86400000 : currentCandleType==='W' ? 4*7*86400000 : 10*86400000;
             let span=max-min;
             if(span<minSpan){const c=(min+max)/2;min=c-minSpan/2;max=c+minSpan/2;}
-            if(min<dataMin){max+=dataMin-min;min=dataMin;}
+            
+            // ★ 개선: 더 불러올 과거 데이터가 있다면, 왼쪽 끝(dataMin)에 도달해도 
+            // 튕겨내지 않고 허공을 스크롤할 수 있게 허용 (부드러운 로딩 구현)
+            let allowedMin = chartHasMoreData ? dataMin - (max - min) : dataMin;
+            
+            if(min<allowedMin){max+=allowedMin-min;min=allowedMin;}
             if(max>dataMax){min-=max-dataMax;max=dataMax;}
-            return {min:Math.max(min,dataMin),max:Math.min(max,dataMax)};
+            return {min:Math.max(min,allowedMin),max:Math.min(max,dataMax)};
         }
-        function applyRange(min,max) { const r=clamp(min,max); candleViewMin=r.min; candleViewMax=r.max; drawCandles(); }
 
+        function applyRange(min,max) { 
+            const r=clamp(min,max); 
+            candleViewMin=r.min; 
+            candleViewMax=r.max; 
+            drawCandles(); 
+
+            // ★ 추가: 스와이프하다가 왼쪽(과거) 끝에 가까워지면 다음 데이터 백그라운드 호출
+            if (chartAllData && chartAllData.length > 0 && chartHasMoreData && !chartIsLoadingMore) {
+                const oldestTime = chartAllData[0].x;
+                const timeSpan = candleViewMax - candleViewMin;
+                
+                // 화면의 왼쪽 끝이 불러온 데이터 끝자락(1.5화면 이내)에 도달하면 즉시 로딩 시작
+                if (candleViewMin - oldestTime < timeSpan * 1.5) {
+                    loadCandleData(chartCurrentTicker, true);
+                }
+            }
+        }
+        
         // 캔버스 X좌표 → visible 인덱스
         function xToVisibleIdx(clientX) {
             const rect = canvas.getBoundingClientRect();
@@ -2820,12 +2972,43 @@
     function hideTradePopup() { const popup = document.getElementById('tradePopup'); if (popup) popup.style.display = 'none'; }
 
     function onTypeChange() {
-        const type = document.getElementById('inputType').value, isFx = (type==='환전매입'||type==='환전매도');
+        const type = document.getElementById('inputType').value;
+        const isFx = (type==='환전매입'||type==='환전매도');
+        const noQty = (type==='입금'||type==='출금'||type==='배당'||isFx);
         const qtyWrap=document.getElementById('qtyWrap'), priceLabel=document.getElementById('priceLabel'), fxLabel=document.getElementById('fxLabel');
         const tickerInput=document.getElementById('inputTicker'), nameInput=document.getElementById('inputName');
         const priceInput=document.getElementById('inputPrice'), fxInput=document.getElementById('inputFx');
-        if (isFx) { qtyWrap.style.display='none'; priceLabel.textContent='달러 금액 ($)'; priceInput.placeholder='예: 1000'; fxLabel.textContent='환전 환율 ★ 필수'; fxInput.placeholder='예: 1380'; tickerInput.value=''; nameInput.value='환전매입/매도'; }
-        else { qtyWrap.style.display=''; priceLabel.textContent='단가/금액'; priceInput.placeholder='USD/KRW'; fxLabel.textContent='환율 (입력 안하면 자동)'; fxInput.placeholder='예: 1400'; if(nameInput.value==='환전매입/매도') nameInput.value=''; }
+        const qtyInput=document.getElementById('inputQty');
+
+        // 수량 칸 비활성화 (입금/출금/배당/환전)
+        if (noQty) {
+            qtyInput.disabled = true;
+            qtyInput.value = '';
+            qtyInput.placeholder = '해당없음';
+            qtyInput.style.background = 'var(--border-color)';
+            qtyInput.style.color = 'var(--text-sub)';
+            qtyInput.style.cursor = 'not-allowed';
+            qtyInput.style.opacity = '0.5';
+        } else {
+            qtyInput.disabled = false;
+            qtyInput.placeholder = '0';
+            qtyInput.style.background = '';
+            qtyInput.style.color = '';
+            qtyInput.style.cursor = '';
+            qtyInput.style.opacity = '';
+        }
+
+        if (isFx) {
+            qtyWrap.style.display='none';
+            priceLabel.textContent='달러 금액 ($)'; priceInput.placeholder='예: 1000';
+            fxLabel.textContent='환전 환율 ★ 필수'; fxInput.placeholder='예: 1380';
+            tickerInput.value=''; nameInput.value='환전매입/매도';
+        } else {
+            qtyWrap.style.display='';
+            priceLabel.textContent='단가/금액'; priceInput.placeholder='USD/KRW';
+            fxLabel.textContent='환율 (입력 안하면 자동)'; fxInput.placeholder='예: 1400';
+            if(nameInput.value==='환전매입/매도') nameInput.value='';
+        }
     }
 
     // ====== 배당 탭 ======
