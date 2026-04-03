@@ -2621,13 +2621,14 @@
             const d = new Date(visible[idx].x);
             let label;
             if (currentCandleType === 'M') {
-                label = (d.getUTCFullYear()%100)+"'"+(d.getUTCMonth()+1).toString().padStart(2,'0');
+                // 월봉: 26'01 형태로 두 자리만 표시
+                label = String(d.getUTCFullYear()).slice(-2) + "'" + String(d.getUTCMonth()+1).padStart(2,'0');
             } else {
-                // 첫 번째 레이블이거나, 1월 1일 근처라면 '연도'를 무조건 표시하여 헷갈림 방지
                 if (i === 0) {
-                    label = d.getUTCFullYear() + '/' + (d.getUTCMonth()+1).toString().padStart(2,'0') + '/' + d.getUTCDate().toString().padStart(2,'0');
+                    // 일봉/주봉 첫 레이블: 26/01/01 형태로 두 자리 연도 적용
+                    label = String(d.getUTCFullYear()).slice(-2) + '/' + String(d.getUTCMonth()+1).padStart(2,'0') + '/' + String(d.getUTCDate()).padStart(2,'0');
                 } else {
-                    label = (d.getUTCMonth()+1).toString().padStart(2,'0')+'/'+d.getUTCDate().toString().padStart(2,'0');
+                    label = String(d.getUTCMonth()+1).padStart(2,'0') + '/' + String(d.getUTCDate()).padStart(2,'0');
                 }
             }
             
@@ -2695,7 +2696,8 @@
         });
 
         // ── 캔들 그리기
-        const candleW = Math.max(1.5, Math.min(14, (chartW/n)*0.55));
+        // 설명: 화면 할당 너비(chartW/n)의 75%를 봉으로 꽉 채웁니다. (14px 제한 삭제)
+        const candleW = Math.max(1.5, (chartW / n) * 0.75);
         visible.forEach((d, i) => {
             const x = toXi(i);
             const isUp = d.o >= d.c;
@@ -2727,7 +2729,7 @@
             const dt = new Date(vd.x);
             let dateStr;
             if (currentCandleType === 'M') {
-                dateStr = dt.getUTCFullYear() + '.' + String(dt.getUTCMonth()+1).padStart(2,'0');
+                dateStr = String(dt.getUTCFullYear()).slice(-2) + '.' + String(dt.getUTCMonth()+1).padStart(2,'0');
             } else if (currentCandleType === 'W') {
                 dateStr = (dt.getUTCMonth()+1) + '/' + dt.getUTCDate() + '주';
             } else {
