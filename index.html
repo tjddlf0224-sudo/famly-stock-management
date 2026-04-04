@@ -627,14 +627,15 @@
 </div>
 
 <nav>
-    <div class="nav-item active" onclick="switchTab('portfolio')"><span class="nav-icon">📊</span>홈</div>
-    <div class="nav-item" onclick="switchTab('performance')"><span class="nav-icon">📈</span>성과</div>
-    <div class="nav-item" onclick="switchTab('balance')"><span class="nav-icon">💰</span>잔고</div>
-    <div class="nav-item" onclick="switchTab('history')"><span class="nav-icon">📝</span>내역</div>
-    <div class="nav-item" onclick="switchTab('chart')"><span class="nav-icon">🕯️</span>차트</div>
-    <div class="nav-item" onclick="switchTab('dividend')"><span class="nav-icon">💸</span>배당</div>
-    <div class="nav-item" onclick="switchTab('fx')"><span class="nav-icon">💱</span>환차손익</div>
-    <div class="nav-item" onclick="switchTab('market')"><span class="nav-icon">🔍</span>시장분석</div>
+    <div class="nav-item active" data-tab="portfolio" onclick="switchTab('portfolio',this)"><span class="nav-icon">📊</span>홈</div>
+    <div class="nav-item" data-tab="performance" onclick="switchTab('performance',this)"><span class="nav-icon">📈</span>성과</div>
+    <div class="nav-item" data-tab="balance" onclick="switchTab('balance',this)"><span class="nav-icon">💰</span>잔고</div>
+    <div class="nav-item" data-tab="history" onclick="switchTab('history',this)"><span class="nav-icon">📝</span>내역</div>
+    <div class="nav-item" data-tab="chart" onclick="switchTab('chart',this)"><span class="nav-icon">🕯️</span>차트</div>
+    <div class="nav-item" data-tab="dividend" onclick="switchTab('dividend',this)"><span class="nav-icon">💸</span>배당</div>
+    <div class="nav-item" data-tab="fx" onclick="switchTab('fx',this)"><span class="nav-icon">💱</span>환차손익</div>
+    <div class="nav-item" data-tab="market" onclick="switchTab('market',this)"><span class="nav-icon">🔍</span>시장분석</div>
+    <div class="nav-item" data-tab="aianalysis" onclick="switchTab('aianalysis',this)"><span class="nav-icon">🤖</span>AI분석</div>
 </nav>
 
 <!-- 차트 탭 -->
@@ -1261,7 +1262,73 @@
 
     <div class="ma-update-notice">업데이트: <span id="maLastUpdated">-</span> &nbsp;|&nbsp; GAS 트리거 자동 업데이트<span class="ma-manual-badge">GAS 연동</span></div>
 </div>
+</div>
 
+<!-- AI 매매분석 탭 -->
+<div id="tab-aianalysis" class="container">
+
+  <!-- 상단 카드: 사람 선택 + 분석 버튼 -->
+  <div class="card" style="padding:22px 18px 18px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <span style="font-size:30px;">🤖</span>
+      <div>
+        <div style="font-size:17px;font-weight:700;">AI 매매일지 분석</div>
+        <div style="font-size:12px;color:var(--text-sub);">Gemini AI가 매매 패턴·전략을 진단합니다</div>
+      </div>
+    </div>
+
+    <!-- 사람 선택 -->
+    <div style="margin-bottom:12px;">
+      <label style="font-size:12px;color:var(--text-sub);margin-bottom:5px;display:block;">👤 분석 대상</label>
+      <select id="aiUserSelect" onchange="onAiUserChange()"
+        style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border-color);
+               font-size:15px;background:var(--card-bg);color:var(--text-main);">
+        <option value="가족 전체">가족 전체</option>
+        <option value="윤성일" selected>윤성일 (아빠)</option>
+        <option value="윤채현">윤채현 (딸)</option>
+        <option value="윤시환">윤시환 (아들)</option>
+      </select>
+    </div>
+
+    <div id="aiAnalysisUserInfo" style="font-size:13px;color:var(--text-sub);margin-bottom:14px;min-height:16px;"></div>
+
+    <!-- 저장된 키 상태 표시 -->
+    <div id="aiKeySavedRow" style="display:none;align-items:center;justify-content:space-between;
+         background:var(--bg);border:1px solid var(--border-color);border-radius:10px;
+         padding:9px 13px;font-size:12px;color:var(--text-sub);margin-bottom:12px;">
+      <span>🔑 API 키 저장됨</span>
+      <button onclick="deleteAiApiKey()"
+        style="background:none;border:none;font-size:11px;color:var(--text-sub);
+               cursor:pointer;text-decoration:underline;padding:0;">삭제</button>
+    </div>
+
+    <button class="btn-primary" id="aiAnalysisBtn" onclick="runAiAnalysis()">
+      📊 AI 분석 시작
+    </button>
+  </div>
+
+  <!-- API 키 입력 카드 -->
+  <div class="card" id="aiApiKeyCard">
+    <div style="font-size:14px;font-weight:600;margin-bottom:8px;">🔑 Gemini API 키 설정</div>
+    <div style="font-size:12px;color:var(--text-sub);margin-bottom:12px;line-height:1.7;">
+      <a href="https://aistudio.google.com/app/apikey" target="_blank"
+         style="color:var(--primary);">aistudio.google.com</a>에서 무료 발급 후 입력하세요.<br>
+      키는 이 기기에만 저장되며 외부로 전송되지 않습니다.
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+      <input type="password" id="aiApiKeyInput" placeholder="AIza..."
+        style="flex:1;font-size:14px;padding:10px 12px;">
+      <button onclick="saveAiApiKey()"
+        style="background:var(--primary);color:#fff;border:none;border-radius:10px;
+               padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">저장</button>
+    </div>
+    <div id="aiApiKeyStatus" style="font-size:12px;color:var(--text-sub);"></div>
+  </div>
+
+  <!-- 분석 결과 (캐시된 결과 또는 새 결과) -->
+  <div id="aiAnalysisResult" style="display:none;"></div>
+
+</div>
 <!-- 예수금 수정 모달 -->
 <div id="cashEditModal" class="modal">
     <div class="modal-content">
@@ -1368,6 +1435,14 @@
     document.addEventListener('DOMContentLoaded', function() {
         const passInput = document.getElementById('inputPass');
         if (passInput) passInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') tryLogin(); });
+
+        // ★ nav-item 클릭을 onclick 대신 addEventListener로 바인딩 (event.currentTarget null 방지)
+        document.querySelectorAll('.nav-item[data-tab]').forEach(function(item) {
+            item.addEventListener('click', function() {
+                var tabName = this.getAttribute('data-tab');
+                switchTab(tabName, this);
+            });
+        });
     });
 
     window.onload = function() {
@@ -1621,19 +1696,23 @@
         } else fetchData();
     }
 
-    function switchTab(tabName) {
-        document.querySelectorAll('.container').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-        document.getElementById('tab-' + tabName).classList.add('active');
-        const activeNavItem = event.currentTarget;
-        activeNavItem.classList.add('active');
-        const nav = document.querySelector('nav');
-        const itemCenter = activeNavItem.offsetLeft + activeNavItem.offsetWidth / 2;
-        nav.scrollTo({ left: itemCenter - nav.offsetWidth / 2, behavior: 'smooth' });
+    function switchTab(tabName, el) {
+        document.querySelectorAll('.container').forEach(function(c) { c.classList.remove('active'); });
+        document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
+        var tab = document.getElementById('tab-' + tabName);
+        if (tab) tab.classList.add('active');
+        // el이 없으면 data-tab 속성으로 찾기
+        var navEl = el || document.querySelector('.nav-item[data-tab="' + tabName + '"]');
+        if (navEl) {
+            navEl.classList.add('active');
+            var nav = document.querySelector('nav');
+            if (nav) nav.scrollTo({ left: navEl.offsetLeft + navEl.offsetWidth / 2 - nav.offsetWidth / 2, behavior: 'smooth' });
+        }
         if (tabName === 'chart') initChartTab();
         if (tabName === 'dividend') renderDividendTab();
         if (tabName === 'fx') renderFxTab();
         if (tabName === 'market') renderMarketTab();
+        if (tabName === 'aianalysis') renderAiAnalysisTab();
     }
 
     function processData(logs) {
@@ -4530,6 +4609,366 @@
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') closeWeightModal();
     });
+
+
+    // ═══════════════════════════════════════
+    //  AI 매매분석  v3
+    // ═══════════════════════════════════════
+    var AI_KEY_ST    = 'ai_api_key_v1';
+    var AI_CACHE_ST  = 'ai_result_cache_v1';  // {user, date, html}
+
+    function renderAiAnalysisTab() {
+        _aiInitSelect();
+        _aiUpdateInfo();
+        _aiShowCachedResult();
+    }
+
+    function _aiInitSelect() {
+        var sel = document.getElementById('aiUserSelect');
+        if (!sel) return;
+        var users = ['가족 전체', '윤성일', '윤채현', '윤시환'];
+        sel.innerHTML = '';
+        users.forEach(function(u) {
+            var opt = document.createElement('option');
+            opt.value = u;
+            opt.textContent = u === '윤성일' ? '윤성일 (아빠)' :
+                              u === '윤채현' ? '윤채현 (딸)' :
+                              u === '윤시환' ? '윤시환 (아들)' : u;
+            if (u === currentUser) opt.selected = true;
+            sel.appendChild(opt);
+        });
+        _aiRefreshKeyCard();
+    }
+
+    function _aiRefreshKeyCard() {
+        var key = localStorage.getItem(AI_KEY_ST);
+        var card = document.getElementById('aiApiKeyCard');
+        var saved = document.getElementById('aiKeySavedRow');
+        if (!card) return;
+        if (key) {
+            card.style.display = 'none';
+            if (saved) saved.style.display = 'flex';
+        } else {
+            card.style.display = 'block';
+            if (saved) saved.style.display = 'none';
+        }
+    }
+
+    function _aiUpdateInfo() {
+        var sel = document.getElementById('aiUserSelect');
+        var target = sel ? sel.value : currentUser;
+        var infoEl = document.getElementById('aiAnalysisUserInfo');
+        var logs = (typeof RAW_DATA !== 'undefined' ? RAW_DATA : []);
+        var userLogs = target === '가족 전체' ? logs : logs.filter(function(r) {
+            return String(r[0]).trim() === target;
+        });
+        var trades = userLogs.filter(function(r) { return r[4] === '매수' || r[4] === '매도'; });
+        var withJ  = trades.filter(function(r) { return r[8] && String(r[8]).trim(); });
+        if (infoEl) {
+            infoEl.textContent = '📋 ' + target + ' · 매매 ' + trades.length + '건 · 일지 ' + withJ.length + '건';
+        }
+    }
+
+    function _aiShowCachedResult() {
+        var sel = document.getElementById('aiUserSelect');
+        var target = sel ? sel.value : currentUser;
+        var resultEl = document.getElementById('aiAnalysisResult');
+        if (!resultEl) return;
+        try {
+            var raw = localStorage.getItem(AI_CACHE_ST);
+            if (!raw) { resultEl.style.display = 'none'; return; }
+            var cache = JSON.parse(raw);
+            if (cache.user !== target) { resultEl.style.display = 'none'; return; }
+            resultEl.style.display = 'block';
+            resultEl.innerHTML = cache.html;
+        } catch(e) {
+            resultEl.style.display = 'none';
+        }
+    }
+
+    // 사람 변경 시
+    function onAiUserChange() {
+        _aiUpdateInfo();
+        _aiShowCachedResult();
+    }
+
+    // API 키 저장
+    function saveAiApiKey() {
+        var input = document.getElementById('aiApiKeyInput');
+        var statusEl = document.getElementById('aiApiKeyStatus');
+        var val = input ? input.value.trim() : '';
+        if (!val.startsWith('AIza')) {
+            if (statusEl) statusEl.textContent = '❌ Gemini 키는 AIza 로 시작해야 합니다';
+            return;
+        }
+        localStorage.setItem(AI_KEY_ST, val);
+        if (input) input.value = '';
+        _aiRefreshKeyCard();
+    }
+
+    function deleteAiApiKey() {
+        if (!confirm('저장된 API 키를 삭제할까요?')) return;
+        localStorage.removeItem(AI_KEY_ST);
+        _aiRefreshKeyCard();
+    }
+
+    // 분석 실행
+    async function runAiAnalysis() {
+        var key = localStorage.getItem(AI_KEY_ST);
+        if (!key) {
+            var card = document.getElementById('aiApiKeyCard');
+            if (card) { card.style.display = 'block'; card.scrollIntoView({behavior:'smooth'}); }
+            return;
+        }
+        var sel = document.getElementById('aiUserSelect');
+        var target = sel ? sel.value : currentUser;
+        var logs = (typeof RAW_DATA !== 'undefined' ? RAW_DATA : []);
+        var userLogs = target === '가족 전체' ? logs : logs.filter(function(r) {
+            return String(r[0]).trim() === target;
+        });
+        var trades = userLogs.filter(function(r) { return r[4] === '매수' || r[4] === '매도'; });
+        if (trades.length === 0) { alert('분석할 매매 데이터가 없습니다.'); return; }
+
+        var btn = document.getElementById('aiAnalysisBtn');
+        var resultEl = document.getElementById('aiAnalysisResult');
+        btn.disabled = true;
+        btn.textContent = '⏳ 분석 중...';
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = '<div class="card" style="text-align:center;padding:36px 20px;">'
+            + '<div style="font-size:32px;margin-bottom:14px;">⏳</div>'
+            + '<div style="font-size:14px;font-weight:600;margin-bottom:6px;">Gemini AI가 분석 중입니다</div>'
+            + '<div style="font-size:12px;color:var(--text-sub);">매매 패턴·신호·전략을 진단합니다<br>약 10~20초 소요됩니다</div>'
+            + '</div>';
+
+        var summary = _aiBuildSummary(trades);
+        var prompt  = _aiBuildPrompt(summary, target);
+
+        try {
+            var resp = await fetch(
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + key,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: { maxOutputTokens: 8192 }
+                    })
+                }
+            );
+            if (!resp.ok) {
+                var errBody = await resp.json().catch(function() { return {}; });
+                var msg = (errBody.error && errBody.error.message) || ('HTTP ' + resp.status);
+                throw new Error(msg);
+            }
+            var data = await resp.json();
+            var text = (data.candidates && data.candidates[0] &&
+                        data.candidates[0].content && data.candidates[0].content.parts &&
+                        data.candidates[0].content.parts[0] &&
+                        data.candidates[0].content.parts[0].text) || '';
+            _aiRenderResult(text, target);
+        } catch(err) {
+            resultEl.innerHTML = '<div class="card" style="border-left:3px solid var(--up);padding:16px;">'
+                + '<div style="font-weight:600;color:var(--up);margin-bottom:8px;">❌ 오류 발생</div>'
+                + '<div style="font-size:13px;color:var(--text-sub);">' + err.message + '</div>'
+                + '<div style="font-size:12px;color:var(--text-sub);margin-top:8px;">'
+                + 'API 키를 확인하거나 잠시 후 다시 시도해주세요.</div>'
+                + '</div>';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '🔄 다시 분석';
+        }
+    }
+
+    function _aiBuildSummary(trades) {
+        var byName = {};
+        trades.forEach(function(r) {
+            var name = String(r[3] || r[2] || '').trim() || '알수없음';
+            var type = r[4];
+            var qty   = parseFloat(r[5]) || 0;
+            var price = parseFloat(r[6]) || 0;
+            var fx    = parseFloat(r[7]) || 1;
+            var krw   = qty * price * fx;
+            if (!byName[name]) byName[name] = {name:name, buy:0, sell:0, bc:0, sc:0};
+            if (type === '매수') { byName[name].buy += krw; byName[name].bc++; }
+            if (type === '매도') { byName[name].sell += krw; byName[name].sc++; }
+        });
+        var journals = trades
+            .filter(function(r) { return r[8] && String(r[8]).trim(); })
+            .slice(-150)
+            .map(function(r) {
+                var d = r[1] ? String(r[1]).slice(0,10) : '';
+                return '[' + d + '][' + (r[3]||r[2]||'') + '][' + r[4] + '] ' + String(r[8]).trim();
+            });
+        var pnl = Object.values(byName)
+            .filter(function(t) { return t.sell > 0; })
+            .map(function(t) { return {name:t.name, pnl:t.sell-t.buy, bc:t.bc, sc:t.sc}; })
+            .sort(function(a,b) { return b.pnl - a.pnl; });
+        return {pnl:pnl, journals:journals, total:trades.length};
+    }
+
+    function _aiBuildPrompt(s, user) {
+        function fmt(n) { return (n >= 0 ? '+' : '') + Math.round(n/10000) + '만'; }
+        var top = s.pnl.slice(0,6).map(function(t) {
+            return '  ' + t.name + ': ' + fmt(t.pnl) + ' (매수' + t.bc + '/매도' + t.sc + ')';
+        }).join('\n');
+        var bot = s.pnl.slice(-5).map(function(t) {
+            return '  ' + t.name + ': ' + fmt(t.pnl) + ' (매수' + t.bc + '/매도' + t.sc + ')';
+        }).join('\n');
+        return '아래는 ' + user + '의 실제 주식 매매일지 데이터입니다.\n\n'
+            + '=== 매매 요약 ===\n총 매매: ' + s.total + '건\n\n'
+            + '손익 상위:\n' + top + '\n\n손익 하위:\n' + bot + '\n\n'
+            + '=== 매매일지 ===\n' + s.journals.join('\n') + '\n\n'
+            + '위 데이터를 분석하여 아래 형식으로 한국어로 답변해주세요. 구체적 종목명과 수치를 반드시 포함하세요.\n\n'
+            + '## ✅ 잘 한 점 (3가지)\n\n'
+            + '## ❌ 잘못한 점 (4가지)\n\n'
+            + '## 📡 신호 vs 노이즈 분석\n\n'
+            + '## 🔍 매매 패턴 & 전략 진단\n\n'
+            + '## 🎯 앞으로의 방향 (3가지 핵심 제언)';
+    }
+
+    function _aiRenderResult(text, user) {
+        var resultEl = document.getElementById('aiAnalysisResult');
+        var now = new Date();
+        var dateStr = now.getFullYear() + '년 ' + (now.getMonth()+1) + '월 ' + now.getDate() + '일 '
+            + now.getHours() + '시 ' + String(now.getMinutes()).padStart(2,'0') + '분';
+
+        // 섹션 헤더별 스타일 매핑
+        var sectionStyles = {
+            '✅': { bg: 'rgba(52,199,89,0.08)', border: '#34C759', color: '#1a7a35' },
+            '❌': { bg: 'rgba(255,59,48,0.08)', border: '#FF3B30', color: '#c0392b' },
+            '📡': { bg: 'rgba(90,200,250,0.08)', border: '#5AC8FA', color: '#0077a8' },
+            '🔍': { bg: 'rgba(255,149,0,0.08)',  border: '#FF9500', color: '#a05c00' },
+            '🎯': { bg: 'rgba(88,86,214,0.08)',  border: '#5856D6', color: '#3a38a0' },
+        };
+
+        // 마크다운 → 섹션 블록으로 파싱
+        var sections = [];
+        var currentSection = null;
+        var introLines = [];
+
+        text.split('\n').forEach(function(line) {
+            var escaped = line
+                .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+            if (/^## /.test(escaped)) {
+                if (currentSection) sections.push(currentSection);
+                var title = escaped.replace(/^## /, '');
+                var styleKey = Object.keys(sectionStyles).find(function(k) { return title.indexOf(k) !== -1; });
+                currentSection = { title: title, style: sectionStyles[styleKey] || null, lines: [] };
+            } else {
+                if (currentSection) {
+                    currentSection.lines.push(escaped);
+                } else {
+                    introLines.push(escaped);
+                }
+            }
+        });
+        if (currentSection) sections.push(currentSection);
+
+        // 인트로 텍스트
+        var introHtml = introLines
+            .filter(function(l) { return l.trim(); })
+            .map(function(l) {
+                return '<p style="margin:0 0 6px;font-size:13px;color:var(--text-sub);line-height:1.6;">' + l + '</p>';
+            }).join('');
+
+        // 라인 렌더러 (번호목록·불릿·일반)
+        function renderLines(lines) {
+            var out = [];
+            var itemBuffer = [];
+
+            function flushItems() {
+                if (!itemBuffer.length) return;
+                out.push('<div style="display:flex;flex-direction:column;gap:10px;margin:4px 0 6px;">');
+                itemBuffer.forEach(function(item) {
+                    out.push(
+                        '<div style="display:flex;gap:10px;align-items:flex-start;">'
+                        + '<span style="flex-shrink:0;width:22px;height:22px;border-radius:50%;'
+                        + 'background:var(--primary);color:#fff;font-size:11px;font-weight:700;'
+                        + 'display:flex;align-items:center;justify-content:center;">' + item.num + '</span>'
+                        + '<div style="flex:1;font-size:14px;line-height:1.7;padding-top:2px;">' + item.text + '</div>'
+                        + '</div>'
+                    );
+                });
+                out.push('</div>');
+                itemBuffer = [];
+            }
+
+            lines.forEach(function(l) {
+                if (!l.trim()) { flushItems(); return; }
+                l = l.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+                var numMatch = l.match(/^(\d+)\.\s+(.*)/);
+                if (numMatch) {
+                    itemBuffer.push({ num: numMatch[1], text: numMatch[2] });
+                    return;
+                }
+                flushItems();
+
+                if (/^[-•]\s/.test(l)) {
+                    out.push(
+                        '<div style="display:flex;gap:8px;align-items:flex-start;margin:5px 0;">'
+                        + '<span style="flex-shrink:0;margin-top:6px;width:6px;height:6px;border-radius:50%;'
+                        + 'background:var(--primary);display:inline-block;"></span>'
+                        + '<div style="flex:1;font-size:14px;line-height:1.7;">' + l.replace(/^[-•]\s/, '') + '</div>'
+                        + '</div>'
+                    );
+                } else {
+                    out.push('<div style="font-size:14px;line-height:1.75;margin:3px 0;">' + l + '</div>');
+                }
+            });
+            flushItems();
+            return out.join('');
+        }
+
+        // 섹션 카드 조립
+        var sectionsHtml = sections.map(function(sec) {
+            var s = sec.style;
+            var headerStyle = s
+                ? 'background:' + s.bg + ';border-left:4px solid ' + s.border + ';'
+                + 'border-radius:10px;padding:10px 14px;margin-bottom:14px;'
+                : 'background:var(--bg);border-radius:10px;padding:10px 14px;margin-bottom:14px;';
+            var titleColor = s ? s.color : 'var(--text-main)';
+
+            return '<div style="margin-bottom:8px;">'
+                + '<div style="' + headerStyle + '">'
+                + '<div style="font-size:15px;font-weight:700;color:' + titleColor + ';">' + sec.title + '</div>'
+                + '</div>'
+                + '<div style="padding:0 4px;">' + renderLines(sec.lines) + '</div>'
+                + '</div>';
+        }).join('<div style="height:1px;background:var(--border-color);margin:16px 0;"></div>');
+
+        var dateBadge = '<div style="display:flex;align-items:center;gap:6px;margin-bottom:16px;">'
+            + '<div style="background:var(--bg);border:1px solid var(--border-color);border-radius:20px;'
+            + 'padding:4px 12px;font-size:11px;color:var(--text-sub);">🕐 ' + dateStr + '</div>'
+            + '<div style="background:rgba(52,199,89,0.12);border-radius:20px;'
+            + 'padding:4px 12px;font-size:11px;color:#1a7a35;font-weight:600;">✦ Gemini 2.5 Flash</div>'
+            + '</div>';
+
+        var html = '<div class="card" style="padding:20px 18px;">'
+            + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">'
+            + '<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#4285F4,#34A853);'
+            + 'display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🤖</div>'
+            + '<div>'
+            + '<div style="font-size:16px;font-weight:700;">AI 매매일지 분석</div>'
+            + '<div style="font-size:12px;color:var(--text-sub);">' + user + ' 님의 매매 패턴 진단</div>'
+            + '</div>'
+            + '</div>'
+            + dateBadge
+            + (introHtml ? '<div style="margin-bottom:16px;">' + introHtml + '</div>' : '')
+            + sectionsHtml
+            + '</div>'
+            + '<div class="card" style="text-align:center;padding:10px;">'
+            + '<div style="font-size:11px;color:var(--text-sub);">Google Gemini AI · 데이터는 서버에 저장되지 않습니다</div>'
+            + '</div>';
+
+        resultEl.innerHTML = html;
+
+        try {
+            localStorage.setItem(AI_CACHE_ST, JSON.stringify({user:user, date:dateStr, html:html}));
+        } catch(e) {}
+    }
+
 
 </script>
 
