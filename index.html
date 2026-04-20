@@ -483,13 +483,29 @@
 </head>
 <body>
 
-<div id="loginModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
-    <div style="background: white; padding: 30px; border-radius: 15px; text-align: center; width: 80%; max-width: 300px;">
-        <h3>🔒 가족 로그인</h3>
-        <p style="font-size: 14px; color: #666; margin-bottom: 20px;">가족 암호를 입력해주세요.</p>
-        <input type="password" id="inputPass" placeholder="암호 입력" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px;">
-        <button onclick="tryLogin()" style="width: 100%; padding: 12px; background: #007AFF; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px;">확인</button>
-        <button onclick="localStorage.clear(); location.reload();" style="width:100%; margin-top:10px; padding:8px; background:none; border:none; color:#aaa; font-size:12px; cursor:pointer;">↺ 캐시 초기화 후 재시도</button>
+<!-- ★ 그룹 로그인 모달 -->
+<div id="loginModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;justify-content:center;align-items:center;backdrop-filter:blur(8px);">
+    <div style="background:var(--card-bg,#fff);padding:32px 28px;border-radius:20px;text-align:center;width:85%;max-width:340px;box-shadow:0 8px 40px rgba(0,0,0,0.4);">
+        <p style="font-size:13px;color:var(--text-sub,#666);margin:0 0 24px;line-height:1.6;">그룹 ID와 비밀번호로 입장하세요.<br>없으면 입력 후 확인 → 자동 생성됩니다.</p>
+        <div style="margin-bottom:12px;text-align:left;">
+            <label style="font-size:12px;color:var(--text-sub,#888);margin-bottom:5px;display:block;">그룹 ID</label>
+            <input type="text" id="group-id-input" placeholder="예: family_yoon, club_A팀"
+                style="width:100%;padding:13px;border:1.5px solid #ddd;border-radius:10px;font-size:15px;box-sizing:border-box;background:var(--bg,#f8f8f8);color:var(--text-main,#333);outline:none;">
+        </div>
+        <div style="margin-bottom:20px;text-align:left;">
+            <label style="font-size:12px;color:var(--text-sub,#888);margin-bottom:5px;display:block;">비밀번호</label>
+            <input type="password" id="group-pw-input" placeholder="그룹 비밀번호"
+                style="width:100%;padding:13px;border:1.5px solid #ddd;border-radius:10px;font-size:15px;box-sizing:border-box;background:var(--bg,#f8f8f8);color:var(--text-main,#333);outline:none;">
+        </div>
+        <button id="loginBtn" onclick="window.loginGroup()"
+            style="width:100%;padding:14px;background:#007AFF;color:white;border:none;border-radius:12px;font-weight:700;font-size:16px;cursor:pointer;margin-bottom:10px;">
+            입장 / 그룹 만들기
+        </button>
+        <button onclick="localStorage.removeItem('myGroupId');location.reload();"
+            style="width:100%;padding:8px;background:none;border:none;color:#aaa;font-size:12px;cursor:pointer;">
+            ↺ 로그아웃 / 그룹 변경
+        </button>
+        <div id="login-error-msg" style="color:#FF3B30;font-size:13px;margin-top:10px;min-height:18px;"></div>
     </div>
 </div>
 
@@ -500,17 +516,37 @@
 
 <header>
     <h1>투자 관리</h1>
-    <div style="display: flex; align-items: center; gap: 10px;">
+    <div style="display: flex; align-items: center; gap: 8px;">
         <select id="userSelect" onchange="changeUser()">
             <option value="윤성일">윤성일 (아빠)</option>
             <option value="윤채현">윤채현 (딸)</option>
             <option value="윤시환">윤시환 (아들)</option>
             <option value="가족 전체">👨‍👩‍👧‍👦 가족 전체</option>
         </select>
-        <button onclick="toggleTheme()" id="themeToggle" style="background:none; border:none; font-size:18px; cursor:pointer; padding:5px; display:flex; align-items:center; justify-content:center;" title="테마 변경">🌓</button>
-        <button onclick="forceRefresh()" style="background:none; border:none; font-size:18px; cursor:pointer; padding:5px; display:flex; align-items:center; justify-content:center; color:var(--primary);" title="새로고침">🔄</button>
+        <button onclick="openSettingsPanel()" style="background:none; border:none; font-size:20px; cursor:pointer; padding:5px; display:flex; align-items:center; justify-content:center; color:var(--text-sub);" title="설정">⚙️</button>
     </div>
 </header>
+
+<!-- 설정 패널 -->
+<div id="settingsOverlay" onclick="closeSettingsPanel(event)" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); z-index:999; backdrop-filter:blur(2px);">
+    <div id="settingsPanel" style="position:absolute; top:60px; right:12px; background:var(--card-bg); border-radius:16px; padding:8px 0; min-width:170px; box-shadow:0 4px 24px rgba(0,0,0,0.18); border:1px solid var(--border-color);">
+        <div style="padding:8px 16px 6px; font-size:11px; color:var(--text-sub); font-weight:600; letter-spacing:0.5px;">설정</div>
+        <div style="height:1px; background:var(--border-color); margin:0 0 4px;"></div>
+        <button onclick="toggleTheme(); updateSettingsThemeLabel();" id="settingsThemeBtn" style="width:100%; background:none; border:none; padding:12px 16px; text-align:left; font-size:15px; color:var(--text-main); cursor:pointer; display:flex; align-items:center; gap:10px;">
+            <span style="width:20px; text-align:center;" id="settingsThemeIcon">🌓</span>
+            <span id="settingsThemeLabel">다크 모드</span>
+        </button>
+        <button onclick="_closeSettings(); forceRefresh();" style="width:100%; background:none; border:none; padding:12px 16px; text-align:left; font-size:15px; color:var(--text-main); cursor:pointer; display:flex; align-items:center; gap:10px;">
+            <span style="width:20px; text-align:center;">🔄</span>
+            <span>새로고침</span>
+        </button>
+        <div style="height:1px; background:var(--border-color); margin:4px 0;"></div>
+        <button onclick="_closeSettings(); if(confirm('로그아웃하시겠습니까?')){localStorage.removeItem('myGroupId'); location.reload();}" style="width:100%; background:none; border:none; padding:12px 16px; text-align:left; font-size:15px; color:#FF3B30; cursor:pointer; display:flex; align-items:center; gap:10px;">
+            <span style="width:20px; text-align:center;">↩</span>
+            <span>로그아웃</span>
+        </button>
+    </div>
+</div>
 
 <div id="tab-portfolio" class="container active">
     <div class="card">
@@ -1343,6 +1379,46 @@
     </div>
 </div>
 
+<!-- 거래 수정 모달 -->
+<div id="editModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center;overflow-y:auto;">
+    <div style="background:var(--card-bg);border-radius:16px;padding:24px 20px;width:92%;max-width:420px;margin:20px auto;box-shadow:0 4px 20px rgba(0,0,0,0.4);">
+        <div style="font-size:18px;font-weight:700;margin-bottom:20px;color:var(--text-main);">✏️ 거래 수정</div>
+        <div class="input-group"><label>날짜</label><input type="date" id="editDate"></div>
+        <div class="input-group"><label>거래자</label>
+            <select id="editWho" style="width:100%;padding:12px;border:1px solid var(--border-color);border-radius:8px;font-size:16px;background:var(--card-bg);color:var(--text-main);"></select>
+        </div>
+        <div style="display:flex;gap:10px;">
+            <div class="input-group" style="flex:1;"><label>티커</label><input type="text" id="editTicker" placeholder="AAPL"></div>
+            <div class="input-group" style="flex:1;"><label>유형</label>
+                <select id="editType" style="width:100%;padding:12px;border:1px solid var(--border-color);border-radius:8px;font-size:16px;background:var(--card-bg);color:var(--text-main);">
+                    <option value="매수">매수</option>
+                    <option value="매도">매도</option>
+                    <option value="입금">입금</option>
+                    <option value="출금">출금</option>
+                    <option value="배당">배당</option>
+                    <option value="환전매입">환전매입</option>
+                    <option value="환전매도">환전매도</option>
+                </select>
+            </div>
+        </div>
+        <div class="input-group"><label>종목명</label><input type="text" id="editName" placeholder="애플"></div>
+        <div style="display:flex;gap:10px;">
+            <div class="input-group" style="flex:1;"><label>수량</label><input type="number" id="editQty" placeholder="0"></div>
+            <div class="input-group" style="flex:1;"><label>단가</label><input type="number" id="editPrice" placeholder="0"></div>
+        </div>
+        <div class="input-group"><label>환율</label><input type="number" id="editFx" placeholder="예: 1400"></div>
+        <div class="input-group"><label>메모</label><textarea id="editMemo" rows="2" style="width:100%;padding:12px;border:1px solid var(--border-color);border-radius:8px;font-size:14px;box-sizing:border-box;background:var(--card-bg);color:var(--text-main);resize:none;"></textarea></div>
+        <div class="input-group" style="margin-top:8px;">
+            <label style="color:#FF3B30;font-weight:700;">🔐 관리자 비밀번호</label>
+            <input type="password" id="editAdminPw" placeholder="관리자만 수정 가능">
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px;">
+            <button onclick="closeEditModal()" style="flex:1;padding:12px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;background:var(--border-color);color:var(--text-main);">취소</button>
+            <button id="editSaveBtn" onclick="saveEditTransaction()" style="flex:1;padding:12px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;background:var(--primary);color:white;">수정 저장</button>
+        </div>
+    </div>
+</div>
+
 <!-- 매수 경고 바텀시트 팝업 -->
 <div class="buy-warning-overlay" id="buyWarningOverlay" onclick="closeBuyWarning(event)">
     <div class="buy-warning-sheet" id="buyWarningSheet">
@@ -1400,15 +1476,21 @@
 </div>
 <script>
     let CURRENT_EXCHANGE_RATE = 1450;
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwwJAx9Xa3uHMb-aEAUkO0cPRPl88bRnSApjRwbgtyRQs0cIbNXCOXdj0w5js5KwpYNTA/exec";
-    const STORAGE_KEY = "family_app_auth_key";
-    let currentAuthKey = localStorage.getItem(STORAGE_KEY);
+    // ★ GAS URL 제거 — 거래 CRUD는 Firestore로 대체
+    // 차트 데이터만 GAS에서 계속 읽음 (Firestore에 시계열 저장 불적합)
+    const CHART_GAS_URL = "https://script.google.com/macros/s/AKfycbwwJAx9Xa3uHMb-aEAUkO0cPRPl88bRnSApjRwbgtyRQs0cIbNXCOXdj0w5js5KwpYNTA/exec";
+    const CHART_GAS_AUTH = "0425"; // 차트 조회 전용 GAS 비밀번호
+    const STORAGE_KEY = "family_app_auth_key"; // 하위 호환용 키 (미사용)
+    let currentAuthKey = null; // GAS 인증키 → Firestore 그룹 인증으로 대체
     let LAST_FETCHED_DATA = null;
     let RAW_DATA = [];
     let MARKET_DATA = [];
     let PERFORMANCE_DATA = [];
     let HISTORY_DATA = [];
-    let currentUser = "윤성일";
+    let currentUser = "가족 전체"; // 앱 시작 시 그룹 전체 기본값
+
+    // ★ Firestore 그룹 인증 전역 변수
+    let currentGroupId = localStorage.getItem("myGroupId") || null;
     let REALIZED_EVENTS = [];
     let CURRENT_PRICES = [];
     let cashAdjustments = {};
@@ -1418,23 +1500,18 @@
     function showLoading() { const l = document.getElementById('loader'); if (l) l.style.display = 'flex'; }
     function hideLoading() { const l = document.getElementById('loader'); if (l) l.style.display = 'none'; }
 
-    function tryLogin() {
-        try {
-            const inputEl = document.getElementById('inputPass');
-            if (!inputEl) { alert("입력창을 찾을 수 없습니다."); return; }
-            const input = inputEl.value;
-            if (!input) { alert("암호를 입력하세요."); return; }
-            localStorage.setItem(STORAGE_KEY, input);
-            currentAuthKey = input;
-            const loginModal = document.getElementById('loginModal');
-            if (loginModal) loginModal.style.display = "none";
-            fetchData();
-        } catch(err) { alert("로그인 오류: " + err.message); }
-    }
+    // ★ tryLogin 제거 — 그룹 로그인은 Firebase module 스크립트의 window.loginGroup()으로 처리
 
     document.addEventListener('DOMContentLoaded', function() {
-        const passInput = document.getElementById('inputPass');
-        if (passInput) passInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') tryLogin(); });
+        // Enter 키 지원
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                const pwInput = document.getElementById('group-pw-input');
+                if (pwInput && document.activeElement === pwInput) {
+                    if (typeof window.loginGroup === 'function') window.loginGroup();
+                }
+            }
+        });
 
         // ★ nav-item 클릭을 onclick 대신 addEventListener로 바인딩 (event.currentTarget null 방지)
         document.querySelectorAll('.nav-item[data-tab]').forEach(function(item) {
@@ -1450,12 +1527,13 @@
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme) { document.body.className = savedTheme; updateThemeIcon(); }
         const loginModal = document.getElementById('loginModal');
-        currentAuthKey = localStorage.getItem(STORAGE_KEY);
-        if (currentAuthKey && currentAuthKey !== 'null' && currentAuthKey.length > 0) {
-            if(loginModal) loginModal.style.display = "none";
-            fetchData();
+        currentGroupId = localStorage.getItem("myGroupId") || null;
+
+        if (currentGroupId) {
+            if (loginModal) loginModal.style.display = "none";
+            fetchData(); // Firestore에서 이 그룹의 데이터 로드
         } else {
-            if(loginModal) loginModal.style.display = "flex";
+            if (loginModal) loginModal.style.display = "flex";
         }
     };
 
@@ -1467,12 +1545,33 @@
         updateThemeIcon();
     }
     function updateThemeIcon() {
-        const btn = document.getElementById('themeToggle'); if (!btn) return;
-        const body = document.body;
-        if (body.classList.contains('dark-mode')) { btn.textContent = '🌙'; btn.title = '라이트모드로 전환'; }
-        else if (body.classList.contains('light-mode')) { btn.textContent = '☀️'; btn.title = '시스템 설정으로 전환'; }
-        else { btn.textContent = '🌓'; btn.title = '다크모드로 전환'; }
+        const btn = document.getElementById('themeToggle'); if (btn) {
+            const body = document.body;
+            if (body.classList.contains('dark-mode')) { btn.textContent = '🌙'; btn.title = '라이트모드로 전환'; }
+            else if (body.classList.contains('light-mode')) { btn.textContent = '☀️'; btn.title = '시스템 설정으로 전환'; }
+            else { btn.textContent = '🌓'; btn.title = '다크모드로 전환'; }
+        }
     }
+    function updateSettingsThemeLabel() {
+        const icon  = document.getElementById('settingsThemeIcon');
+        const label = document.getElementById('settingsThemeLabel');
+        if (!icon || !label) return;
+        const body = document.body;
+        if (body.classList.contains('dark-mode'))  { icon.textContent = '☀️'; label.textContent = '라이트 모드로 전환'; }
+        else if (body.classList.contains('light-mode')) { icon.textContent = '🌓'; label.textContent = '시스템 모드로 전환'; }
+        else { icon.textContent = '🌙'; label.textContent = '다크 모드로 전환'; }
+    }
+    function openSettingsPanel() {
+        updateSettingsThemeLabel();
+        document.getElementById('settingsOverlay').style.display = 'block';
+    }
+    function closeSettingsPanel(event) {
+        // 오버레이 클릭 시만 닫기 (패널 내부 클릭은 닫지 않음)
+        if (event && event.target !== document.getElementById('settingsOverlay')) return;
+        document.getElementById('settingsOverlay').style.display = 'none';
+    }
+    // 설정 패널 내 버튼 클릭 후 패널 닫기용 헬퍼
+    function _closeSettings() { document.getElementById('settingsOverlay').style.display = 'none'; }
 
     function processMarketData(data) {
         if (!data || data.length === 0) return [];
@@ -1636,41 +1735,258 @@
         }
     });
 
-    function fetchDataFromServer(isBackground = false) {
+    // ★ Firestore에서 이 그룹의 거래내역을 가져와 앱에 적용
+    async function fetchDataFromServer(isBackground = false) {
+        if (!currentGroupId) { console.warn("그룹 미로그인 상태"); return; }
         if (!isBackground) showLoading();
-        if (!GOOGLE_SCRIPT_URL) { alert("오류: GOOGLE_SCRIPT_URL 변수가 없습니다."); hideLoading(); return; }
-        const requestUrl = `${GOOGLE_SCRIPT_URL}?who=${currentUser}&authKey=${currentAuthKey}`;
-        fetch(requestUrl)
-            .then(res => { if (!res.ok) throw new Error("서버 연결 실패 (HTTP: " + res.status + ")"); return res.text(); })
-            .then(text => {
-                if (text.trim().startsWith("<")) throw new Error("서버에서 HTML을 반환했습니다. 배포 주소를 확인하세요.");
-                try { return JSON.parse(text); } catch (e) { throw new Error("JSON 파싱 실패: " + text.substring(0, 50)); }
-            })
-            .then(data => {
-                if (data.status === 'error') {
-                    if(data.message.includes("비밀번호") || data.message.includes("권한")) {
-                        alert("비밀번호가 틀렸거나 변경되었습니다.\n다시 로그인해주세요.");
-                        localStorage.removeItem(STORAGE_KEY); location.reload(); return;
-                    }
-                    throw new Error("앱스스크립트 오류: " + data.message);
+
+        try {
+            const db = window._firestoreDb;
+            if (!db) throw new Error("Firestore 미초기화 — Firebase SDK 로딩을 확인하세요.");
+
+            const { collection, query, where, getDocs } = window._firestoreApi;
+
+            const logsQuery = query(
+                collection(db, "investments"),
+                where("groupId", "==", currentGroupId)
+            );
+            const logsSnap = await getDocs(logsQuery);
+
+            const logs = [];
+            const rawDocs = [];
+            // ★ docId도 같이 저장 (수정 기능용)
+            window._firestoreDocMap = {};
+
+            logsSnap.forEach(docSnap => {
+                const d = docSnap.data();
+                rawDocs.push({ ...d, _docId: docSnap.id });
+            });
+
+            // ★ 정렬: 1차=date, 2차=createdAt (동일 날짜 내 입력 순서 보존)
+            rawDocs.sort((a, b) => {
+                const dateA = String(a.date || '');
+                const dateB = String(b.date || '');
+                if (dateA !== dateB) return dateA < dateB ? -1 : 1;
+                const tA = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis()
+                         : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+                const tB = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis()
+                         : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+                return tA - tB;
+            });
+
+            rawDocs.forEach(d => {
+                const row = [
+                    d.who    || '',
+                    d.date   || '',
+                    d.ticker || '',
+                    d.name   || '',
+                    d.type   || '',
+                    Number(d.qty)    || 0,
+                    Number(d.price)  || 0,
+                    Number(d.fxRate) || 1,
+                    d.memo   || ''
+                ];
+                logs.push(row);
+                // docId → row 매핑 저장 (날짜+이름+티커+유형으로 키 생성)
+                const key = [d.date, d.who, d.ticker, d.type, d.qty, d.price].join('|');
+                window._firestoreDocMap[key] = d._docId;
+            });
+
+            const memberSet = new Set(logs.map(r => r[0]).filter(Boolean));
+            if (memberSet.size > 0) updateMemberSelectors([...memberSet]);
+
+            // ★ 현재가/시장데이터는 Firestore cache에서 먼저 조회, 없으면 GAS fallback
+            let pricesObj = {}, currentUsdRate = CURRENT_EXCHANGE_RATE, marketRows = [];
+            let gasData = {};
+            try {
+                const db = window._firestoreDb;
+                const { doc, getDoc } = window._firestoreApi;
+
+                // 현재가 캐시 조회
+                const priceSnap = await getDoc(doc(db, "cache", "prices"));
+                if (priceSnap.exists()) {
+                    const pd = priceSnap.data();
+                    pricesObj      = JSON.parse(pd.prices || '{}');
+                    currentUsdRate = pd.currentUsdRate || CURRENT_EXCHANGE_RATE;
+                    CURRENT_EXCHANGE_RATE = currentUsdRate;
                 }
-                saveToCache(data);
-                applyDataToApp(data);
-                if (!isBackground) hideLoading();
-                else {
-                    if (document.getElementById('tab-chart') &&
-                        document.getElementById('tab-chart').classList.contains('active') &&
-                        typeof chartCurrentTicker !== 'undefined' && chartCurrentTicker) {
-                        loadCandleData(chartCurrentTicker);
-                    }
-                    // ★ v61: 백그라운드 갱신 후 시장분석 탭도 최신 데이터로 재렌더링
-                    if (document.getElementById('tab-market') &&
-                        document.getElementById('tab-market').classList.contains('active')) {
-                        if (typeof renderMarketTab === 'function') renderMarketTab();
-                    }
+
+                // MarketData 캐시 조회
+                const marketSnap = await getDoc(doc(db, "cache", "marketdata"));
+                if (marketSnap.exists()) {
+                    marketRows = JSON.parse(marketSnap.data().market || '[]');
                 }
-            })
-            .catch(err => { if (!isBackground) hideLoading(); console.error("데이터 로드 실패:", err); });
+
+                // 성과분석 캐시 조회
+                const perfSnap = await getDoc(doc(db, "cache", "performance"));
+                if (perfSnap.exists()) {
+                    gasData.performance = JSON.parse(perfSnap.data().performance || '[]');
+                }
+
+            } catch (e) {
+                console.warn("Firestore 캐시 조회 실패, GAS fallback:", e.message);
+            }
+
+            // 현재가를 GAS prices 배열 형식으로 변환
+            const pricesArray = Object.entries(pricesObj).map(([ticker, v]) => [ticker, v.price, v.changePct, v.prevClose]);
+
+            // 성과분석/시장분석/종목목록 등은 Firestore 캐시에 없으면 GAS에서 가져옴
+            // (현재가는 이미 Firestore에서 가져왔으므로 GAS 응답에서 prices는 무시)
+            if (!gasData.performance || gasData.performance.length === 0 || pricesArray.length === 0) {
+                try {
+                    const gasUrl = `${CHART_GAS_URL}?authKey=${CHART_GAS_AUTH}&who=${encodeURIComponent(currentUser)}`;
+                    const gasRes = await fetch(gasUrl);
+                    const gasText = await gasRes.text();
+                    if (!gasText.trim().startsWith("<")) {
+                        const parsed = JSON.parse(gasText);
+                        if (parsed.status !== 'error') {
+                            // Firestore에 없는 것만 GAS에서 보충
+                            if (!gasData.performance || gasData.performance.length === 0) gasData.performance = parsed.performance || [];
+                            if (pricesArray.length === 0) {
+                                pricesObj = {};
+                                (parsed.prices || []).forEach(row => {
+                                    const t = String(row[0]).trim().toUpperCase();
+                                    if (t) pricesObj[t] = { price: row[1], changePct: row[2], prevClose: row[3] };
+                                });
+                            }
+                            gasData.market         = gasData.market         || parsed.market         || [];
+                            gasData.marketAnalysis = gasData.marketAnalysis || parsed.marketAnalysis || null;
+                            gasData.perCache       = gasData.perCache       || parsed.perCache       || {};
+                            gasData.stockList      = gasData.stockList      || parsed.stockList      || [];
+                            gasData.stockListUs    = gasData.stockListUs    || parsed.stockListUs    || [];
+                            gasData.fearGreed      = gasData.fearGreed      || parsed.fearGreed      || null;
+                            gasData.econData       = gasData.econData       || parsed.econData       || null;
+                        }
+                    }
+                } catch (e) {
+                    console.warn("GAS fallback 실패:", e.message);
+                }
+            }
+
+            const pricesFinal = Object.entries(pricesObj).map(([ticker, v]) => [ticker, v.price, v.changePct, v.prevClose]);
+
+            const data = {
+                status: "success",
+                logs: logs,
+                cashInfo: computeCashInfo(logs),
+                market:          marketRows.length > 0 ? marketRows : (gasData.market || []),
+                performance:     gasData.performance     || [],
+                prices:          pricesFinal.length > 0 ? pricesFinal : [],
+                currentUsdRate:  currentUsdRate,
+                marketAnalysis:  gasData.marketAnalysis  || null,
+                perCache:        gasData.perCache        || {},
+                stockList:       gasData.stockList       || [],
+                stockListUs:     gasData.stockListUs     || [],
+                fearGreed:       gasData.fearGreed       || null,
+                econData:        gasData.econData        || null,
+            };
+
+            saveToCache(data);
+            applyDataToApp(data);
+
+            if (!isBackground) hideLoading();
+            else {
+                if (document.getElementById('tab-chart') &&
+                    document.getElementById('tab-chart').classList.contains('active') &&
+                    typeof chartCurrentTicker !== 'undefined' && chartCurrentTicker) {
+                    loadCandleData(chartCurrentTicker);
+                }
+                if (document.getElementById('tab-market') &&
+                    document.getElementById('tab-market').classList.contains('active')) {
+                    if (typeof renderMarketTab === 'function') renderMarketTab();
+                }
+            }
+        } catch (err) {
+            if (!isBackground) hideLoading();
+            console.error("Firestore 데이터 로드 실패:", err);
+            if (!isBackground) alert("데이터 로드 실패: " + err.message);
+        }
+    }
+
+    // ★ 거래내역 배열에서 예수금/보유주식 계산
+    function computeCashInfo(logs) {
+        const stats = {};
+        const usdRate = CURRENT_EXCHANGE_RATE;
+
+        logs.forEach(row => {
+            const user = String(row[0]).trim(); if (!user) return;
+            if (!stats[user]) stats[user] = { cashKRW: 0, cashUSD: 0, netInvest: 0, holdings: {} };
+            let ticker = String(row[2]).toUpperCase().trim();
+            if (/^\d{1,5}$/.test(ticker)) ticker = ticker.padStart(6, '0');
+            const type  = String(row[4]).trim();
+            const qty   = Number(row[5]) || 0;
+            const price = Number(row[6]) || 0;
+            let fx = Number(row[7]); if (!fx || fx === 0) fx = 1;
+
+            switch (type) {
+                case "입금":   stats[user].cashKRW += price; stats[user].netInvest += price; break;
+                case "출금":   stats[user].cashKRW -= price; stats[user].netInvest -= price; break;
+                case "매수":
+                    // 한국 티커: 6자리 숫자 or 숫자+영문 (예: 04020K 금현물)
+                    if (/^\d{6}$/.test(ticker) || /^\d+[A-Z]$/.test(ticker)) stats[user].cashKRW -= (qty * price);
+                    else stats[user].cashUSD -= (qty * price);
+                    stats[user].holdings[ticker] = (stats[user].holdings[ticker] || 0) + qty; break;
+                case "매도":
+                    if (/^\d{6}$/.test(ticker) || /^\d+[A-Z]$/.test(ticker)) stats[user].cashKRW += (qty * price);
+                    else stats[user].cashUSD += (qty * price);
+                    stats[user].holdings[ticker] = (stats[user].holdings[ticker] || 0) - qty; break;
+                case "배당":
+                    if (fx > 100) stats[user].cashUSD += price;
+                    else stats[user].cashKRW += price; break;
+                case "잔고수정":
+                    stats[user].cashUSD += qty; stats[user].cashKRW += price; break;
+                case "입고": case "액면분할입고":
+                    stats[user].holdings[ticker] = (stats[user].holdings[ticker] || 0) + qty; break;
+                case "출고": case "액면분할출고":
+                    stats[user].holdings[ticker] = (stats[user].holdings[ticker] || 0) - qty; break;
+            }
+        });
+
+        for (const u in stats) {
+            const s = stats[u];
+            s.totalAsset = Math.round(s.cashKRW + s.cashUSD * usdRate);
+            s.currentUsdRate = usdRate;
+        }
+
+        const groupTotal = { cashKRW:0, cashUSD:0, netInvest:0, totalAsset:0, holdings:{}, currentUsdRate:usdRate };
+        for (const u in stats) {
+            groupTotal.cashKRW    += stats[u].cashKRW;
+            groupTotal.cashUSD    += stats[u].cashUSD;
+            groupTotal.netInvest  += stats[u].netInvest;
+            groupTotal.totalAsset += stats[u].totalAsset;
+        }
+        stats['가족 전체'] = groupTotal;
+        stats['그룹 전체'] = groupTotal;
+        return stats;
+    }
+
+    // ★ 그룹 멤버 목록으로 셀렉트박스 동적 업데이트
+    function updateMemberSelectors(members) {
+        ['userSelect', 'inputUser'].forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.innerHTML = '';
+            if (id === 'userSelect') {
+                // ★ 그룹 전체를 항상 첫 번째 + 기본 선택
+                const allOpt = document.createElement('option');
+                allOpt.value = '가족 전체';
+                allOpt.textContent = '그룹 전체';
+                allOpt.selected = true;
+                el.appendChild(allOpt);
+            }
+            members.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m; opt.textContent = m;
+                el.appendChild(opt);
+            });
+            // userSelect는 항상 가족 전체로, inputUser는 첫 번째 멤버로
+            if (id === 'userSelect') {
+                el.value = '가족 전체';
+                currentUser = '가족 전체';
+            } else if (id === 'inputUser' && members.length > 0) {
+                el.value = members[0];
+            }
+        });
     }
 
     function fetchData() {
@@ -1736,6 +2052,8 @@
             if (!userPortfolios[name]) userPortfolios[name] = {};
             let date = new Date(row[1]);
             let ticker = String(row[2]).trim().toUpperCase();
+            // ★ 한국 티커 6자리 패딩 정규화 (Firestore 마이그레이션 시 앞자리 0 누락 대응)
+            if (/^\d{1,5}$/.test(ticker)) ticker = ticker.padStart(6, '0');
             let logName = row[3], type = String(row[4]).trim();
             let qty = safeFloat(row[5]), price = safeFloat(row[6]);
             let fx = safeFloat(row[7]); if (fx === 0) fx = 1;
@@ -1760,7 +2078,8 @@
                     REALIZED_EVENTS.push({ date, name: logName || ticker, ticker, profit, returnRate: costBasis === 0 ? 0 : (profit / costBasis) * 100, who: name });
                 }
                 item.qty -= qty; item.totalCost -= costBasis; item.totalAmtOrigin -= costBasisOrigin;
-                if (item.qty <= 0.000001) delete userPortfolios[name][ticker];
+                // ★ Firestore 마이그레이션 후 부동소수점 오차 대응: 임계값을 0.01로 상향
+                if (item.qty <= 0.01) delete userPortfolios[name][ticker];
             } else if (type === '액면분할입고') {
                 if (item.splitMemory) { item.totalCost = item.splitMemory.cost; item.totalAmtOrigin = item.splitMemory.origin; item.splitMemory = null; }
                 else { item.totalCost += amount; item.totalAmtOrigin += amountOrigin; }
@@ -1790,7 +2109,8 @@
             let changePct = fetchedPriceRow && !isNaN(fetchedPriceRow[2]) ? Number(fetchedPriceRow[2]) : 0;
             let yesterdayPrice = fetchedPriceRow && !isNaN(fetchedPriceRow[3]) ? Number(fetchedPriceRow[3]) : rawCurrentPrice;
             let avgPrice = item.qty > 0 ? (item.totalAmtOrigin / item.qty) : 0;
-            let isKorea = !isNaN(t.charAt(0));
+            // ★ t는 processData 진입 시 이미 패딩됨 — 6자리 숫자 or 끝이 영문인 한국 티커(04020K 등)
+            let isKorea = /^\d{6}$/.test(t) || /^\d+[A-Z]$/.test(t);
             let displayName = isKorea ? item.name : t;
             let fx = isKorea ? 1 : (typeof CURRENT_EXCHANGE_RATE !== 'undefined' ? CURRENT_EXCHANGE_RATE : 1);
             let finalPrice = isKorea ? rawCurrentPrice : rawCurrentPrice * fx;
@@ -1867,11 +2187,10 @@
         balanceList.forEach(item => {
             let colorClass = item.profit >= 0 ? 'up' : 'down';
             let tSign = item.todayProfitAmt > 0 ? "+" : "";
-            let tIcon = item.todayProfitAmt > 0 ? "🔥" : (item.todayProfitAmt < 0 ? "📉" : "");
             let tColorClass = item.todayProfitAmt > 0 ? "up" : (item.todayProfitAmt < 0 ? "down" : "");
             let itemDiv = document.createElement('div');
             itemDiv.className = 'stock-item';
-            itemDiv.innerHTML = `<div><div class="stock-name">${item.name}</div><div class="stock-ticker">${item.ticker}</div></div><div style="text-align:right;"><div class="stock-price" style="color:#333;">${Math.round(item.evalAmt).toLocaleString()}원</div><div class="stock-change ${colorClass}">${item.rate.toFixed(1)}% (${Math.round(item.profit).toLocaleString()}원)</div><div class="${tColorClass}" style="font-size:12px;margin-top:3px;font-weight:500;">오늘 ${tSign}${Math.round(item.todayProfitAmt).toLocaleString()}원 (${tSign}${item.changePct.toFixed(2)}%) ${tIcon}</div></div>`;
+            itemDiv.innerHTML = `<div><div class="stock-name">${item.name}</div><div class="stock-ticker">${item.ticker}</div></div><div style="text-align:right;"><div class="stock-price" style="color:#333;">${Math.round(item.evalAmt).toLocaleString()}원</div><div class="stock-change ${colorClass}">${item.rate.toFixed(1)}% (${Math.round(item.profit).toLocaleString()}원)</div><div class="${tColorClass}" style="font-size:12px;margin-top:3px;font-weight:500;">오늘 ${tSign}${Math.round(item.todayProfitAmt).toLocaleString()}원 (${tSign}${item.changePct.toFixed(2)}%)</div></div>`;
             listDiv.appendChild(itemDiv);
         });
     }
@@ -1883,12 +2202,11 @@
             let weight = totalAsset > 0 ? (item.evalAmt / totalAsset) * 100 : 0;
             let color = item.profit >= 0 ? 'up' : 'down';
             let tSign = item.changePct > 0 ? "+" : "";
-            let tIcon = item.changePct > 0 ? "🔥" : (item.changePct < 0 ? "📉" : "");
             let tColorClass = item.changePct > 0 ? "up" : (item.changePct < 0 ? "down" : "");
             let displayAvgPrice = item.isKorea ? Math.round(item.avgPrice).toLocaleString() + "원" : `<span style="color:#008000">$${Number(item.avgPrice).toFixed(2)}</span>`;
             let displayCurPrice = item.isKorea ? Math.round(item.curPrice).toLocaleString() + "원" : `<span style="color:#008000">$${Number(item.curPrice).toFixed(2)}</span>`;
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${item.name}</td><td class="${color}">${Math.round(item.profit).toLocaleString()}</td><td class="${color}">${item.rate.toFixed(1)}%</td><td class="${tColorClass}" style="font-weight:bold;">${tSign}${item.changePct.toFixed(2)}% ${tIcon}</td><td>${item.qty}</td><td>${displayAvgPrice}</td><td>${displayCurPrice}</td><td>${Math.round(item.evalAmt).toLocaleString()}</td><td>${weight.toFixed(1)}%</td>`;
+            tr.innerHTML = `<td>${item.name}</td><td class="${color}">${Math.round(item.profit).toLocaleString()}</td><td class="${color}">${item.rate.toFixed(1)}%</td><td class="${tColorClass}" style="font-weight:bold;">${tSign}${item.changePct.toFixed(2)}%</td><td>${item.qty}</td><td>${displayAvgPrice}</td><td>${displayCurPrice}</td><td>${Math.round(item.evalAmt).toLocaleString()}</td><td>${weight.toFixed(1)}%</td>`;
             tbody.appendChild(tr);
         });
     }
@@ -1942,7 +2260,17 @@
             let itemDiv = document.createElement('div');
             itemDiv.className = 'stock-item';
             itemDiv.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #eee;';
-            itemDiv.innerHTML = `<div style="display:flex;align-items:center;flex:1;min-width:0;margin-right:10px;"><div style="margin-right:12px;color:#999;font-size:12px;min-width:55px;">${dateStr}</div><div style="flex:1;min-width:0;display:flex;align-items:center;"><div style="font-weight:bold;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;"><span class="badge" style="display:inline-block;vertical-align:middle;margin-right:6px;font-size:11px;padding:3px 6px;border-radius:4px;color:white;background:${badgeColor};">${type}</span><span style="vertical-align:middle;">${name}</span></div>${ticker?`<span style="font-size:12px;color:#888;margin-left:4px;white-space:nowrap;">(${ticker})</span>`:''}</div></div><div style="text-align:right;flex-shrink:0;">${descHtml}</div>`;
+            // ★ row를 전역 맵에 저장하고 docId로만 참조 (onclick에 JSON 직접 삽입 시 특수문자 깨짐 방지)
+            const docKey = [row[1], row[0], row[2], row[4], row[5], row[6]].join('|');
+            const docId = (window._firestoreDocMap && window._firestoreDocMap[docKey]) || null;
+            if (docId) {
+                window._editRowCache = window._editRowCache || {};
+                window._editRowCache[docId] = row;
+            }
+            const editBtnHtml = docId
+                ? `<button onclick="openEditModal('${docId}')" style="background:none;border:1px solid var(--border-color);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--text-sub);cursor:pointer;margin-top:4px;white-space:nowrap;">✏️ 수정</button>`
+                : '';
+            itemDiv.innerHTML = `<div style="display:flex;align-items:center;flex:1;min-width:0;margin-right:10px;"><div style="margin-right:12px;color:#999;font-size:12px;min-width:55px;">${dateStr}</div><div style="flex:1;min-width:0;display:flex;align-items:center;"><div style="font-weight:bold;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;"><span class="badge" style="display:inline-block;vertical-align:middle;margin-right:6px;font-size:11px;padding:3px 6px;border-radius:4px;color:white;background:${badgeColor};">${type}</span><span style="vertical-align:middle;">${name}</span></div>${ticker?`<span style="font-size:12px;color:#888;margin-left:4px;white-space:nowrap;">(${ticker})</span>`:''}</div></div><div style="text-align:right;flex-shrink:0;">${descHtml}${editBtnHtml}</div>`;
             listDiv.appendChild(itemDiv);
         });
     }
@@ -2207,16 +2535,163 @@
         wrap.addEventListener('touchend', () => { isDragging=false; isPinching=false; });
     }
 
-    function submitTransaction() {
+    async function submitTransaction() {
         const btn = document.querySelector('button.btn-primary');
         btn.innerText = "저장 중..."; btn.disabled = true;
+
+        if (!currentGroupId) {
+            alert("그룹 로그인이 필요합니다.");
+            btn.innerText = "거래 저장"; btn.disabled = false; return;
+        }
+
         let tickerRaw = document.getElementById('inputTicker').value.trim().toUpperCase();
-        // ★ 국내 종목 티커 6자리 패딩 보정 (예: 660 → 000660, 5930 → 005930)
         if (/^\d{1,5}$/.test(tickerRaw)) tickerRaw = tickerRaw.padStart(6, '0');
-        const data = { authKey: currentAuthKey, who: document.getElementById('inputUser').value, date: document.getElementById('inputDate').value, ticker: tickerRaw, name: document.getElementById('inputName').value, type: document.getElementById('inputType').value, qty: document.getElementById('inputQty').value, price: document.getElementById('inputPrice').value, fxRate: document.getElementById('inputFx').value || (tickerRaw ? '' : 1), memo: document.getElementById('inputMemo').value };
-        fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
-        .then(() => { alert("저장되었습니다!"); localStorage.removeItem(CACHE_KEY); localStorage.removeItem(CACHE_TIME_KEY); location.reload(); })
-        .catch(err => { alert("오류 발생: " + err); btn.innerText = "거래 저장"; btn.disabled = false; });
+
+        const txData = {
+            groupId:  currentGroupId,
+            who:      document.getElementById('inputUser').value,
+            date:     document.getElementById('inputDate').value,
+            ticker:   tickerRaw,
+            name:     document.getElementById('inputName').value,
+            type:     document.getElementById('inputType').value,
+            qty:      Number(document.getElementById('inputQty').value) || 0,
+            price:    Number(document.getElementById('inputPrice').value) || 0,
+            fxRate:   Number(document.getElementById('inputFx').value) || 1,
+            memo:     document.getElementById('inputMemo').value,
+            createdAt: new Date()
+        };
+
+        let gasOk = false, dbOk = false;
+
+        // ① Firestore 저장
+        try {
+            const db = window._firestoreDb;
+            const { collection, addDoc } = window._firestoreApi;
+            await addDoc(collection(db, "investments"), txData);
+            dbOk = true;
+        } catch (err) {
+            console.error("Firestore 저장 실패:", err);
+        }
+
+        // ② GAS(스프레드시트) 저장
+        try {
+            const gasPayload = {
+                authKey: CHART_GAS_AUTH,
+                who:     txData.who,
+                date:    txData.date,
+                ticker:  txData.ticker,
+                name:    txData.name,
+                type:    txData.type,
+                qty:     txData.qty,
+                price:   txData.price,
+                fxRate:  txData.fxRate,
+                memo:    txData.memo
+            };
+            const gasRes = await fetch(CHART_GAS_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(gasPayload)
+            });
+            gasOk = true;
+        } catch (err) {
+            console.error("GAS 저장 실패:", err);
+        }
+
+        if (dbOk) {
+            alert(gasOk ? "저장되었습니다!" : "DB 저장 완료 (스프레드시트 저장 실패 — 나중에 수동 확인 필요)");
+            localStorage.removeItem(CACHE_KEY);
+            localStorage.removeItem(CACHE_TIME_KEY);
+            location.reload();
+        } else {
+            alert("저장 실패: DB에 저장되지 않았습니다. 다시 시도해주세요.");
+            btn.innerText = "거래 저장"; btn.disabled = false;
+        }
+    }
+
+    // ── 거래 수정 모달 ──────────────────────────────────────────
+    let _editDocId = null; // 수정 중인 Firestore 문서 ID
+
+    function openEditModal(docId) {
+        const row = (window._editRowCache && window._editRowCache[docId]) || [];
+        _editDocId = docId;
+        const editWho = document.getElementById('editWho');
+        if (editWho) {
+            const inputUser = document.getElementById('inputUser');
+            if (inputUser) editWho.innerHTML = inputUser.innerHTML;
+            editWho.value = row[0] || '';
+        }
+        document.getElementById('editDate').value   = row[1] || '';
+        document.getElementById('editTicker').value = row[2] || '';
+        document.getElementById('editName').value   = row[3] || '';
+        document.getElementById('editType').value   = row[4] || '매수';
+        document.getElementById('editQty').value    = row[5] || '';
+        document.getElementById('editPrice').value  = row[6] || '';
+        document.getElementById('editFx').value     = row[7] || '';
+        document.getElementById('editMemo').value   = row[8] || '';
+        document.getElementById('editAdminPw').value = '';
+        document.getElementById('editModal').style.display = 'flex';
+    }
+
+    function closeEditModal() {
+        document.getElementById('editModal').style.display = 'none';
+        _editDocId = null;
+    }
+
+    async function saveEditTransaction() {
+        const adminPw = document.getElementById('editAdminPw').value.trim();
+        if (!adminPw) { alert("관리자 비밀번호를 입력하세요."); return; }
+
+        const btnSave = document.getElementById('editSaveBtn');
+        btnSave.disabled = true; btnSave.innerText = "확인 중...";
+
+        // Firestore에서 관리자 비밀번호 검증
+        try {
+            const db = window._firestoreDb;
+            const { doc, getDoc } = window._firestoreApi;
+            const adminSnap = await getDoc(doc(db, "admins", "config"));
+            if (!adminSnap.exists() || adminSnap.data().password !== adminPw) {
+                alert("❌ 관리자 비밀번호가 틀렸습니다.");
+                btnSave.disabled = false; btnSave.innerText = "수정 저장";
+                return;
+            }
+        } catch(e) {
+            alert("비밀번호 확인 실패: " + e.message);
+            btnSave.disabled = false; btnSave.innerText = "수정 저장";
+            return;
+        }
+
+        btnSave.innerText = "저장 중...";
+
+        let tickerRaw = document.getElementById('editTicker').value.trim().toUpperCase();
+        if (/^\d{1,5}$/.test(tickerRaw)) tickerRaw = tickerRaw.padStart(6, '0');
+
+        const updatedData = {
+            groupId: currentGroupId,
+            who:     document.getElementById('editWho').value,
+            date:    document.getElementById('editDate').value,
+            ticker:  tickerRaw,
+            name:    document.getElementById('editName').value,
+            type:    document.getElementById('editType').value,
+            qty:     Number(document.getElementById('editQty').value) || 0,
+            price:   Number(document.getElementById('editPrice').value) || 0,
+            fxRate:  Number(document.getElementById('editFx').value) || 1,
+            memo:    document.getElementById('editMemo').value,
+        };
+
+        try {
+            const db = window._firestoreDb;
+            const { doc, updateDoc } = window._firestoreApi;
+            await updateDoc(doc(db, "investments", _editDocId), updatedData);
+            alert("수정되었습니다!");
+            closeEditModal();
+            localStorage.removeItem(CACHE_KEY);
+            localStorage.removeItem(CACHE_TIME_KEY);
+            location.reload();
+        } catch(err) {
+            alert("수정 실패: " + err.message);
+            btnSave.disabled = false; btnSave.innerText = "수정 저장";
+        }
     }
 
     function openCashEditModal() {
@@ -2231,16 +2706,56 @@
         modal.style.display = 'block';
     }
     function closeCashEditModal() { document.getElementById('cashEditModal').style.display = 'none'; }
-    function saveCashEdit() {
+    async function saveCashEdit() {
         const realKRW = parseFloat(document.getElementById('edit-krw').value) || 0;
         const realUSD = parseFloat(document.getElementById('edit-usd').value) || 0;
-        if (realKRW === 0 && realUSD === 0) { if(!confirm("원화와 달러 잔고를 모두 0원으로 수정하시겠습니까?")) return; }
+        if (realKRW === 0 && realUSD === 0) { if (!confirm("원화와 달러 잔고를 모두 0원으로 수정하시겠습니까?")) return; }
+
         const btnSave = document.querySelector('.btn-save');
-        if(btnSave) { btnSave.disabled = true; btnSave.innerText = "저장 중..."; }
-        fetch(GOOGLE_SCRIPT_URL, { method: "POST", mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ authKey: currentAuthKey, type: "adjustCash", who: currentUser, actualKRW: realKRW, actualUSD: realUSD }) })
-        .then(() => { alert("예수금이 수정되었습니다.\n페이지를 새로고침합니다."); closeCashEditModal(); localStorage.removeItem(CACHE_KEY); localStorage.removeItem(CACHE_TIME_KEY); location.reload(); })
-        .catch(err => { console.error("서버 통신 실패:", err); alert("서버 통신 실패: " + err.message); })
-        .finally(() => { if(btnSave) { btnSave.disabled=false; btnSave.innerText="저장"; } });
+        if (btnSave) { btnSave.disabled = true; btnSave.innerText = "저장 중..."; }
+
+        let currentKRW = 0, currentUSD = 0;
+        if (LAST_FETCHED_DATA && LAST_FETCHED_DATA.cashInfo && LAST_FETCHED_DATA.cashInfo[currentUser]) {
+            currentKRW = LAST_FETCHED_DATA.cashInfo[currentUser].cashKRW || 0;
+            currentUSD = LAST_FETCHED_DATA.cashInfo[currentUser].cashUSD || 0;
+        }
+        const diffKRW = realKRW - currentKRW;
+        const diffUSD = realUSD - currentUSD;
+
+        if (Math.abs(diffKRW) <= 1 && Math.abs(diffUSD) <= 0.01) {
+            alert("변동 없음 — 수정이 필요하지 않습니다.");
+            closeCashEditModal();
+            if (btnSave) { btnSave.disabled = false; btnSave.innerText = "저장"; }
+            return;
+        }
+
+        try {
+            const db = window._firestoreDb;
+            const { collection, addDoc } = window._firestoreApi;
+            const today = new Date().toISOString().substring(0, 10);
+            await addDoc(collection(db, "investments"), {
+                groupId:  currentGroupId,
+                who:      currentUser,
+                date:     today,
+                ticker:   '',
+                name:     '예수금보정',
+                type:     '잔고수정',
+                qty:      diffUSD,
+                price:    diffKRW,
+                fxRate:   1,
+                memo:     '앱에서 잔고 수정함',
+                createdAt: new Date()
+            });
+            alert("예수금이 수정되었습니다.\n페이지를 새로고침합니다.");
+            closeCashEditModal();
+            localStorage.removeItem(CACHE_KEY);
+            localStorage.removeItem(CACHE_TIME_KEY);
+            location.reload();
+        } catch (err) {
+            alert("서버 통신 실패: " + err.message);
+        } finally {
+            if (btnSave) { btnSave.disabled = false; btnSave.innerText = "저장"; }
+        }
     }
 
     // ====== 차트 탭 ======
@@ -2326,50 +2841,29 @@
         function loadNextSilent() {
             if (currentIndex >= tickersToLoad.length) {
                 console.log('✅ 모든 보유 종목 백그라운드 프리로드 완료!');
-                return; 
+                return;
             }
-            
+
             const ticker = tickersToLoad[currentIndex];
             currentIndex++;
 
-            // 이미 로컬 캐시에 있거나 현재 보고 있는 종목이면 패스하고 다음으로
             if (CHART_DATA_CACHE[ticker] || chartCurrentTicker === ticker) {
                 loadNextSilent();
                 return;
             }
 
-            console.log(`[프리로드 진행 중...] ${ticker}`);
-            const url = `${GOOGLE_SCRIPT_URL}?authKey=${currentAuthKey}&action=getChartData&ticker=${encodeURIComponent(ticker)}&limit=${CHUNK_SIZE}&offset=0`;
-            
-            // 화면 UI(스피너 등)를 전혀 건드리지 않고 fetch만 수행
-            fetch(url)
-            .then(res => res.text())
-            .then(text => {
-                if (!text.trim().startsWith('<')) {
-                    const data = JSON.parse(text);
-                    if (!data.error && data.dates && data.dates.length > 0) {
-                        const parsed = data.dates.map((d,i) => {
-                            let ts = new Date(d+'T00:00:00Z').getTime();
-                            return { x:ts, o:Number(data.opens[i])||0, h:Number(data.highs[i])||0, l:Number(data.lows[i])||0, c:Number(data.closes[i])||0 };
-                        }).filter(d => !isNaN(d.x) && d.h > 0);
-                        
-                        // ★ 핵심: 화면을 그리지 않고 오직 CHART_DATA_CACHE 에만 데이터를 저장해둠
-                        CHART_DATA_CACHE[ticker] = { 
-                            data: parsed, 
-                            ts: Date.now(), 
-                            hasMore: data.hasMore !== undefined ? data.hasMore : (data.dates.length >= CHUNK_SIZE * 0.9) 
-                        };
-                    }
+            console.log(`[프리로드] ${ticker}`);
+            // ★ Firestore에서 조회
+            _loadChartFromFirestore(ticker)
+            .then(parsed => {
+                if (parsed && parsed.length > 0) {
+                    CHART_DATA_CACHE[ticker] = { data: parsed, ts: Date.now(), hasMore: false };
                 }
             })
             .catch(err => console.error(`[프리로드 실패] ${ticker}:`, err))
-            .finally(() => {
-                // 하나 다운로드가 끝나면 구글 서버가 힘들어하지 않게 1.5초 쉬었다가 다음 종목 시작
-                setTimeout(loadNextSilent, 1500); 
-            });
+            .finally(() => setTimeout(loadNextSilent, 300)); // Firestore는 빠르니까 300ms로 단축
         }
 
-        // 백그라운드 다운로드 릴레이 시작
         loadNextSilent();
     }
 
@@ -2400,23 +2894,48 @@
     let _chartAbortCtrl = null;
 
     // ★ isLoadMore 파라미터 추가 (과거 데이터 스와이프 시 true)
+    // ★ Firestore에서 차트 데이터 로드 (공통 헬퍼)
+    async function _loadChartFromFirestore(ticker) {
+        const db = window._firestoreDb;
+        const { doc, getDoc } = window._firestoreApi;
+
+        // 티커 정규화 (한국 종목 6자리 패딩)
+        let normalizedTicker = ticker.toUpperCase();
+        if (/^\d{1,5}$/.test(normalizedTicker)) normalizedTicker = normalizedTicker.padStart(6, '0');
+
+        const snap = await getDoc(doc(db, "charts", normalizedTicker));
+        if (!snap.exists()) return null;
+
+        const d = snap.data();
+        const dates   = JSON.parse(d.dates   || '[]');
+        const opens   = JSON.parse(d.opens   || '[]');
+        const highs   = JSON.parse(d.highs   || '[]');
+        const lows    = JSON.parse(d.lows    || '[]');
+        const closes  = JSON.parse(d.closes  || '[]');
+
+        return dates.map((dateStr, i) => {
+            const ts = new Date(dateStr + 'T00:00:00Z').getTime();
+            return { x:ts, o:Number(opens[i])||0, h:Number(highs[i])||0, l:Number(lows[i])||0, c:Number(closes[i])||0 };
+        }).filter(d => !isNaN(d.x) && d.h > 0);
+    }
+
     function loadCandleData(ticker, isLoadMore = false) {
+        // ★ Firestore로 전환 — 전체 데이터를 1회 조회 (페이징 불필요)
         if (!isLoadMore) {
-            // 새 종목 로딩 시 초기화
             if (_chartAbortCtrl) _chartAbortCtrl.abort();
             _chartAbortCtrl = new AbortController();
-            
+
             chartAllData = [];
-            chartHasMoreData = true;
+            chartHasMoreData = false; // Firestore는 전체 데이터를 한 번에 가져오므로 hasMore 불필요
             chartIsLoadingMore = false;
 
-            // 캐시 확인 (10분) - 초기 로딩 시에만 적용
+            // 10분 캐시 확인
             const cached = CHART_DATA_CACHE[ticker];
             if (cached && (Date.now() - cached.ts) < 10 * 60 * 1000) {
                 document.getElementById('chartLoadingMsg').style.display = 'none';
                 document.getElementById('candleChartCard').style.display = 'block';
                 chartAllData = cached.data;
-                chartHasMoreData = cached.hasMore !== false; // 캐시된 페이징 상태 복원
+                chartHasMoreData = false;
                 currentCandleType = 'D';
                 setCandleType('D');
                 return;
@@ -2424,72 +2943,34 @@
 
             document.getElementById('candleChartCard').style.display = 'none';
             document.getElementById('chartLoadingMsg').style.display = 'block';
-        } else {
-            // 과거 데이터 로딩 중이거나 더 이상 데이터가 없으면 중복 실행 방지
-            if (chartIsLoadingMore || !chartHasMoreData) return;
-            chartIsLoadingMore = true;
-        }
 
-        const signal = _chartAbortCtrl ? _chartAbortCtrl.signal : null;
-        
-        // ★ 백엔드로 offset(지금까지 로딩된 개수)과 limit 전송
-        const currentOffset = isLoadMore ? chartAllData.length : 0;
-        const url = `${GOOGLE_SCRIPT_URL}?authKey=${currentAuthKey}&action=getChartData&ticker=${encodeURIComponent(ticker)}&limit=${CHUNK_SIZE}&offset=${currentOffset}`;
-        
-        fetch(url, { signal })
-        .then(res => res.text())
-        .then(text => {
-            if (text.trim().startsWith('<')) throw new Error('서버 응답 오류');
-            return JSON.parse(text);
-        })
-        .then(data => {
-            chartIsLoadingMore = false;
-            if (!isLoadMore) document.getElementById('chartLoadingMsg').style.display = 'none';
+            _loadChartFromFirestore(ticker)
+            .then(parsed => {
+                document.getElementById('chartLoadingMsg').style.display = 'none';
 
-            if (data.error || !data.dates || data.dates.length === 0) {
-                if (!isLoadMore) {
+                if (!parsed || parsed.length === 0) {
                     document.getElementById('candleChartCard').style.display = 'block';
                     showCandleEmpty();
-                } else {
-                    chartHasMoreData = false; // 과거 데이터 바닥남
+                    return;
                 }
-                return;
-            }
 
-            // 서버에서 넘겨준 hasMore 플래그 저장
-            chartHasMoreData = data.hasMore !== undefined ? data.hasMore : (data.dates.length >= CHUNK_SIZE * 0.9);
-
-            const parsed = data.dates.map((d,i) => {
-                let ts = new Date(d+'T00:00:00Z').getTime();
-                return { x:ts, o:Number(data.opens[i])||0, h:Number(data.highs[i])||0, l:Number(data.lows[i])||0, c:Number(data.closes[i])||0 };
-            }).filter(d => !isNaN(d.x) && d.h > 0);
-
-            if (isLoadMore) {
-                // 🚀 스와이프 로딩: 과거 데이터를 기존 데이터 배열 '앞'에 합침
-                chartAllData = parsed.concat(chartAllData);
-                CHART_DATA_CACHE[ticker] = { data: chartAllData, ts: Date.now(), hasMore: chartHasMoreData };
-                
-                renderCandleChart(true); // 차트 화면 영역을 유지하면서 다시 그리기
-            } else {
-                // 🚀 최초 로딩
                 chartAllData = parsed;
-                CHART_DATA_CACHE[ticker] = { data: chartAllData, ts: Date.now(), hasMore: chartHasMoreData };
-                
+                chartHasMoreData = false;
+                CHART_DATA_CACHE[ticker] = { data: chartAllData, ts: Date.now(), hasMore: false };
+
                 currentCandleType = 'D';
                 document.getElementById('candleChartCard').style.display = 'block';
-                setCandleType('D'); // 내부에서 renderCandleChart() 호출함
-            }
-        })
-        .catch(err => {
-            if (err.name === 'AbortError') return; 
-            console.error('[차트오류]', err);
-            chartIsLoadingMore = false;
-            if (!isLoadMore) {
+                setCandleType('D');
+            })
+            .catch(err => {
+                if (err.name === 'AbortError') return;
+                console.error('[차트오류]', err);
                 document.getElementById('chartLoadingMsg').style.display = 'none';
                 document.getElementById('candleChartCard').style.display = 'block';
                 showCandleEmpty();
-            }
-        });
+            });
+        }
+        // ★ isLoadMore는 Firestore에서 이미 전체 데이터를 가져오므로 불필요 — 무시
     }
 
     function showCandleEmpty() {
@@ -4476,7 +4957,12 @@
     }
 
 
-    window.onclick = function(event) { const cashModal=document.getElementById('cashEditModal'); if(event.target===cashModal) closeCashEditModal(); }
+    window.onclick = function(event) {
+        const cashModal = document.getElementById('cashEditModal');
+        if (event.target === cashModal) closeCashEditModal();
+        const editModal = document.getElementById('editModal');
+        if (event.target === editModal) closeEditModal();
+    }
 
     // ====================================================================
     // 종합신호 가중치 설명 모달
@@ -4986,6 +5472,85 @@
             </div>
         </div>
     </div>
+
+<script type="module">
+  import { initializeApp }   from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+  import { getAnalytics }    from "https://www.gstatic.com/firebasejs/12.12.0/firebase-analytics.js";
+  import {
+    getFirestore, doc, getDoc, setDoc, updateDoc,
+    collection, addDoc, query, where, getDocs, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey:            "AIzaSyDTE7tfv9raWM9Yk2cy1EAEL57vxKg8UrQ",
+    authDomain:        "invest-management-2e947.firebaseapp.com",
+    projectId:         "invest-management-2e947",
+    storageBucket:     "invest-management-2e947.firebasestorage.app",
+    messagingSenderId: "79655500249",
+    appId:             "1:79655500249:web:1e43cfd3927c80093ac1c8",
+    measurementId:     "G-J3VBD71MMD"
+  };
+
+  const app       = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+  const db        = getFirestore(app);
+
+  // module 스코프의 db와 API를 일반 <script>에서도 접근 가능하도록 window에 노출
+  window._firestoreDb  = db;
+  window._firestoreApi = {
+    collection, addDoc, query, where, getDocs,
+    doc, getDoc, setDoc, updateDoc, serverTimestamp
+  };
+
+  window.loginGroup = async function() {
+    const idEl  = document.getElementById('group-id-input');
+    const pwEl  = document.getElementById('group-pw-input');
+    const errEl = document.getElementById('login-error-msg');
+    const btn   = document.getElementById('loginBtn');
+
+    const id = (idEl ? idEl.value.trim() : '');
+    const pw = (pwEl ? pwEl.value.trim() : '');
+
+    function showErr(msg) {
+      if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
+      if (btn)   { btn.disabled = false; btn.innerText = "입장 / 그룹 만들기"; }
+    }
+
+    if (!id || !pw) { showErr("그룹 ID와 비밀번호를 모두 입력하세요."); return; }
+    if (btn) { btn.disabled = true; btn.innerText = "확인 중..."; }
+    if (errEl) errEl.style.display = 'none';
+
+    try {
+      const groupRef = doc(db, "groups", id);
+      const snap     = await getDoc(groupRef);
+
+      if (snap.exists()) {
+        if (snap.data().password === pw) {
+          enterGroup(id);
+        } else {
+          showErr("❌ 비밀번호가 틀렸습니다.");
+        }
+      } else {
+        if (confirm(`"${id}" 그룹이 없습니다.\n이 비밀번호로 새 그룹을 만드시겠습니까?`)) {
+          await setDoc(groupRef, { password: pw, createdAt: serverTimestamp() });
+          enterGroup(id);
+        } else {
+          if (btn) { btn.disabled = false; btn.innerText = "입장 / 그룹 만들기"; }
+        }
+      }
+    } catch (err) {
+      showErr("오류: " + err.message);
+    }
+  };
+
+  function enterGroup(id) {
+    localStorage.setItem("myGroupId", id);
+    const modal = document.getElementById('loginModal');
+    if (modal) modal.style.display = 'none';
+    if (typeof window.currentGroupId !== 'undefined') window.currentGroupId = id;
+    if (typeof fetchData === 'function') fetchData();
+  }
+</script>
 
 </body>
 </html>
