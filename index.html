@@ -487,26 +487,76 @@
 <!-- ★ 그룹 로그인 모달 -->
 <div id="loginModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;justify-content:center;align-items:center;backdrop-filter:blur(8px);">
     <div style="background:var(--card-bg,#fff);padding:32px 28px;border-radius:20px;text-align:center;width:85%;max-width:340px;box-shadow:0 8px 40px rgba(0,0,0,0.4);">
-        <p style="font-size:13px;color:var(--text-sub,#666);margin:0 0 24px;line-height:1.6;">그룹 ID와 비밀번호로 입장하세요.<br>없으면 입력 후 확인 → 자동 생성됩니다.</p>
-        <div style="margin-bottom:12px;text-align:left;">
-            <label style="font-size:12px;color:var(--text-sub,#888);margin-bottom:5px;display:block;">그룹 ID</label>
-            <input type="text" id="group-id-input" placeholder="예: family_yoon, club_A팀"
-                style="width:100%;padding:13px;border:1.5px solid #ddd;border-radius:10px;font-size:15px;box-sizing:border-box;background:var(--bg,#f8f8f8);color:var(--text-main,#333);outline:none;">
+
+        <!-- 1단계: 그룹 로그인 -->
+        <div id="loginStep1">
+            <p style="font-size:13px;color:var(--text-sub,#666);margin:0 0 24px;line-height:1.6;">그룹 ID와 비밀번호로 입장하세요.</p>
+            <div style="margin-bottom:12px;text-align:left;">
+                <label style="font-size:12px;color:var(--text-sub,#888);margin-bottom:5px;display:block;">그룹 ID</label>
+                <input type="text" id="group-id-input" placeholder="예: family_yoon, club_A팀"
+                    style="width:100%;padding:13px;border:1.5px solid #ddd;border-radius:10px;font-size:15px;box-sizing:border-box;background:var(--bg,#f8f8f8);color:var(--text-main,#333);outline:none;">
+            </div>
+            <div style="margin-bottom:20px;text-align:left;">
+                <label style="font-size:12px;color:var(--text-sub,#888);margin-bottom:5px;display:block;">비밀번호</label>
+                <input type="password" id="group-pw-input" placeholder="그룹 비밀번호"
+                    style="width:100%;padding:13px;border:1.5px solid #ddd;border-radius:10px;font-size:15px;box-sizing:border-box;background:var(--bg,#f8f8f8);color:var(--text-main,#333);outline:none;">
+            </div>
+            <button id="loginBtn" onclick="window.loginGroup()"
+                style="width:100%;padding:14px;background:#007AFF;color:white;border:none;border-radius:12px;font-weight:700;font-size:16px;cursor:pointer;margin-bottom:10px;">
+                입장
+            </button>
+            <button onclick="localStorage.removeItem('myGroupId');localStorage.removeItem('myNickname');location.reload();"
+                style="width:100%;padding:8px;background:none;border:none;color:#aaa;font-size:12px;cursor:pointer;">
+                ↺ 로그아웃 / 그룹 변경
+            </button>
+            <div id="login-error-msg" style="color:#FF3B30;font-size:13px;margin-top:10px;min-height:18px;"></div>
         </div>
-        <div style="margin-bottom:20px;text-align:left;">
-            <label style="font-size:12px;color:var(--text-sub,#888);margin-bottom:5px;display:block;">비밀번호</label>
-            <input type="password" id="group-pw-input" placeholder="그룹 비밀번호"
-                style="width:100%;padding:13px;border:1.5px solid #ddd;border-radius:10px;font-size:15px;box-sizing:border-box;background:var(--bg,#f8f8f8);color:var(--text-main,#333);outline:none;">
+
+        <!-- 2단계: 닉네임 입력 -->
+        <div id="loginStep2" style="display:none;">
+            <div style="font-size:32px;margin-bottom:12px;">👤</div>
+            <p style="font-size:15px;font-weight:700;color:var(--text-main,#333);margin:0 0 6px;"><span id="step2GroupName"></span> 그룹</p>
+            <p style="font-size:13px;color:var(--text-sub,#666);margin:0 0 24px;line-height:1.6;">앱에서 사용할 닉네임을 입력하세요.<br>거래 내역에 이 이름으로 기록됩니다.</p>
+            <div style="margin-bottom:20px;text-align:left;">
+                <label style="font-size:12px;color:var(--text-sub,#888);margin-bottom:5px;display:block;">닉네임</label>
+                <input type="text" id="nickname-input" placeholder="예: 홍길동, 김투자"
+                    style="width:100%;padding:13px;border:1.5px solid #ddd;border-radius:10px;font-size:15px;box-sizing:border-box;background:var(--bg,#f8f8f8);color:var(--text-main,#333);outline:none;">
+            </div>
+            <button onclick="window.confirmNickname()"
+                style="width:100%;padding:14px;background:#007AFF;color:white;border:none;border-radius:12px;font-weight:700;font-size:16px;cursor:pointer;margin-bottom:10px;">
+                시작하기
+            </button>
+            <div id="nickname-error-msg" style="color:#FF3B30;font-size:13px;margin-top:10px;min-height:18px;"></div>
         </div>
-        <button id="loginBtn" onclick="window.loginGroup()"
-            style="width:100%;padding:14px;background:#007AFF;color:white;border:none;border-radius:12px;font-weight:700;font-size:16px;cursor:pointer;margin-bottom:10px;">
-            입장 / 그룹 만들기
-        </button>
-        <button onclick="localStorage.removeItem('myGroupId');location.reload();"
-            style="width:100%;padding:8px;background:none;border:none;color:#aaa;font-size:12px;cursor:pointer;">
-            ↺ 로그아웃 / 그룹 변경
-        </button>
-        <div id="login-error-msg" style="color:#FF3B30;font-size:13px;margin-top:10px;min-height:18px;"></div>
+    </div>
+</div>
+
+<!-- 관리자 패널 -->
+<div id="adminPanel" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:9998;justify-content:center;align-items:flex-start;overflow-y:auto;padding-top:60px;box-sizing:border-box;">
+    <div style="background:var(--card-bg);border-radius:20px;padding:24px 20px;width:92%;max-width:480px;margin:0 auto 40px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <div style="font-size:18px;font-weight:700;">🔑 관리자 패널</div>
+            <button onclick="document.getElementById('adminPanel').style.display='none';" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-sub);">✕</button>
+        </div>
+        <div style="background:var(--bg,#f5f5f5);border-radius:14px;padding:16px;margin-bottom:16px;">
+            <div style="font-size:14px;font-weight:700;margin-bottom:12px;">➕ 새 그룹 만들기</div>
+            <input type="text" id="newGroupId" placeholder="그룹 ID (예: club_2024_A팀)"
+                style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-size:14px;box-sizing:border-box;background:var(--card-bg);color:var(--text-main);margin-bottom:8px;outline:none;">
+            <input type="text" id="newGroupPw" placeholder="비밀번호"
+                style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-size:14px;box-sizing:border-box;background:var(--card-bg);color:var(--text-main);margin-bottom:8px;outline:none;">
+            <input type="text" id="newGroupName" placeholder="그룹 이름 (예: 2024 투자동아리 A팀)"
+                style="width:100%;padding:11px;border:1px solid var(--border-color);border-radius:8px;font-size:14px;box-sizing:border-box;background:var(--card-bg);color:var(--text-main);margin-bottom:12px;outline:none;">
+            <button onclick="window.createGroup()"
+                style="width:100%;padding:12px;background:#007AFF;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">그룹 생성</button>
+            <div id="createGroupMsg" style="font-size:13px;margin-top:8px;min-height:16px;text-align:center;"></div>
+        </div>
+        <div style="background:var(--bg,#f5f5f5);border-radius:14px;padding:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <div style="font-size:14px;font-weight:700;">📋 그룹 목록</div>
+                <button onclick="window.loadGroupList()" style="background:none;border:1px solid var(--border-color);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--text-sub);">새로고침</button>
+            </div>
+            <div id="groupListContainer" style="font-size:13px;color:var(--text-sub);">로딩 중...</div>
+        </div>
     </div>
 </div>
 
@@ -542,10 +592,17 @@
             <span>새로고침</span>
         </button>
         <div style="height:1px; background:var(--border-color); margin:4px 0;"></div>
-        <button onclick="_closeSettings(); if(confirm('로그아웃하시겠습니까?')){localStorage.removeItem('myGroupId'); location.reload();}" style="width:100%; background:none; border:none; padding:12px 16px; text-align:left; font-size:15px; color:#FF3B30; cursor:pointer; display:flex; align-items:center; gap:10px;">
+        <button onclick="_closeSettings(); if(confirm('로그아웃하시겠습니까?')){localStorage.removeItem('myGroupId');localStorage.removeItem('myNickname'); location.reload();}" style="width:100%; background:none; border:none; padding:12px 16px; text-align:left; font-size:15px; color:#FF3B30; cursor:pointer; display:flex; align-items:center; gap:10px;">
             <span style="width:20px; text-align:center;">↩</span>
             <span>로그아웃</span>
         </button>
+        <div id="adminPanelBtnWrap" style="display:none;">
+            <div style="height:1px; background:var(--border-color); margin:4px 0;"></div>
+            <button onclick="_closeSettings(); window.openAdminPanel();" style="width:100%; background:none; border:none; padding:12px 16px; text-align:left; font-size:15px; color:var(--primary); cursor:pointer; display:flex; align-items:center; gap:10px;">
+                <span style="width:20px; text-align:center;">🔑</span>
+                <span>관리자 패널</span>
+            </button>
+        </div>
     </div>
 </div>
 
@@ -1529,10 +1586,28 @@
         if (savedTheme) { document.body.className = savedTheme; updateThemeIcon(); }
         const loginModal = document.getElementById('loginModal');
         currentGroupId = localStorage.getItem("myGroupId") || null;
+        const savedNickname = localStorage.getItem("myNickname") || null;
+        const isAdmin = localStorage.getItem("isAdmin") === "true";
 
-        if (currentGroupId) {
+        if (currentGroupId && savedNickname) {
             if (loginModal) loginModal.style.display = "none";
-            fetchData(); // Firestore에서 이 그룹의 데이터 로드
+            // 닉네임을 inputUser에 설정
+            window._myNickname = savedNickname;
+            window._isAdmin = isAdmin;
+            // 관리자 버튼 표시
+            if (isAdmin) {
+                const adminBtn = document.getElementById('adminPanelBtnWrap');
+                if (adminBtn) adminBtn.style.display = 'block';
+            }
+            fetchData();
+        } else if (currentGroupId && !savedNickname) {
+            // 그룹은 있는데 닉네임 없으면 닉네임 입력 화면
+            if (loginModal) loginModal.style.display = "flex";
+            document.getElementById('loginStep1').style.display = 'none';
+            document.getElementById('loginStep2').style.display = 'block';
+            const nameEl = document.getElementById('step2GroupName');
+            if (nameEl) nameEl.textContent = currentGroupId;
+            window._pendingGroupId = currentGroupId;
         } else {
             if (loginModal) loginModal.style.display = "flex";
         }
@@ -2019,7 +2094,22 @@
         const select = document.getElementById('userSelect'); if (!select) return;
         currentUser = select.value;
         const inputUser = document.getElementById('inputUser');
-        if (inputUser) inputUser.value = currentUser === '가족 전체' ? '윤성일' : currentUser;
+        if (inputUser) {
+            const myNickname = window._myNickname || '';
+            const isAdmin = window._isAdmin || false;
+            if (myNickname && !isAdmin) {
+                // 일반 유저: 본인 닉네임 고정 (선택 불가)
+                inputUser.innerHTML = `<option value="${myNickname}">${myNickname}</option>`;
+                inputUser.value = myNickname;
+                inputUser.disabled = true;
+            } else if (myNickname) {
+                // 관리자: 전체 선택 가능, 본인 닉네임 기본값
+                inputUser.value = myNickname;
+                inputUser.disabled = false;
+            } else {
+                inputUser.value = currentUser === '가족 전체' ? (members[0] || '') : currentUser;
+            }
+        }
         if (typeof processData === 'function' && RAW_DATA && RAW_DATA.length > 0) {
             chartTabInited = false;
             processData(RAW_DATA);
@@ -5523,6 +5613,9 @@
     doc, getDoc, setDoc, updateDoc, serverTimestamp
   };
 
+  const ADMIN_GROUP_ID = "admin";
+  let _pendingGroupId = null; // 닉네임 입력 대기 중인 그룹ID
+
   window.loginGroup = async function() {
     const idEl  = document.getElementById('group-id-input');
     const pwEl  = document.getElementById('group-pw-input');
@@ -5534,7 +5627,7 @@
 
     function showErr(msg) {
       if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
-      if (btn)   { btn.disabled = false; btn.innerText = "입장 / 그룹 만들기"; }
+      if (btn)   { btn.disabled = false; btn.innerText = "입장"; }
     }
 
     if (!id || !pw) { showErr("그룹 ID와 비밀번호를 모두 입력하세요."); return; }
@@ -5542,36 +5635,141 @@
     if (errEl) errEl.style.display = 'none';
 
     try {
+      // 관리자 로그인 체크
+      if (id === ADMIN_GROUP_ID) {
+        const adminSnap = await getDoc(doc(db, "admins", "config"));
+        if (!adminSnap.exists() || adminSnap.data().password !== pw) {
+          showErr("❌ 관리자 비밀번호가 틀렸습니다."); return;
+        }
+        // 관리자로 입장
+        localStorage.setItem("myGroupId", ADMIN_GROUP_ID);
+        localStorage.setItem("myNickname", "관리자");
+        localStorage.setItem("isAdmin", "true");
+        enterGroup(ADMIN_GROUP_ID, "관리자", true);
+        return;
+      }
+
       const groupRef = doc(db, "groups", id);
       const snap     = await getDoc(groupRef);
 
       if (snap.exists()) {
         if (snap.data().password === pw) {
-          enterGroup(id);
+          _pendingGroupId = id;
+          showNicknameStep(id);
         } else {
           showErr("❌ 비밀번호가 틀렸습니다.");
         }
       } else {
-        if (confirm(`"${id}" 그룹이 없습니다.\n이 비밀번호로 새 그룹을 만드시겠습니까?`)) {
-          await setDoc(groupRef, { password: pw, createdAt: serverTimestamp() });
-          enterGroup(id);
-        } else {
-          if (btn) { btn.disabled = false; btn.innerText = "입장 / 그룹 만들기"; }
-        }
+        showErr("❌ 존재하지 않는 그룹입니다. 관리자에게 문의하세요.");
+        if (btn) { btn.disabled = false; btn.innerText = "입장"; }
       }
     } catch (err) {
       showErr("오류: " + err.message);
     }
   };
 
-  function enterGroup(id) {
+  function showNicknameStep(groupId) {
+    // 이미 닉네임 저장돼 있으면 바로 입장
+    const saved = localStorage.getItem("myNickname");
+    const savedGroup = localStorage.getItem("myGroupId");
+    if (saved && savedGroup === groupId) {
+      enterGroup(groupId, saved, false);
+      return;
+    }
+    // 2단계 화면으로 전환
+    document.getElementById('loginStep1').style.display = 'none';
+    document.getElementById('loginStep2').style.display = 'block';
+    const nameEl = document.getElementById('step2GroupName');
+    if (nameEl) nameEl.textContent = groupId;
+  }
+
+  window.confirmNickname = function() {
+    const nicknameEl = document.getElementById('nickname-input');
+    const errEl = document.getElementById('nickname-error-msg');
+    const nickname = nicknameEl ? nicknameEl.value.trim() : '';
+    if (!nickname) { if (errEl) errEl.textContent = "닉네임을 입력하세요."; return; }
+    if (!_pendingGroupId) { if (errEl) errEl.textContent = "오류: 다시 시도해주세요."; return; }
+    localStorage.setItem("myNickname", nickname);
+    enterGroup(_pendingGroupId, nickname, false);
+  };
+
+  function enterGroup(id, nickname, isAdmin) {
     localStorage.setItem("myGroupId", id);
+    if (nickname) localStorage.setItem("myNickname", nickname);
+    if (isAdmin) localStorage.setItem("isAdmin", "true");
+    else localStorage.removeItem("isAdmin");
+
     const modal = document.getElementById('loginModal');
     if (modal) modal.style.display = 'none';
     if (typeof window.currentGroupId !== 'undefined') window.currentGroupId = id;
+
+    // 관리자 버튼 표시
+    if (isAdmin) {
+      const adminBtn = document.getElementById('adminPanelBtnWrap');
+      if (adminBtn) adminBtn.style.display = 'block';
+    }
+
     if (typeof fetchData === 'function') fetchData();
   }
-</script>
 
-</body>
-</html>
+  // 관리자 패널 열기
+  window.openAdminPanel = async function() {
+    document.getElementById('adminPanel').style.display = 'flex';
+    window.loadGroupList();
+  };
+
+  // 그룹 목록 로드
+  window.loadGroupList = async function() {
+    const container = document.getElementById('groupListContainer');
+    if (!container) return;
+    container.innerHTML = '로딩 중...';
+    try {
+      const snap = await getDocs(collection(db, "groups"));
+      if (snap.empty) { container.innerHTML = '그룹이 없습니다.'; return; }
+      let html = '';
+      snap.forEach(d => {
+        const gid = d.id;
+        const gname = d.data().name || gid;
+        html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border-color);">
+          <div>
+            <div style="font-weight:600;font-size:14px;">${gname}</div>
+            <div style="font-size:11px;color:var(--text-sub);">${gid}</div>
+          </div>
+          <button onclick="window.adminSwitchGroup('${gid}')" style="background:var(--primary);color:white;border:none;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;">조회</button>
+        </div>`;
+      });
+      container.innerHTML = html;
+    } catch(e) {
+      container.innerHTML = '오류: ' + e.message;
+    }
+  };
+
+  // 관리자가 다른 그룹 조회
+  window.adminSwitchGroup = function(groupId) {
+    document.getElementById('adminPanel').style.display = 'none';
+    window.currentGroupId = groupId;
+    if (typeof fetchData === 'function') fetchData();
+  };
+
+  // 그룹 생성
+  window.createGroup = async function() {
+    const gid   = document.getElementById('newGroupId').value.trim();
+    const gpw   = document.getElementById('newGroupPw').value.trim();
+    const gname = document.getElementById('newGroupName').value.trim();
+    const msg   = document.getElementById('createGroupMsg');
+    if (!gid || !gpw) { msg.textContent = '❌ ID와 비밀번호는 필수입니다.'; msg.style.color = '#FF3B30'; return; }
+    try {
+      const ref = doc(db, "groups", gid);
+      const snap = await getDoc(ref);
+      if (snap.exists()) { msg.textContent = '❌ 이미 존재하는 그룹 ID입니다.'; msg.style.color = '#FF3B30'; return; }
+      await setDoc(ref, { password: gpw, name: gname || gid, createdAt: serverTimestamp() });
+      msg.textContent = '✅ 그룹 생성 완료!'; msg.style.color = '#34C759';
+      document.getElementById('newGroupId').value = '';
+      document.getElementById('newGroupPw').value = '';
+      document.getElementById('newGroupName').value = '';
+      window.loadGroupList();
+    } catch(e) {
+      msg.textContent = '오류: ' + e.message; msg.style.color = '#FF3B30';
+    }
+  };
+</script>
