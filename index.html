@@ -48,7 +48,7 @@
         body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text-main); padding-bottom: var(--nav-height); -webkit-tap-highlight-color: transparent; }
         header { background: var(--card-bg); padding: 15px 20px; position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
         h1 { margin: 0; font-size: 18px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
-        select#userSelect { padding: 5px 10px; border-radius: 15px; border: 1px solid var(--border-color); font-size: 14px; background: var(--card-bg); color: var(--text-main); outline: none; flex-shrink: 1; max-width: 60%; }
+        select#userSelect { padding: 5px 10px; border-radius: 15px; border: 1px solid var(--border-color); font-size: 14px; background: var(--card-bg); color: var(--text-main); outline: none; flex-shrink: 1; max-width: 45%; min-width: 100px; }
         .container { padding: 15px; max-width: 600px; margin: 0 auto; display: none; }
         .container.active { display: block; }
         .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
@@ -521,7 +521,7 @@
             <option value="윤성일">윤성일 (아빠)</option>
             <option value="윤채현">윤채현 (딸)</option>
             <option value="윤시환">윤시환 (아들)</option>
-            <option value="가족 전체">👨‍👩‍👧‍👦 가족 전체</option>
+            <option value="가족 전체">가족 전체</option>
         </select>
         <button onclick="openSettingsPanel()" style="background:none; border:none; font-size:20px; cursor:pointer; padding:5px; display:flex; align-items:center; justify-content:center; color:var(--text-sub);" title="설정">⚙️</button>
     </div>
@@ -1823,6 +1823,18 @@
                     gasData.performance = JSON.parse(perfSnap.data().performance || '[]');
                 }
 
+                // ★ 시장분석(market_analysis) 캐시 조회
+                const maSnap = await getDoc(doc(db, "cache", "marketanalysis"));
+                if (maSnap.exists()) {
+                    gasData.marketAnalysis = JSON.parse(maSnap.data().data || 'null');
+                }
+
+                // ★ 경제지표(EconData) 캐시 조회
+                const econSnap = await getDoc(doc(db, "cache", "econdata"));
+                if (econSnap.exists()) {
+                    gasData.econData = JSON.parse(econSnap.data().data || 'null');
+                }
+
             } catch (e) {
                 console.warn("Firestore 캐시 조회 실패, GAS fallback:", e.message);
             }
@@ -1830,9 +1842,12 @@
             // 현재가를 GAS prices 배열 형식으로 변환
             const pricesArray = Object.entries(pricesObj).map(([ticker, v]) => [ticker, v.price, v.changePct, v.prevClose]);
 
-            // 성과분석/시장분석/종목목록 등은 Firestore 캐시에 없으면 GAS에서 가져옴
-            // (현재가는 이미 Firestore에서 가져왔으므로 GAS 응답에서 prices는 무시)
-            if (!gasData.performance || gasData.performance.length === 0 || pricesArray.length === 0) {
+            // Firestore 캐시에 없는 항목만 GAS에서 보충 (종목목록, 공포탐욕, perCache 등)
+            const needGas = pricesArray.length === 0
+                         || !gasData.performance || gasData.performance.length === 0
+                         || !gasData.stockList   || gasData.stockList.length === 0;
+
+            if (needGas) {
                 try {
                     const gasUrl = `${CHART_GAS_URL}?authKey=${CHART_GAS_AUTH}&who=${encodeURIComponent(currentUser)}`;
                     const gasRes = await fetch(gasUrl);
@@ -1840,8 +1855,9 @@
                     if (!gasText.trim().startsWith("<")) {
                         const parsed = JSON.parse(gasText);
                         if (parsed.status !== 'error') {
-                            // Firestore에 없는 것만 GAS에서 보충
                             if (!gasData.performance || gasData.performance.length === 0) gasData.performance = parsed.performance || [];
+                            if (!gasData.marketAnalysis) gasData.marketAnalysis = parsed.marketAnalysis || null;
+                            if (!gasData.econData)       gasData.econData       = parsed.econData       || null;
                             if (pricesArray.length === 0) {
                                 pricesObj = {};
                                 (parsed.prices || []).forEach(row => {
@@ -1849,13 +1865,11 @@
                                     if (t) pricesObj[t] = { price: row[1], changePct: row[2], prevClose: row[3] };
                                 });
                             }
-                            gasData.market         = gasData.market         || parsed.market         || [];
-                            gasData.marketAnalysis = gasData.marketAnalysis || parsed.marketAnalysis || null;
-                            gasData.perCache       = gasData.perCache       || parsed.perCache       || {};
-                            gasData.stockList      = gasData.stockList      || parsed.stockList      || [];
-                            gasData.stockListUs    = gasData.stockListUs    || parsed.stockListUs    || [];
-                            gasData.fearGreed      = gasData.fearGreed      || parsed.fearGreed      || null;
-                            gasData.econData       = gasData.econData       || parsed.econData       || null;
+                            gasData.market      = gasData.market      || parsed.market      || [];
+                            gasData.perCache    = gasData.perCache    || parsed.perCache    || {};
+                            gasData.stockList   = gasData.stockList   || parsed.stockList   || [];
+                            gasData.stockListUs = gasData.stockListUs || parsed.stockListUs || [];
+                            gasData.fearGreed   = gasData.fearGreed   || parsed.fearGreed   || null;
                         }
                     }
                 } catch (e) {
@@ -2151,9 +2165,11 @@
         let chartDataLabels = [...balanceList.map(b => b.name), '예수금'];
         let chartDataValues = [...balanceList.map(b => b.evalAmt), totalCashValuation];
         if(typeof renderDonutChart === 'function') renderDonutChart(chartDataLabels, chartDataValues, totalCashValuation, totalAsset);
+        // ★ 평가손익 내림차순 정렬
+        balanceList.sort((a, b) => b.profit - a.profit);
         if(typeof renderStockList === 'function') renderStockList(balanceList);
         if(typeof renderHistory === 'function') renderHistory(userLogs.slice().reverse().slice(0, 20));
-        if(typeof renderBalanceTable === 'function') renderBalanceTable(balanceList, totalAsset, totalCashValuation, myCashKRW, myCashUSD);
+        if(typeof renderBalanceTable === 'function') renderBalanceTable(balanceList.slice().sort((a,b) => b.profit - a.profit), totalAsset, totalCashValuation, myCashKRW, myCashUSD);
         if(typeof renderPerformanceTable === 'function') renderPerformanceTable();
         if (typeof renderPerformanceChartFromSheet === 'function' && typeof PERFORMANCE_DATA !== 'undefined') {
             let myPerfLogs = PERFORMANCE_DATA.filter(row => row[1] === currentUser);
@@ -2270,7 +2286,7 @@
             const editBtnHtml = docId
                 ? `<button onclick="openEditModal('${docId}')" style="background:none;border:1px solid var(--border-color);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--text-sub);cursor:pointer;margin-top:4px;white-space:nowrap;">✏️ 수정</button>`
                 : '';
-            itemDiv.innerHTML = `<div style="display:flex;align-items:center;flex:1;min-width:0;margin-right:10px;"><div style="margin-right:12px;color:#999;font-size:12px;min-width:55px;">${dateStr}</div><div style="flex:1;min-width:0;display:flex;align-items:center;"><div style="font-weight:bold;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;"><span class="badge" style="display:inline-block;vertical-align:middle;margin-right:6px;font-size:11px;padding:3px 6px;border-radius:4px;color:white;background:${badgeColor};">${type}</span><span style="vertical-align:middle;">${name}</span></div>${ticker?`<span style="font-size:12px;color:#888;margin-left:4px;white-space:nowrap;">(${ticker})</span>`:''}</div></div><div style="text-align:right;flex-shrink:0;">${descHtml}${editBtnHtml}</div>`;
+            itemDiv.innerHTML = `<div style="display:flex;align-items:center;flex:1;min-width:0;margin-right:10px;"><div style="margin-right:8px;color:#999;font-size:11px;white-space:nowrap;flex-shrink:0;">${dateStr}</div><div style="flex:1;min-width:0;display:flex;align-items:center;"><div style="font-weight:bold;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;"><span class="badge" style="display:inline-block;vertical-align:middle;margin-right:6px;font-size:11px;padding:3px 6px;border-radius:4px;color:white;background:${badgeColor};">${type}</span><span style="vertical-align:middle;">${name}</span></div>${ticker?`<span style="font-size:12px;color:#888;margin-left:4px;white-space:nowrap;">(${ticker})</span>`:''}</div></div><div style="text-align:right;flex-shrink:0;">${descHtml}${editBtnHtml}</div>`;
             listDiv.appendChild(itemDiv);
         });
     }
@@ -2388,8 +2404,13 @@
             myPerfData.sort((a,b)=>new Date(b[0])-new Date(a[0]));
             currentTotalAsset = Number(myPerfData[0][3]);
         }
-        // 가족 전체 총손익 = 구성원 전체 입출금 기반 계산
-        let grandTotalProfit = (currentTotalAsset + totalWithdraw) - totalDeposit;
+        // ★ 그룹 전체 총손익 = yearlyResults 연도별 손익 단순 합산
+        let grandTotalProfit;
+        if (currentUser === '가족 전체') {
+            grandTotalProfit = yearlyResults.reduce((sum, r) => sum + (Number(r.profit) || 0), 0);
+        } else {
+            grandTotalProfit = (currentTotalAsset + totalWithdraw) - totalDeposit;
+        }
         let grandRealizedProfit = Object.values(realizedMap).reduce((a,b)=>a+b,0);
         let yearSet = new Set();
         yearlyResults.forEach(y => yearSet.add(Number(y.year)));
@@ -3361,7 +3382,7 @@
                 ctx.lineTo(x - hw,    headTop);
                 ctx.closePath();
 
-                ctx.fillStyle   = 'rgba(232,0,45,0.15)';
+                ctx.fillStyle   = 'rgba(232,0,45,0.85)';
                 ctx.fill();
                 ctx.strokeStyle = arrowColor;
                 ctx.lineWidth   = 1.5;
@@ -3383,7 +3404,7 @@
                 ctx.lineTo(x - hw,    headBot);
                 ctx.closePath();
 
-                ctx.fillStyle   = 'rgba(0,87,255,0.12)';
+                ctx.fillStyle   = 'rgba(0,87,255,0.85)';
                 ctx.fill();
                 ctx.strokeStyle = arrowColor;
                 ctx.lineWidth   = 1.5;
@@ -5231,7 +5252,7 @@
 
         try {
             var resp = await fetch(
-                'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + key,
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=' + key,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -5428,7 +5449,7 @@
             + '<div style="background:var(--bg);border:1px solid var(--border-color);border-radius:20px;'
             + 'padding:4px 12px;font-size:11px;color:var(--text-sub);">🕐 ' + dateStr + '</div>'
             + '<div style="background:rgba(52,199,89,0.12);border-radius:20px;'
-            + 'padding:4px 12px;font-size:11px;color:#1a7a35;font-weight:600;">✦ Gemini 2.5 Flash</div>'
+            + 'padding:4px 12px;font-size:11px;color:#1a7a35;font-weight:600;">✦ Gemini 2.5 Flash Lite</div>'
             + '</div>';
 
         var html = '<div class="card" style="padding:20px 18px;">'
