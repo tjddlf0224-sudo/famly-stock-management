@@ -73,7 +73,8 @@
         td:first-child { text-align: left; font-weight: 600; background: var(--card-bg); }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-size: 13px; color: var(--text-sub); }
-        input, select, textarea { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 16px; box-sizing: border-box; background: var(--card-bg); color: var(--text-main); }
+        input, select, textarea { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 16px; box-sizing: border-box; background: var(--card-bg); color: var(--text-main); max-width: 100%; }
+        input[type="date"] { -webkit-appearance: none; appearance: none; width: 100%; max-width: 100%; box-sizing: border-box; }
         button.btn-primary { width: 100%; background: var(--primary); color: white; padding: 15px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; }
         button.btn-primary:active { opacity: 0.9; }
         nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card-bg); height: var(--nav-height); border-top: 1px solid var(--border-color); display: flex; justify-content: flex-start; align-items: center; z-index: 100; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: env(safe-area-inset-bottom, 8px); box-sizing: content-box; touch-action: pan-x; }
@@ -608,7 +609,7 @@
 <div id="tab-history" class="container">
     <div class="card">
         <h3>거래 추가</h3>
-        <div class="form-group"><label>날짜</label><input type="date" id="inputDate"></div>
+        <div class="form-group"><label>날짜</label><input type="date" id="inputDate" style="width:100%;box-sizing:border-box;max-width:100%;"></div>
         <div class="form-group">
             <label>거래자</label>
             <select id="inputUser">
@@ -2156,9 +2157,8 @@
             let yesterdayTotalAsset = totalAsset - totalTodayProfitKRW;
             let todayTotalPct = yesterdayTotalAsset !== 0 ? (totalTodayProfitKRW / yesterdayTotalAsset) * 100 : 0;
             let tSign = totalTodayProfitKRW > 0 ? "+" : "";
-            let tIcon = totalTodayProfitKRW > 0 ? "⬆️" : (totalTodayProfitKRW < 0 ? "📉" : "");
             elTodayProfit.className = totalTodayProfitKRW > 0 ? 'up' : (totalTodayProfitKRW < 0 ? 'down' : '');
-            elTodayProfit.innerHTML = `${tSign}${Math.round(totalTodayProfitKRW).toLocaleString()}원 (${tSign}${todayTotalPct.toFixed(2)}%) ${tIcon}`;
+            elTodayProfit.innerHTML = `${tSign}${Math.round(totalTodayProfitKRW).toLocaleString()}원 (${tSign}${todayTotalPct.toFixed(2)}%)`;
         }
         const elCash = document.getElementById('cashHoldings'); if (elCash) elCash.innerText = Math.round(totalCashValuation).toLocaleString() + "원";
         const elStock = document.getElementById('stockHoldings'); if (elStock) elStock.innerText = Math.round(stockValuation).toLocaleString() + "원";
