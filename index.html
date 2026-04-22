@@ -1591,7 +1591,7 @@
 
     const CACHE_KEY = 'portfolio_data_cache';
     const CACHE_TIME_KEY = 'portfolio_cache_time';
-    const CACHE_VALIDITY_MINUTES = 0;
+    const CACHE_VALIDITY_MINUTES = 30;
 
     function loadFromCache() {
         try {
@@ -1830,7 +1830,14 @@
                     gasData.marketAnalysis = JSON.parse(maSnap.data().data || 'null');
                 }
 
-                // ★ 경제지표(EconData) 캐시 조회
+                // stockList/stockListUs 캐시 조회
+                const stockListSnap = await getDoc(doc(db, "cache", "stocklist"));
+                if (stockListSnap.exists()) {
+                    const sl = stockListSnap.data();
+                    gasData.stockList   = JSON.parse(sl.stockList   || '[]');
+                    gasData.stockListUs = JSON.parse(sl.stockListUs || '[]');
+                }
+
                 const econSnap = await getDoc(doc(db, "cache", "econdata"));
                 if (econSnap.exists()) {
                     gasData.econData = JSON.parse(econSnap.data().data || 'null');
@@ -1843,10 +1850,9 @@
             // 현재가를 GAS prices 배열 형식으로 변환
             const pricesArray = Object.entries(pricesObj).map(([ticker, v]) => [ticker, v.price, v.changePct, v.prevClose]);
 
-            // Firestore 캐시에 없는 항목만 GAS에서 보충 (종목목록, 공포탐욕, perCache 등)
+            // Firestore에 없는 데이터만 GAS에서 보충 (현재가/성과분석 없을 때만)
             const needGas = pricesArray.length === 0
-                         || !gasData.performance || gasData.performance.length === 0
-                         || !gasData.stockList   || gasData.stockList.length === 0;
+                         || !gasData.performance || gasData.performance.length === 0;
 
             if (needGas) {
                 try {
@@ -1866,16 +1872,25 @@
                                     if (t) pricesObj[t] = { price: row[1], changePct: row[2], prevClose: row[3] };
                                 });
                             }
-                            gasData.market      = gasData.market      || parsed.market      || [];
-                            gasData.perCache    = gasData.perCache    || parsed.perCache    || {};
-                            gasData.stockList   = gasData.stockList   || parsed.stockList   || [];
-                            gasData.stockListUs = gasData.stockListUs || parsed.stockListUs || [];
-                            gasData.fearGreed   = gasData.fearGreed   || parsed.fearGreed   || null;
+                            gasData.market = gasData.market || parsed.market || [];
                         }
                     }
                 } catch (e) {
                     console.warn("GAS fallback 실패:", e.message);
                 }
+            }
+
+            // fearGreed만 GAS에서 별도 경량 호출
+            try {
+                const fgUrl = `${CHART_GAS_URL}?authKey=${CHART_GAS_AUTH}&action=fearGreed`;
+                const fgRes = await fetch(fgUrl);
+                const fgText = await fgRes.text();
+                if (!fgText.trim().startsWith("<")) {
+                    const fgParsed = JSON.parse(fgText);
+                    if (fgParsed.fearGreed) gasData.fearGreed = fgParsed.fearGreed;
+                }
+            } catch (e) {
+                console.warn("fearGreed 조회 실패:", e.message);
             }
 
             const pricesFinal = Object.entries(pricesObj).map(([ticker, v]) => [ticker, v.price, v.changePct, v.prevClose]);
@@ -1889,7 +1904,6 @@
                 prices:          pricesFinal.length > 0 ? pricesFinal : [],
                 currentUsdRate:  currentUsdRate,
                 marketAnalysis:  gasData.marketAnalysis  || null,
-                perCache:        gasData.perCache        || {},
                 stockList:       gasData.stockList       || [],
                 stockListUs:     gasData.stockListUs     || [],
                 fearGreed:       gasData.fearGreed       || null,
