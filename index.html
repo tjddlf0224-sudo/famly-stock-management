@@ -2176,8 +2176,9 @@
         }
         const elCash = document.getElementById('cashHoldings'); if (elCash) elCash.innerText = Math.round(totalCashValuation).toLocaleString() + "원";
         const elStock = document.getElementById('stockHoldings'); if (elStock) elStock.innerText = Math.round(stockValuation).toLocaleString() + "원";
-        let chartDataLabels = [...balanceList.map(b => b.name), '예수금'];
-        let chartDataValues = [...balanceList.map(b => b.evalAmt), totalCashValuation];
+        let chartSorted = [...balanceList].sort((a, b) => b.evalAmt - a.evalAmt);
+        let chartDataLabels = [...chartSorted.map(b => b.name), '예수금'];
+        let chartDataValues = [...chartSorted.map(b => b.evalAmt), totalCashValuation];
         if(typeof renderDonutChart === 'function') renderDonutChart(chartDataLabels, chartDataValues, totalCashValuation, totalAsset);
         // ★ 평가손익 내림차순 정렬
         balanceList.sort((a, b) => b.profit - a.profit);
