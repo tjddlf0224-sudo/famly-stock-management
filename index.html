@@ -574,9 +574,23 @@
 
 <div id="tab-performance" class="container">
     <div class="card">
-        <h3>벤치마킹 비교 (누적 수익률)</h3>
-        <div class="sub-text" style="margin-bottom:10px; font-size:12px;">* 기간별 시간가중 수익률 지수화 (시작일=1000)</div>
-        <div class="chart-container" id="lineChartWrap" style="touch-action:none; user-select:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <h3 style="margin:0;">벤치마킹 비교</h3>
+            <div style="display:flex;gap:4px;background:var(--bg);border-radius:10px;padding:3px;">
+                <button id="btnNavMode" onclick="setReturnMode('nav')"
+                    style="padding:5px 12px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:var(--primary);color:white;">
+                    NAV 방식
+                </button>
+                <button id="btnSimpleMode" onclick="setReturnMode('simple')"
+                    style="padding:5px 12px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:none;color:var(--text-sub);">
+                    단순 방식
+                </button>
+            </div>
+        </div>
+        <div id="returnModeDesc" style="margin-bottom:10px;font-size:12px;color:var(--text-sub);">
+            ★ NAV 방식: 시간가중 수익률 (입금 타이밍 반영, 펀드 기준가 방식)
+        </div>
+        <div class="chart-container" id="lineChartWrap" style="touch-action:none;user-select:none;">
             <canvas id="lineChart"></canvas>
         </div>
     </div>
@@ -2487,6 +2501,32 @@
         });
     }
 
+    // ── 수익률 모드 토글 ──────────────────────────────
+    let _returnMode = 'nav'; // 'nav' | 'simple'
+
+    function setReturnMode(mode) {
+        _returnMode = mode;
+        const btnNav    = document.getElementById('btnNavMode');
+        const btnSimple = document.getElementById('btnSimpleMode');
+        const desc      = document.getElementById('returnModeDesc');
+        if (mode === 'nav') {
+            btnNav.style.background    = 'var(--primary)'; btnNav.style.color    = 'white';
+            btnSimple.style.background = 'none';           btnSimple.style.color = 'var(--text-sub)';
+            if (desc) desc.textContent = '★ NAV 방식: 시간가중 수익률 (입금 타이밍 반영, 펀드 기준가 방식)';
+        } else {
+            btnSimple.style.background = 'var(--primary)'; btnSimple.style.color = 'white';
+            btnNav.style.background    = 'none';           btnNav.style.color    = 'var(--text-sub)';
+            if (desc) desc.textContent = '★ 단순 방식: 총 입금액 대비 현재 자산 수익률 (금액 기준)';
+        }
+        // 차트 다시 그리기
+        if (typeof PERFORMANCE_DATA !== 'undefined' && PERFORMANCE_DATA.length > 0) {
+            const myPerfLogs = currentUser === '가족 전체'
+                ? PERFORMANCE_DATA.filter(r => r[1] && r[1] !== '가족 전체')
+                : PERFORMANCE_DATA.filter(r => r[1] === currentUser);
+            renderPerformanceChartFromSheet(myPerfLogs, MARKET_DATA, currentUser);
+        }
+    }
+
     function renderPerformanceChartFromSheet(perfLogs, benchmarks, userLabel) {
         const ctx = document.getElementById('lineChart'); if (!ctx) return;
         const context = ctx.getContext('2d');
@@ -2497,8 +2537,68 @@
         let startIdx = benchmarks.findIndex(b => new Date(b.date) >= startDate);
         if(startIdx === -1) startIdx = 0;
         const baseK = benchmarks[startIdx].kospi || 1, baseS = benchmarks[startIdx].sp500 || 1, baseN = benchmarks[startIdx].nasdaq || 1;
+
+        // ── 수익률 데이터 맵 생성 (모드에 따라 다르게)
         let myMap = {};
-        perfLogs.forEach(log => { let d = new Date(log[0]).toISOString().split('T')[0]; myMap[d] = Number(log[8]) * 100; });
+
+        if (_returnMode === 'nav') {
+            // NAV 방식: I열(log[8]) = 누적수익률
+            if (userLabel === '가족 전체') {
+                // 가족 전체: 날짜별로 모든 멤버의 자산 합산 후 총입금 대비 수익률
+                const memberNames = [...new Set(perfLogs.map(r => r[1]).filter(n => n && n !== '가족 전체'))];
+                const dateAssetMap = {}, dateTotalInvest = {};
+                // 각 멤버별 최신 누적 자산 수집
+                perfLogs.forEach(log => {
+                    const d = String(log[0]).substring(0, 10);
+                    const asset = Number(log[3]) || 0;
+                    if (!dateAssetMap[d]) dateAssetMap[d] = {};
+                    dateAssetMap[d][log[1]] = asset;
+                });
+                // 날짜별 전체 멤버 NAV 가중평균
+                Object.keys(dateAssetMap).sort().forEach(d => {
+                    let totalReturn = 0, count = 0;
+                    memberNames.forEach(m => {
+                        const mLogs = perfLogs.filter(r => r[1] === m && String(r[0]).substring(0,10) <= d);
+                        if (mLogs.length > 0) { totalReturn += Number(mLogs[mLogs.length-1][8]) * 100; count++; }
+                    });
+                    if (count > 0) myMap[d] = totalReturn / count;
+                });
+            } else {
+                perfLogs.forEach(log => { const d = String(log[0]).substring(0, 10); myMap[d] = Number(log[8]) * 100; });
+            }
+        } else {
+            // 단순 방식: (현재자산 - 총입금) / 총입금 × 100
+            if (userLabel === '가족 전체') {
+                // 날짜별 전체 멤버 자산합 / 전체 입금합
+                const memberNames = [...new Set(perfLogs.map(r => r[1]).filter(n => n && n !== '가족 전체'))];
+                const allDates = [...new Set(perfLogs.map(r => String(r[0]).substring(0,10)))].sort();
+                allDates.forEach(d => {
+                    let totalAsset = 0, totalInvest = 0;
+                    memberNames.forEach(m => {
+                        const mLogs = perfLogs.filter(r => r[1] === m && String(r[0]).substring(0,10) <= d);
+                        if (mLogs.length > 0) {
+                            const last = mLogs[mLogs.length - 1];
+                            // 해당 멤버의 누적 입금액 계산
+                            const mInvest = perfLogs.filter(r => r[1] === m && String(r[0]).substring(0,10) <= d)
+                                .reduce((sum, r) => sum + Math.max(0, Number(r[2]) || 0), 0);
+                            totalAsset  += Number(last[3]) || 0;
+                            totalInvest += mInvest;
+                        }
+                    });
+                    if (totalInvest > 0) myMap[d] = (totalAsset - totalInvest) / totalInvest * 100;
+                });
+            } else {
+                // 개인: 누적 입금합 추적
+                let cumulativeInvest = 0;
+                perfLogs.forEach(log => {
+                    const flow = Number(log[2]) || 0;
+                    if (flow > 0) cumulativeInvest += flow;
+                    const d = String(log[0]).substring(0, 10);
+                    const asset = Number(log[3]) || 0;
+                    if (cumulativeInvest > 0) myMap[d] = (asset - cumulativeInvest) / cumulativeInvest * 100;
+                });
+            }
+        }
         for(let i = startIdx; i < benchmarks.length; i++) {
             let b = benchmarks[i], dateKey = b.date.substring(0, 10);
             labels.push(dateKey);
