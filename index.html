@@ -2201,7 +2201,9 @@
         if(typeof renderBalanceTable === 'function') renderBalanceTable(balanceList.slice().sort((a,b) => b.profit - a.profit), totalAsset, totalCashValuation, myCashKRW, myCashUSD);
         if(typeof renderPerformanceTable === 'function') renderPerformanceTable();
         if (typeof renderPerformanceChartFromSheet === 'function' && typeof PERFORMANCE_DATA !== 'undefined') {
-            let myPerfLogs = PERFORMANCE_DATA.filter(row => row[1] === currentUser);
+            let myPerfLogs = currentUser === '가족 전체'
+                ? PERFORMANCE_DATA.filter(row => row[1] && row[1] !== '가족 전체')
+                : PERFORMANCE_DATA.filter(row => row[1] === currentUser);
             renderPerformanceChartFromSheet(myPerfLogs, MARKET_DATA, currentUser);
         }
     }
