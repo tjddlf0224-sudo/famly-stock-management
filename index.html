@@ -3446,6 +3446,81 @@
             ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText(dateStr, bx + bw/2, by + bh/2);
             ctx.textBaseline = 'alphabetic';
+
+            // ── OHLC 팝업창
+            const isKorea = chartCurrentTicker && /^\d{6}$/.test(chartCurrentTicker);
+            const fmt = (v) => isKorea ? Math.round(v).toLocaleString() + '원' : '$' + Number(v).toFixed(2);
+            const isUp = vd.c >= vd.o;
+            const ohlcColor = isUp ? upColor : downColor;
+            const lines = [
+                { label: '종가', value: fmt(vd.c) },
+                { label: '시가', value: fmt(vd.o) },
+                { label: '고가', value: fmt(vd.h) },
+                { label: '저가', value: fmt(vd.l) },
+            ];
+            const popFont = '11px -apple-system, sans-serif';
+            const popFontBold = 'bold 11px -apple-system, sans-serif';
+            ctx.font = popFont;
+            const labelW = 24, valW = Math.max(...lines.map(l => ctx.measureText(l.value).width)) + 4;
+            const popW = labelW + valW + 16, lineH = 17, popH = lineH * 4 + 10;
+            let popX = cx + 8;
+            if (popX + popW > W - PAD_R) popX = cx - popW - 8;
+            if (popX < PAD_L) popX = PAD_L;
+            const popY = Math.min(Math.max(PAD_T, toY(vd.h) - popH / 2), H - PAD_B - popH);
+            // 배경
+            ctx.fillStyle = isDark ? 'rgba(40,40,45,0.95)' : 'rgba(255,255,255,0.95)';
+            ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)';
+            ctx.lineWidth = 1; ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.roundRect ? ctx.roundRect(popX, popY, popW, popH, 8) : ctx.rect(popX, popY, popW, popH);
+            ctx.fill(); ctx.stroke();
+            // 내용
+            lines.forEach((line, i) => {
+                const ly = popY + 5 + lineH * i + lineH * 0.7;
+                ctx.font = popFont;
+                ctx.fillStyle = isDark ? '#aaa' : '#888';
+                ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+                ctx.fillText(line.label, popX + 8, ly);
+                ctx.font = popFontBold;
+                ctx.fillStyle = i === 0 ? ohlcColor : (isDark ? '#eee' : '#222');
+                ctx.textAlign = 'right';
+                ctx.fillText(line.value, popX + popW - 8, ly);
+            });
+            ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+        }
+
+        // ── 현재가 Y축 라벨
+        if (visible.length > 0) {
+            const lastCandle = visible[visible.length - 1];
+            const curPrice = lastCandle.c;
+            if (curPrice >= yMin && curPrice <= yMax) {
+                const curY = toY(curPrice);
+                const isKorea = chartCurrentTicker && /^\d{6}$/.test(chartCurrentTicker);
+                const priceLabel = isKorea
+                    ? Math.round(curPrice).toLocaleString()
+                    : '$' + Number(curPrice).toFixed(2);
+                const isUp = lastCandle.c >= lastCandle.o;
+                const labelColor = isUp ? upColor : downColor;
+                ctx.font = 'bold 10px -apple-system, sans-serif';
+                const lw = ctx.measureText(priceLabel).width;
+                const lh = 16, lpad = 5;
+                const lx = W - PAD_R + 2;
+                const ly = curY - lh / 2;
+                // 배경 사각형
+                ctx.fillStyle = labelColor;
+                ctx.beginPath();
+                ctx.roundRect ? ctx.roundRect(lx, ly, lw + lpad * 2, lh, 3) : ctx.rect(lx, ly, lw + lpad * 2, lh);
+                ctx.fill();
+                // 텍스트
+                ctx.fillStyle = '#fff';
+                ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+                ctx.fillText(priceLabel, lx + lpad, curY);
+                ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+                // 수평 점선 (현재가 라인)
+                ctx.strokeStyle = labelColor; ctx.lineWidth = 0.8; ctx.setLineDash([3, 3]);
+                ctx.beginPath(); ctx.moveTo(PAD_L, curY); ctx.lineTo(W - PAD_R, curY); ctx.stroke();
+                ctx.setLineDash([]);
+            }
         }
 
         // ── 매수/매도 뱃지
