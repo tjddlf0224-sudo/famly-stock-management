@@ -2518,7 +2518,7 @@
         } else {
             btnSimple.style.background = 'var(--primary)'; btnSimple.style.color = 'white';
             btnNav.style.background    = 'none';           btnNav.style.color    = 'var(--text-sub)';
-            if (desc) desc.textContent = '★ 단순 방식: 총 입금액 대비 현재 자산 수익률 (금액 기준)';
+            if (desc) desc.textContent = '★ 단순 방식: 순투자금(입금-출금) 대비 현재 자산 수익률';
         }
         // 차트 다시 그리기
         if (typeof PERFORMANCE_DATA !== 'undefined' && PERFORMANCE_DATA.length > 0) {
@@ -2569,35 +2569,34 @@
                 perfLogs.forEach(log => { const d = String(log[0]).substring(0, 10); myMap[d] = Number(log[8]) * 100; });
             }
         } else {
-            // 단순 방식: (현재자산 - 총입금) / 총입금 × 100
+            // 단순 방식: (현재자산 - 순투자금) / |순투자금| × 100
+            // 순투자금 = 누적입금 - 누적출금 (출금은 수익률에 영향 안 줌)
             if (userLabel === '가족 전체') {
-                // 날짜별 전체 멤버 자산합 / 전체 입금합
                 const memberNames = [...new Set(perfLogs.map(r => r[1]).filter(n => n && n !== '가족 전체'))];
                 const allDates = [...new Set(perfLogs.map(r => String(r[0]).substring(0,10)))].sort();
                 allDates.forEach(d => {
-                    let totalAsset = 0, totalInvest = 0;
+                    let totalAsset = 0, totalNetInvest = 0;
                     memberNames.forEach(m => {
                         const mLogs = perfLogs.filter(r => r[1] === m && String(r[0]).substring(0,10) <= d);
                         if (mLogs.length > 0) {
                             const last = mLogs[mLogs.length - 1];
-                            // 해당 멤버의 누적 입금액 계산
-                            const mInvest = perfLogs.filter(r => r[1] === m && String(r[0]).substring(0,10) <= d)
-                                .reduce((sum, r) => sum + Math.max(0, Number(r[2]) || 0), 0);
-                            totalAsset  += Number(last[3]) || 0;
-                            totalInvest += mInvest;
+                            // 순투자금 = 입금 합계 - 출금 합계
+                            const mNetInvest = mLogs.reduce((sum, r) => sum + (Number(r[2]) || 0), 0);
+                            totalAsset    += Number(last[3]) || 0;
+                            totalNetInvest += mNetInvest;
                         }
                     });
-                    if (totalInvest > 0) myMap[d] = (totalAsset - totalInvest) / totalInvest * 100;
+                    if (totalNetInvest > 0 && totalAsset > 0) myMap[d] = (totalAsset - totalNetInvest) / totalNetInvest * 100;
                 });
             } else {
-                // 개인: 누적 입금합 추적
-                let cumulativeInvest = 0;
+                // 개인: flow(입금+, 출금-)를 누적해서 순투자금 계산
+                let netInvest = 0;
                 perfLogs.forEach(log => {
-                    const flow = Number(log[2]) || 0;
-                    if (flow > 0) cumulativeInvest += flow;
+                    netInvest += Number(log[2]) || 0;
                     const d = String(log[0]).substring(0, 10);
                     const asset = Number(log[3]) || 0;
-                    if (cumulativeInvest > 0) myMap[d] = (asset - cumulativeInvest) / cumulativeInvest * 100;
+                    // 순투자금이 0 이하(전액 인출 상태)면 차트에 표시 안 함
+                    if (netInvest > 0 && asset > 0) myMap[d] = (asset - netInvest) / netInvest * 100;
                 });
             }
         }
