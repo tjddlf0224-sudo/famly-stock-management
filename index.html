@@ -687,6 +687,7 @@
     <div class="nav-item" data-tab="fx" onclick="switchTab('fx',this)"><span class="nav-icon">💱</span>환차손익</div>
     <div class="nav-item" data-tab="market" onclick="switchTab('market',this)"><span class="nav-icon">🔍</span>시장분석</div>
     <div class="nav-item" data-tab="aianalysis" onclick="switchTab('aianalysis',this)"><span class="nav-icon">🤖</span>AI분석</div>
+    <div class="nav-item" data-tab="stockanalysis" onclick="switchTab('stockanalysis',this)"><span class="nav-icon">🔬</span>종목분석</div>
 </nav>
 
 <!-- 차트 탭 -->
@@ -1378,6 +1379,73 @@
 
   <!-- 분석 결과 (캐시된 결과 또는 새 결과) -->
   <div id="aiAnalysisResult" style="display:none;"></div>
+
+</div>
+
+<!-- ═══════════════════════════════════════ 종목분석 탭 ═══════════════════════════════════════ -->
+<div id="tab-stockanalysis" class="container">
+
+  <!-- 상단 카드: 종목 선택 + 분석 버튼 -->
+  <div class="card" style="padding:22px 18px 18px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <span style="font-size:30px;">🔬</span>
+      <div>
+        <div style="font-size:17px;font-weight:700;">AI 종목 분석</div>
+        <div style="font-size:12px;color:var(--text-sub);">보유 종목의 매수·관망·매도 시그널을 AI가 진단합니다</div>
+      </div>
+    </div>
+
+    <!-- 사람 선택 -->
+    <div style="margin-bottom:12px;">
+      <label style="font-size:12px;color:var(--text-sub);margin-bottom:5px;display:block;">👤 분석 대상</label>
+      <select id="saUserSelect" onchange="onSaUserChange()"
+        style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border-color);
+               font-size:15px;background:var(--card-bg);color:var(--text-main);">
+        <option value="가족 전체">가족 전체</option>
+        <option value="윤성일" selected>윤성일 (아빠)</option>
+        <option value="윤채현">윤채현 (딸)</option>
+        <option value="윤시환">윤시환 (아들)</option>
+      </select>
+    </div>
+
+    <!-- 보유 종목 정보 표시 -->
+    <div id="saHoldingsInfo" style="font-size:13px;color:var(--text-sub);margin-bottom:14px;min-height:16px;"></div>
+
+    <!-- 저장된 키 상태 표시 -->
+    <div id="saKeySavedRow" style="display:none;align-items:center;justify-content:space-between;
+         background:var(--bg);border:1px solid var(--border-color);border-radius:10px;
+         padding:9px 13px;font-size:12px;color:var(--text-sub);margin-bottom:12px;">
+      <span>🔑 API 키 저장됨 (AI분석 탭과 공유)</span>
+      <button onclick="deleteAiApiKey()"
+        style="background:none;border:none;font-size:11px;color:var(--text-sub);
+               cursor:pointer;text-decoration:underline;padding:0;">삭제</button>
+    </div>
+
+    <button class="btn-primary" id="saAnalysisBtn" onclick="runStockAnalysis()">
+      🔬 종목 분석 시작
+    </button>
+  </div>
+
+  <!-- API 키 입력 카드 (AI분석 탭과 동일한 키 공유) -->
+  <div class="card" id="saApiKeyCard">
+    <div style="font-size:14px;font-weight:600;margin-bottom:8px;">🔑 Gemini API 키 설정</div>
+    <div style="font-size:12px;color:var(--text-sub);margin-bottom:12px;line-height:1.7;">
+      <a href="https://aistudio.google.com/app/apikey" target="_blank"
+         style="color:var(--primary);">aistudio.google.com</a>에서 무료 발급 후 입력하세요.<br>
+      AI분석 탭에서 이미 저장했다면 그대로 사용됩니다.
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+      <input type="password" id="saApiKeyInput" placeholder="AIza..."
+        style="flex:1;font-size:14px;padding:10px 12px;">
+      <button onclick="saveSaApiKey()"
+        style="background:var(--primary);color:#fff;border:none;border-radius:10px;
+               padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">저장</button>
+    </div>
+    <div id="saApiKeyStatus" style="font-size:12px;color:var(--text-sub);"></div>
+  </div>
+
+  <!-- 분석 결과 -->
+  <div id="saAnalysisResult" style="display:none;"></div>
 
 </div>
 <!-- 예수금 수정 모달 -->
@@ -2089,6 +2157,7 @@
         if (tabName === 'fx') renderFxTab();
         if (tabName === 'market') renderMarketTab();
         if (tabName === 'aianalysis') renderAiAnalysisTab();
+        if (tabName === 'stockanalysis') initStockAnalysisTab();
     }
 
     function processData(logs) {
@@ -2213,6 +2282,7 @@
         if(typeof renderDonutChart === 'function') renderDonutChart(chartDataLabels, chartDataValues, totalCashValuation, totalAsset);
         // ★ 평가손익 내림차순 정렬
         balanceList.sort((a, b) => b.profit - a.profit);
+        window._lastBalanceList = balanceList;  // 종목분석 탭에서 재활용
         if(typeof renderStockList === 'function') renderStockList(balanceList);
         if(typeof renderHistory === 'function') renderHistory(userLogs.slice().reverse().slice(0, 20));
         if(typeof renderBalanceTable === 'function') renderBalanceTable(balanceList.slice().sort((a,b) => b.profit - a.profit), totalAsset, totalCashValuation, myCashKRW, myCashUSD);
@@ -5831,6 +5901,449 @@
 
         try {
             localStorage.setItem(AI_CACHE_ST, JSON.stringify({user:user, date:dateStr, html:html}));
+        } catch(e) {}
+    }
+
+
+    // ═══════════════════════════════════════════════════════
+    //  종목분석 탭 (SA = Stock Analysis)
+    // ═══════════════════════════════════════════════════════
+    var SA_CACHE_ST = 'sa_result_cache_v1';  // {user, date, html}
+
+    // 탭 진입 시 초기화
+    function initStockAnalysisTab() {
+        var sel = document.getElementById('saUserSelect');
+        if (!sel) return;
+        // AI분석과 동일한 멤버 목록 동기
+        var aiSel = document.getElementById('aiUserSelect');
+        if (aiSel && aiSel.options.length > 0) {
+            sel.innerHTML = aiSel.innerHTML;
+        }
+        _saRefreshKeyCard();
+        _saUpdateInfo();
+        _saShowCachedResult();
+    }
+
+    function _saRefreshKeyCard() {
+        var key = localStorage.getItem(AI_KEY_ST);
+        var card = document.getElementById('saApiKeyCard');
+        var saved = document.getElementById('saKeySavedRow');
+        if (!card) return;
+        if (key) {
+            card.style.display = 'none';
+            if (saved) saved.style.display = 'flex';
+        } else {
+            card.style.display = 'block';
+            if (saved) saved.style.display = 'none';
+        }
+    }
+
+    function saveSaApiKey() {
+        var input = document.getElementById('saApiKeyInput');
+        var statusEl = document.getElementById('saApiKeyStatus');
+        var val = input ? input.value.trim() : '';
+        if (!val.startsWith('AIza')) {
+            if (statusEl) statusEl.textContent = '❌ Gemini 키는 AIza 로 시작해야 합니다';
+            return;
+        }
+        localStorage.setItem(AI_KEY_ST, val);
+        if (input) input.value = '';
+        _saRefreshKeyCard();
+    }
+
+    function onSaUserChange() {
+        _saUpdateInfo();
+        _saShowCachedResult();
+    }
+
+    // 보유 종목 목록 텍스트 표시
+    function _saUpdateInfo() {
+        var sel = document.getElementById('saUserSelect');
+        var target = sel ? sel.value : currentUser;
+        var infoEl = document.getElementById('saHoldingsInfo');
+        var holdings = _saGetHoldings(target);
+        if (infoEl) {
+            var cnt = Object.keys(holdings).length;
+            if (cnt === 0) {
+                infoEl.textContent = '⚠️ ' + target + ' · 보유 종목 없음';
+            } else {
+                var names = Object.values(holdings).map(function(h) { return h.name; }).join(', ');
+                infoEl.textContent = '📦 ' + target + ' · 보유 ' + cnt + '종목: ' + names;
+            }
+        }
+    }
+
+    // 잔고 탭에서 이미 계산된 balanceList를 재활용 (processData 결과)
+    // balanceList 항목: { name, ticker, qty, avgPrice, curPrice, evalAmt, profit, rate, isKorea, changePct, todayProfitAmt }
+    function _saGetHoldings(target) {
+        var allList = window._lastBalanceList || [];
+        if (allList.length === 0) return {};
+
+        var logs = (typeof RAW_DATA !== 'undefined' ? RAW_DATA : []);
+
+        // target이 가족 전체가 아니면 해당 사람의 보유 종목만 필터링
+        var result = {};
+        if (target === '가족 전체') {
+            allList.forEach(function(item) {
+                result[item.ticker] = {
+                    name:      item.name,
+                    ticker:    item.ticker,
+                    qty:       item.qty,
+                    isKorea:   item.isKorea,
+                    avgKRW:    item.isKorea ? item.avgPrice : item.avgPrice * (typeof CURRENT_EXCHANGE_RATE !== 'undefined' ? CURRENT_EXCHANGE_RATE : 1),
+                    curKRW:    item.isKorea ? item.curPrice : item.curPrice * (typeof CURRENT_EXCHANGE_RATE !== 'undefined' ? CURRENT_EXCHANGE_RATE : 1),
+                    curPrice:  item.curPrice,
+                    evalAmt:   item.evalAmt,
+                    profit:    item.profit,
+                    rate:      item.rate,
+                    changePct: item.changePct
+                };
+            });
+        } else {
+            // 개인 보유 수량만 RAW_DATA에서 추출 후, 현재가는 allList에서 가져옴
+            var userLogs = logs.filter(function(r) { return String(r[0]).trim() === target; });
+            var qtyMap = {};
+            var costMap = {};
+            userLogs.forEach(function(r) {
+                var ticker = String(r[2] || '').toUpperCase().trim();
+                if (/^\d{1,5}$/.test(ticker)) ticker = ticker.padStart(6, '0');
+                var type = String(r[4] || '').trim();
+                var qty  = Number(r[5]) || 0;
+                var price = Number(r[6]) || 0;
+                var fx = Number(r[7]); if (!fx || fx === 0) fx = 1;
+                var isKorea = /^\d{6}$/.test(ticker) || /^\d+[A-Z]$/.test(ticker);
+                if (!qtyMap[ticker]) { qtyMap[ticker] = 0; costMap[ticker] = 0; }
+                if (type === '매수' || type === '입고' || type === '액면분할입고') {
+                    qtyMap[ticker] += qty;
+                    costMap[ticker] += isKorea ? (qty * price) : (qty * price * fx);
+                } else if (type === '매도' || type === '출고' || type === '액면분할출고') {
+                    qtyMap[ticker] -= qty;
+                }
+            });
+            // allList에서 현재가 정보 매칭
+            var priceRef = {};
+            allList.forEach(function(item) { priceRef[item.ticker] = item; });
+            Object.keys(qtyMap).forEach(function(t) {
+                if (qtyMap[t] < 0.000001) return;
+                var ref = priceRef[t];
+                var usdRate = (typeof CURRENT_EXCHANGE_RATE !== 'undefined' ? CURRENT_EXCHANGE_RATE : 1);
+                var isKorea = /^\d{6}$/.test(t) || /^\d+[A-Z]$/.test(t);
+                var curPrice = ref ? ref.curPrice : 0;
+                var curKRW   = isKorea ? curPrice : curPrice * usdRate;
+                var evalAmt  = qtyMap[t] * curKRW;
+                var profit   = evalAmt - costMap[t];
+                var rate     = costMap[t] > 0 ? (profit / costMap[t] * 100) : 0;
+                result[t] = {
+                    name:      ref ? ref.name : t,
+                    ticker:    t,
+                    qty:       qtyMap[t],
+                    isKorea:   isKorea,
+                    avgKRW:    qtyMap[t] > 0 ? costMap[t] / qtyMap[t] : 0,
+                    curPrice:  curPrice,
+                    curKRW:    curKRW,
+                    evalAmt:   evalAmt,
+                    profit:    profit,
+                    rate:      rate,
+                    changePct: ref ? ref.changePct : 0
+                };
+            });
+        }
+        return result;
+    }
+
+    function _saShowCachedResult() {
+        var sel = document.getElementById('saUserSelect');
+        var target = sel ? sel.value : currentUser;
+        var resultEl = document.getElementById('saAnalysisResult');
+        if (!resultEl) return;
+        try {
+            var raw = localStorage.getItem(SA_CACHE_ST);
+            if (!raw) { resultEl.style.display = 'none'; return; }
+            var cache = JSON.parse(raw);
+            if (cache.user !== target) { resultEl.style.display = 'none'; return; }
+            resultEl.style.display = 'block';
+            resultEl.innerHTML = cache.html;
+        } catch(e) {
+            resultEl.style.display = 'none';
+        }
+    }
+
+    // 분석 실행
+    async function runStockAnalysis() {
+        var key = localStorage.getItem(AI_KEY_ST);
+        if (!key) {
+            var card = document.getElementById('saApiKeyCard');
+            if (card) { card.style.display = 'block'; card.scrollIntoView({behavior:'smooth'}); }
+            return;
+        }
+        var sel = document.getElementById('saUserSelect');
+        var target = sel ? sel.value : currentUser;
+        var holdings = _saGetHoldings(target);
+        var tickers = Object.keys(holdings);
+        if (tickers.length === 0) { alert('분석할 보유 종목이 없습니다.'); return; }
+
+        var btn = document.getElementById('saAnalysisBtn');
+        var resultEl = document.getElementById('saAnalysisResult');
+        btn.disabled = true;
+        btn.textContent = '⏳ 분석 중...';
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = '<div class="card" style="text-align:center;padding:36px 20px;">'
+            + '<div style="font-size:32px;margin-bottom:14px;">⏳</div>'
+            + '<div style="font-size:14px;font-weight:600;margin-bottom:6px;">보유 종목 분석 중입니다</div>'
+            + '<div style="font-size:12px;color:var(--text-sub);">각 종목의 현황을 분석하고 행동 추천을 생성합니다<br>약 15~30초 소요됩니다</div>'
+            + '</div>';
+
+        var prompt = _saBuildPrompt(holdings, target);
+
+        try {
+            var resp = await fetch(
+                'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=' + key,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: { maxOutputTokens: 8192 }
+                    })
+                }
+            );
+            if (!resp.ok) {
+                var errBody = await resp.json().catch(function() { return {}; });
+                var msg = (errBody.error && errBody.error.message) || ('HTTP ' + resp.status);
+                throw new Error(msg);
+            }
+            var data = await resp.json();
+            var text = (data.candidates && data.candidates[0] &&
+                        data.candidates[0].content && data.candidates[0].content.parts &&
+                        data.candidates[0].content.parts[0] &&
+                        data.candidates[0].content.parts[0].text) || '';
+            _saRenderResult(text, target, holdings);
+        } catch(err) {
+            resultEl.innerHTML = '<div class="card" style="border-left:3px solid var(--up);padding:16px;">'
+                + '<div style="font-weight:600;color:var(--up);margin-bottom:8px;">❌ 오류 발생</div>'
+                + '<div style="font-size:13px;color:var(--text-sub);">' + err.message + '</div>'
+                + '<div style="font-size:12px;color:var(--text-sub);margin-top:8px;">'
+                + 'API 키를 확인하거나 잠시 후 다시 시도해주세요.</div>'
+                + '</div>';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '🔄 다시 분석';
+        }
+    }
+
+    function _saBuildPrompt(holdings, user) {
+        function fmtKRW(n) { return Math.round(n).toLocaleString() + '원'; }
+        function fmtRate(r) { return (r >= 0 ? '+' : '') + r.toFixed(2) + '%'; }
+
+        var lines = Object.values(holdings).map(function(h) {
+            var avgStr  = h.avgKRW > 0 ? fmtKRW(h.avgKRW) : '정보없음';
+            var curStr  = h.curKRW > 0 ? fmtKRW(h.curKRW) : '정보없음';
+            var evalStr = h.evalAmt > 0 ? fmtKRW(h.evalAmt) : '정보없음';
+            var profStr = h.evalAmt > 0 ? (fmtKRW(h.profit) + ' (' + fmtRate(h.rate) + ')') : '정보없음';
+            var todayStr = h.changePct !== 0 ? fmtRate(h.changePct) : '0.00%';
+            var market = h.isKorea ? '국내' : '해외';
+            return '- ' + h.name + ' [' + market + '] 수량:' + h.qty
+                + ' 평균단가:' + avgStr + ' 현재가:' + curStr
+                + ' 평가금액:' + evalStr + ' 손익:' + profStr + ' 당일변동:' + todayStr;
+        });
+
+        return '아래는 ' + user + '의 현재 보유 주식 포트폴리오입니다.\n\n'
+            + '=== 보유 종목 현황 ===\n' + lines.join('\n') + '\n\n'
+            + '위 보유 종목 각각에 대해 아래 형식으로 한국어로 분석해주세요.\n'
+            + '현재가/손익 데이터 외에 각 종목의 최근 업황, 섹터 동향, 밸류에이션 등 일반 투자 지식을 활용하여 실질적인 의견을 주세요.\n\n'
+            + '각 종목마다 반드시 아래 4가지를 포함해주세요:\n'
+            + '1. 현황 요약 (현재 손익 상태, 보유 의미)\n'
+            + '2. 긍정 요인 (해당 종목의 강점 또는 기회)\n'
+            + '3. 리스크 요인 (주의해야 할 점)\n'
+            + '4. 행동 추천: 반드시 아래 중 하나를 명확히 선택하고 그 이유를 설명\n'
+            + '   [추가 매수] / [관망] / [분할매도] / [매도]\n\n'
+            + '각 종목은 "## 🔬 종목명" 형식의 헤더로 구분해주세요.\n'
+            + '마지막에 "## 📊 포트폴리오 종합 의견" 섹션으로 전체 포트폴리오 균형 및 리밸런싱 제언을 추가해주세요.';
+    }
+
+    function _saRenderResult(text, user, holdings) {
+        var resultEl = document.getElementById('saAnalysisResult');
+        var now = new Date();
+        var dateStr = now.getFullYear() + '년 ' + (now.getMonth()+1) + '월 ' + now.getDate() + '일 '
+            + now.getHours() + '시 ' + String(now.getMinutes()).padStart(2,'0') + '분';
+
+        // 행동 추천 배지 색상
+        var actionColors = {
+            '추가 매수': { bg: 'rgba(52,199,89,0.15)', border: '#34C759', color: '#1a7a35', icon: '📈' },
+            '관망':     { bg: 'rgba(90,200,250,0.15)', border: '#5AC8FA', color: '#0077a8', icon: '👀' },
+            '분할매도': { bg: 'rgba(255,149,0,0.15)',  border: '#FF9500', color: '#a05c00', icon: '✂️' },
+            '매도':     { bg: 'rgba(255,59,48,0.15)',  border: '#FF3B30', color: '#c0392b', icon: '🚨' },
+        };
+
+        // 섹션 헤더 스타일 (종목별)
+        function getSectionStyle(title) {
+            if (title.indexOf('📊') !== -1) return { bg:'rgba(88,86,214,0.08)', border:'#5856D6', color:'#3a38a0' };
+            return { bg:'rgba(255,149,0,0.06)', border:'#FF9500', color:'#a05c00' };
+        }
+
+        // 마크다운 → 섹션 파싱
+        var sections = [];
+        var currentSection = null;
+        var introLines = [];
+
+        text.split('\n').forEach(function(line) {
+            var escaped = line
+                .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+            if (/^## /.test(escaped)) {
+                if (currentSection) sections.push(currentSection);
+                var title = escaped.replace(/^## /, '');
+                currentSection = { title: title, style: getSectionStyle(title), lines: [] };
+            } else {
+                if (currentSection) {
+                    currentSection.lines.push(escaped);
+                } else {
+                    introLines.push(escaped);
+                }
+            }
+        });
+        if (currentSection) sections.push(currentSection);
+
+        // 인트로
+        var introHtml = introLines
+            .filter(function(l) { return l.trim(); })
+            .map(function(l) {
+                return '<p style="margin:0 0 6px;font-size:13px;color:var(--text-sub);line-height:1.6;">' + l + '</p>';
+            }).join('');
+
+        // 라인 렌더러
+        function renderLines(lines) {
+            var out = [];
+            var itemBuffer = [];
+            var actionBadge = null;
+
+            function flushItems() {
+                if (!itemBuffer.length) return;
+                out.push('<div style="display:flex;flex-direction:column;gap:10px;margin:4px 0 6px;">');
+                itemBuffer.forEach(function(item) {
+                    out.push(
+                        '<div style="display:flex;gap:10px;align-items:flex-start;">'
+                        + '<span style="flex-shrink:0;width:22px;height:22px;border-radius:50%;'
+                        + 'background:var(--primary);color:#fff;font-size:11px;font-weight:700;'
+                        + 'display:flex;align-items:center;justify-content:center;">' + item.num + '</span>'
+                        + '<div style="flex:1;font-size:14px;line-height:1.7;padding-top:2px;">' + item.text + '</div>'
+                        + '</div>'
+                    );
+                });
+                out.push('</div>');
+                itemBuffer = [];
+            }
+
+            lines.forEach(function(l) {
+                if (!l.trim()) { flushItems(); return; }
+                l = l.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+                // 행동 추천 감지: [추가 매수] [관망] [분할매도] [매도]
+                var actionMatch = l.match(/\[(추가 매수|관망|분할매도|매도)\]/);
+                if (actionMatch) {
+                    flushItems();
+                    var ac = actionColors[actionMatch[1]] || actionColors['관망'];
+                    var rest = l.replace(/\[' + actionMatch[1] + '\]/, '').replace(/^[\d]+\.\s*행동 추천[：:]\s*/,'').trim();
+                    // 행동 추천 배지 (큰 카드)
+                    out.push(
+                        '<div style="margin:12px 0 8px;padding:12px 16px;border-radius:12px;'
+                        + 'background:' + ac.bg + ';border:2px solid ' + ac.border + ';display:flex;align-items:center;gap:12px;">'
+                        + '<span style="font-size:26px;">' + ac.icon + '</span>'
+                        + '<div>'
+                        + '<div style="font-size:16px;font-weight:800;color:' + ac.color + ';">' + actionMatch[1] + '</div>'
+                        + (rest.length > 3 ? '<div style="font-size:12px;color:var(--text-sub);margin-top:3px;line-height:1.5;">' + rest + '</div>' : '')
+                        + '</div>'
+                        + '</div>'
+                    );
+                    return;
+                }
+
+                var numMatch = l.match(/^(\d+)\.\s+(.*)/);
+                if (numMatch) {
+                    itemBuffer.push({ num: numMatch[1], text: numMatch[2] });
+                    return;
+                }
+                flushItems();
+
+                if (/^[-•]\s/.test(l)) {
+                    out.push(
+                        '<div style="display:flex;gap:8px;align-items:flex-start;margin:5px 0;">'
+                        + '<span style="flex-shrink:0;margin-top:6px;width:6px;height:6px;border-radius:50%;'
+                        + 'background:var(--primary);display:inline-block;"></span>'
+                        + '<div style="flex:1;font-size:14px;line-height:1.7;">' + l.replace(/^[-•]\s/, '') + '</div>'
+                        + '</div>'
+                    );
+                } else {
+                    out.push('<div style="font-size:14px;line-height:1.75;margin:3px 0;">' + l + '</div>');
+                }
+            });
+            flushItems();
+            return out.join('');
+        }
+
+        // 보유 종목 현황 미니 카드들
+        var holdingCards = Object.values(holdings).map(function(h) {
+            var rateStr = (h.rate >= 0 ? '+' : '') + h.rate.toFixed(2) + '%';
+            var rateColor = h.rate >= 0 ? 'var(--up)' : 'var(--down)';
+            var profStr = (h.profit >= 0 ? '+' : '') + Math.round(h.profit).toLocaleString() + '원';
+            return '<div style="background:var(--bg);border:1px solid var(--border-color);border-radius:10px;'
+                + 'padding:10px 13px;min-width:130px;flex-shrink:0;">'
+                + '<div style="font-size:12px;font-weight:700;margin-bottom:4px;">' + h.name + '</div>'
+                + '<div style="font-size:11px;color:var(--text-sub);">수량: ' + h.qty + '</div>'
+                + '<div style="font-size:13px;font-weight:700;color:' + rateColor + ';margin-top:3px;">' + rateStr + '</div>'
+                + '<div style="font-size:11px;color:' + rateColor + ';">' + profStr + '</div>'
+                + '</div>';
+        }).join('');
+
+        var holdingsScrollDiv = holdingCards.length > 0
+            ? '<div style="overflow-x:auto;margin-bottom:18px;padding-bottom:4px;">'
+              + '<div style="display:flex;gap:8px;width:max-content;">' + holdingCards + '</div>'
+              + '</div>'
+            : '';
+
+        // 섹션 카드 조립
+        var sectionsHtml = sections.map(function(sec) {
+            var s = sec.style;
+            var headerStyle = 'background:' + s.bg + ';border-left:4px solid ' + s.border + ';'
+                + 'border-radius:10px;padding:10px 14px;margin-bottom:14px;';
+            var titleColor = s.color;
+            return '<div style="margin-bottom:8px;">'
+                + '<div style="' + headerStyle + '">'
+                + '<div style="font-size:15px;font-weight:700;color:' + titleColor + ';">' + sec.title + '</div>'
+                + '</div>'
+                + '<div style="padding:0 4px;">' + renderLines(sec.lines) + '</div>'
+                + '</div>';
+        }).join('<div style="height:1px;background:var(--border-color);margin:16px 0;"></div>');
+
+        var dateBadge = '<div style="display:flex;align-items:center;gap:6px;margin-bottom:16px;">'
+            + '<div style="background:var(--bg);border:1px solid var(--border-color);border-radius:20px;'
+            + 'padding:4px 12px;font-size:11px;color:var(--text-sub);">🕐 ' + dateStr + '</div>'
+            + '<div style="background:rgba(52,199,89,0.12);border-radius:20px;'
+            + 'padding:4px 12px;font-size:11px;color:#1a7a35;font-weight:600;">✦ Gemini 2.5 Flash Lite</div>'
+            + '</div>';
+
+        var html = '<div class="card" style="padding:20px 18px;">'
+            + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">'
+            + '<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#FF9500,#FF3B30);'
+            + 'display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🔬</div>'
+            + '<div>'
+            + '<div style="font-size:16px;font-weight:700;">AI 종목 분석</div>'
+            + '<div style="font-size:12px;color:var(--text-sub);">' + user + ' 님의 보유 종목 진단</div>'
+            + '</div>'
+            + '</div>'
+            + dateBadge
+            + holdingsScrollDiv
+            + (introHtml ? '<div style="margin-bottom:16px;">' + introHtml + '</div>' : '')
+            + sectionsHtml
+            + '</div>'
+            + '<div class="card" style="text-align:center;padding:10px;">'
+            + '<div style="font-size:11px;color:var(--text-sub);">Google Gemini AI · 투자 판단은 본인 책임입니다</div>'
+            + '</div>';
+
+        resultEl.innerHTML = html;
+
+        try {
+            localStorage.setItem(SA_CACHE_ST, JSON.stringify({user:user, date:dateStr, html:html}));
         } catch(e) {}
     }
 
