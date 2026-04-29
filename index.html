@@ -261,7 +261,7 @@
 
         /* 캔버스 래퍼 */
         .candle-wrap {
-            position: relative; width: 100%; height: 360px;
+            position: relative; width: 100%; height: 440px;
             touch-action: none; user-select: none;
         }
 
@@ -1546,7 +1546,18 @@
 
         if (currentGroupId) {
             if (loginModal) loginModal.style.display = "none";
-            fetchData(); // Firestore에서 이 그룹의 데이터 로드
+            // Firebase module 초기화 완료를 기다린 뒤 fetchData 호출
+            // (window.onload 시점에 <script type="module">이 아직 실행 중일 수 있음)
+            (function waitForFirestore(retries) {
+                if (window._firestoreDb && window._firestoreApi) {
+                    fetchData();
+                } else if (retries > 0) {
+                    setTimeout(function() { waitForFirestore(retries - 1); }, 100);
+                } else {
+                    console.error('Firestore 초기화 타임아웃');
+                    fetchData(); // 그래도 한 번 시도
+                }
+            })(30); // 최대 3초(100ms x 30) 대기
         } else {
             if (loginModal) loginModal.style.display = "flex";
         }
@@ -3100,10 +3111,11 @@
         const highs   = JSON.parse(d.highs   || '[]');
         const lows    = JSON.parse(d.lows    || '[]');
         const closes  = JSON.parse(d.closes  || '[]');
+        const volumes = JSON.parse(d.volumes || '[]');
 
         return dates.map((dateStr, i) => {
             const ts = new Date(dateStr + 'T00:00:00Z').getTime();
-            return { x:ts, o:Number(opens[i])||0, h:Number(highs[i])||0, l:Number(lows[i])||0, c:Number(closes[i])||0 };
+            return { x:ts, o:Number(opens[i])||0, h:Number(highs[i])||0, l:Number(lows[i])||0, c:Number(closes[i])||0, v:Number(volumes[i])||0 };
         }).filter(d => !isNaN(d.x) && d.h > 0);
     }
 
@@ -3217,19 +3229,20 @@
                 key = dt.getUTCFullYear() + '-' + String(dt.getUTCMonth()+1).padStart(2,'0');
             }
             if (!groups[key]) {
-                groups[key] = { x: d.x, firstC: d.c, h: d.h, l: d.l, c: d.c };
+                groups[key] = { x: d.x, firstC: d.c, h: d.h, l: d.l, c: d.c, v: d.v || 0 };
                 groupKeys.push(key);
             } else {
                 groups[key].h = Math.max(groups[key].h, d.h);
                 groups[key].l = Math.min(groups[key].l, d.l);
                 groups[key].c = d.c;
+                groups[key].v = (groups[key].v || 0) + (d.v || 0);
             }
         });
         // o = 마지막날 종가, c = 첫날 종가
         // → isUp(o >= c): 마지막종가 >= 첫날종가 = 상승 = 빨강 (일봉 색상과 일치)
         return groupKeys.map(k => {
             const g = groups[k];
-            return { x: g.x, o: g.c, h: g.h, l: g.l, c: g.firstC };
+            return { x: g.x, o: g.c, h: g.h, l: g.l, c: g.firstC, v: g.v };
         });
     }
 
@@ -3252,7 +3265,7 @@
         try {
             const canvas = document.getElementById('candleChart'); if (!canvas) return;
             const wrap = canvas.parentElement;
-            const W = wrap ? wrap.offsetWidth : (window.innerWidth-32), H = 360, dpr = window.devicePixelRatio || 1;
+            const W = wrap ? wrap.offsetWidth : (window.innerWidth-32), H = 440, dpr = window.devicePixelRatio || 1;
             canvas.style.width = W+'px'; canvas.style.height = H+'px';
             canvas.width = W*dpr; canvas.height = H*dpr;
             candleW_fixed = W; candleH_fixed = H;
@@ -3291,8 +3304,13 @@
         const bgColor   = isDark ? '#1C1C1E' : '#fff';
         ctx.fillStyle = bgColor; ctx.fillRect(0,0,W,H);
 
-        const PAD_L=4, PAD_R=62, PAD_T=14, PAD_B=36; // PAD_B 넉넉히
-        const chartW = W-PAD_L-PAD_R, chartH = H-PAD_T-PAD_B;
+        const PAD_L=4, PAD_R=62, PAD_T=14, PAD_B=4; // PAD_B 최소화 (날짜가 중간으로 이동)
+        // ── 레이아웃: [캔들 영역] → [날짜 행 20px] → [거래량 패널]
+        const DATE_ROW = 20; // 날짜 레이블 행 높이
+        const VOL_H = Math.round((H - PAD_T - PAD_B - DATE_ROW) * 0.28); // 거래량 패널 높이
+        const VOL_GAP = 4; // 거래량 위 여백
+        const CANDLE_H = H - PAD_T - PAD_B - DATE_ROW - VOL_H - VOL_GAP; // 캔들 실제 높이
+        const chartW = W-PAD_L-PAD_R, chartH = CANDLE_H;
 
         // visible: 현재 화면에 보이는 봉들만 필터링
         const visible = candleDisplayData.filter(d => d.x >= candleViewMin && d.x <= candleViewMax);
@@ -3361,7 +3379,8 @@
             ctx.fillText(fmtPrice(v), W-PAD_R+4, y+4);
         }
 
-        // X축 날짜 레이블 (인덱스 기반)
+        // X축 날짜 레이블 — 캔들 영역 바로 아래 (거래량 위)
+        const dateRowY = PAD_T + CANDLE_H + DATE_ROW * 0.72; // 날짜 텍스트 Y 기준
         ctx.font = '10px -apple-system, sans-serif'; ctx.fillStyle = textColor;
         const xTicks = Math.min(6, n);
         for (let i = 0; i < xTicks; i++) {
@@ -3381,25 +3400,24 @@
             }
             
             let xPos = toXi(idx);
-            ctx.textAlign = 'center'; // 기본은 가운데 정렬
+            ctx.textAlign = 'center';
             
-            // 🚀 잘림 방지: 양끝 레이블 정렬 방식 변경
             if (i === 0) {
-                ctx.textAlign = 'left';  // 맨 왼쪽 글자는 왼쪽 기준으로 그리기
-                xPos = PAD_L + 2;        // 왼쪽 화면 끝에 살짝 여백(2px)만 주고 붙임
+                ctx.textAlign = 'left';
+                xPos = PAD_L + 2;
             } else if (i === xTicks - 1) {
-                ctx.textAlign = 'right'; // 맨 오른쪽 글자는 오른쪽 기준으로 그리기
-                xPos = W - PAD_R - 4;    // Y축 가격 영역을 침범하지 않도록 살짝 띄움
+                ctx.textAlign = 'right';
+                xPos = W - PAD_R - 4;
             }
             
-            ctx.fillText(label, xPos, H-6);
+            ctx.fillText(label, xPos, dateRowY);
         }
 
         // ── 💡 연도 구분선 (세로 점선 및 연도 텍스트) ──
         if (visible.length > 0) {
             ctx.lineWidth = 1;
-            ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'; // 점선 색상
-            ctx.fillStyle = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';     // 텍스트 색상
+            ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)';
+            ctx.fillStyle = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
             ctx.font = 'bold 11px -apple-system, sans-serif';
             ctx.textAlign = 'center';
 
@@ -3407,19 +3425,18 @@
             for (let i = 1; i < visible.length; i++) {
                 const currentYear = new Date(visible[i].x).getUTCFullYear();
                 
-                // 해가 바뀌는 지점을 찾았을 때 (예: 2023 -> 2024)
                 if (currentYear !== prevYear) {
                     const x = toXi(i);
                     
-                    // 세로 점선 그리기
-                    ctx.setLineDash([4, 4]); // 4px 선, 4px 공백
+                    // 세로 점선: 캔들 영역만 (날짜 행 위까지)
+                    ctx.setLineDash([4, 4]);
                     ctx.beginPath();
                     ctx.moveTo(x, PAD_T);
-                    ctx.lineTo(x, H - PAD_B);
+                    ctx.lineTo(x, PAD_T + CANDLE_H);
                     ctx.stroke();
-                    ctx.setLineDash([]); // 다른 선에 영향 안 가도록 초기화
+                    ctx.setLineDash([]);
                     
-                    // 구분선 맨 위에 연도 텍스트 (예: '2024년')
+                    // 연도 텍스트
                     ctx.fillText(currentYear + '년', x, PAD_T + 12);
                     
                     prevYear = currentYear;
@@ -3457,12 +3474,71 @@
             ctx.fillRect(x-candleW/2, bodyTop, candleW, bodyH);
         });
 
-        // ── 평균 매입가 라인 (차트 가격 범위 안에 있을 때만 표시)
+        // ── 평균 매입가 점선 (라벨은 현재가 라벨 다음에 그림)
         if (chartAvgPrice > 0 && chartAvgPrice >= yMin && chartAvgPrice <= yMax) {
             const avgY = toY(chartAvgPrice);
-            ctx.strokeStyle = 'rgba(0,180,255,0.85)'; ctx.lineWidth = 1.5; ctx.setLineDash([5,4]);
+            ctx.strokeStyle = '#FF9500'; ctx.lineWidth = 1.5; ctx.setLineDash([5,4]);
             ctx.beginPath(); ctx.moveTo(PAD_L,avgY); ctx.lineTo(W-PAD_R,avgY); ctx.stroke();
             ctx.setLineDash([]);
+        }
+
+        // ── 거래량 패널 그리기
+        {
+            const volTop = PAD_T + CANDLE_H + DATE_ROW + VOL_GAP;
+            const volBot = volTop + VOL_H;
+
+            // 구분선
+            ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
+            ctx.lineWidth = 1; ctx.setLineDash([]);
+            ctx.beginPath(); ctx.moveTo(PAD_L, PAD_T + CANDLE_H + DATE_ROW - 1); ctx.lineTo(W-PAD_R, PAD_T + CANDLE_H + DATE_ROW - 1); ctx.stroke();
+
+            // 거래량 최대값 (현재 visible 기준)
+            const vols = visible.map(d => d.v || 0);
+            const maxVol = Math.max(...vols, 1);
+
+            // 'Vol' 라벨
+            ctx.font = '9px -apple-system, sans-serif';
+            ctx.fillStyle = isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.25)';
+            ctx.textAlign = 'left';
+            ctx.fillText('거래량', PAD_L + 2, volTop + 9);
+
+            // 거래량 Y축 max 레이블 (오른쪽)
+            ctx.textAlign = 'left';
+            const fmtVol = (v) => {
+                if (v >= 1e8) return (v/1e8).toFixed(1)+'억';
+                if (v >= 1e4) return Math.round(v/1e4)+'만';
+                return v.toLocaleString();
+            };
+            ctx.fillStyle = textColor;
+            ctx.font = '9px -apple-system, sans-serif';
+            ctx.fillText(fmtVol(maxVol), W-PAD_R+4, volTop + 9);
+
+            // 거래량 막대
+            const barW = Math.max(1, (chartW / n) * 0.75);
+            visible.forEach((d, i) => {
+                const v = d.v || 0;
+                const barH = Math.max(1, (v / maxVol) * VOL_H);
+                const bx = toXi(i);
+                const by = volBot - barH;
+                const isUp = d.c >= d.o;
+                ctx.fillStyle = isUp
+                    ? (isDark ? 'rgba(0,122,255,0.55)' : 'rgba(0,122,255,0.45)')
+                    : (isDark ? 'rgba(255,59,48,0.55)' : 'rgba(255,59,48,0.45)');
+                ctx.fillRect(bx - barW/2, by, barW, barH);
+            });
+
+            // 크로스헤어 위치의 거래량 막대 강조
+            if (_crosshair && _crosshair.xi >= 0 && _crosshair.xi < visible.length) {
+                const ci = _crosshair.xi;
+                const d = visible[ci];
+                const v = d.v || 0;
+                const barH = Math.max(1, (v / maxVol) * VOL_H);
+                const bx = toXi(ci);
+                const by = volBot - barH;
+                const isUp = d.c >= d.o;
+                ctx.fillStyle = isUp ? 'rgba(0,122,255,0.9)' : 'rgba(255,59,48,0.9)';
+                ctx.fillRect(bx - barW/2, by, barW, barH);
+            }
         }
 
         // ── 크로스헤어 (터치/마우스)
@@ -3472,6 +3548,7 @@
             const vd = visible[ci];
             ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.3)';
             ctx.lineWidth = 1; ctx.setLineDash([4,3]);
+            // 세로선: 캔들 상단 ~ 거래량 패널 하단까지
             ctx.beginPath(); ctx.moveTo(cx, PAD_T); ctx.lineTo(cx, H-PAD_B); ctx.stroke();
             ctx.setLineDash([]);
             const dt = new Date(vd.x);
@@ -3489,7 +3566,7 @@
             let bx = cx - bw/2;
             if (bx < PAD_L) bx = PAD_L;
             if (bx + bw > W-PAD_R) bx = W-PAD_R-bw;
-            const by = H - PAD_B + 2;
+            const by = PAD_T + CANDLE_H + 2;
             ctx.fillStyle = isDark ? '#555' : '#333';
             ctx.beginPath();
             ctx.roundRect ? ctx.roundRect(bx, by, bw, bh, br) :
@@ -3502,6 +3579,12 @@
             // ── OHLC 팝업창
             const isKorea = chartCurrentTicker && /^\d{6}$/.test(chartCurrentTicker);
             const fmt = (v) => isKorea ? Math.round(v).toLocaleString() + '원' : '$' + Number(v).toFixed(2);
+            const fmtVolPop = (v) => {
+                if (!v) return '-';
+                if (v >= 1e8) return (v/1e8).toFixed(2)+'억주';
+                if (v >= 1e4) return (v/1e4).toFixed(1)+'만주';
+                return v.toLocaleString()+'주';
+            };
             const isUp = vd.c >= vd.o;
             const ohlcColor = isUp ? upColor : downColor;
             const lines = [
@@ -3509,12 +3592,13 @@
                 { label: '시가', value: fmt(vd.o) },
                 { label: '고가', value: fmt(vd.h) },
                 { label: '저가', value: fmt(vd.l) },
+                { label: '거래량', value: fmtVolPop(vd.v) },
             ];
             const popFont = '11px -apple-system, sans-serif';
             const popFontBold = 'bold 11px -apple-system, sans-serif';
             ctx.font = popFont;
             const labelW = 24, valW = Math.max(...lines.map(l => ctx.measureText(l.value).width)) + 4;
-            const popW = labelW + valW + 16, lineH = 17, popH = lineH * 4 + 10;
+            const popW = labelW + valW + 16, lineH = 17, popH = lineH * lines.length + 10;
             let popX = cx + 8;
             if (popX + popW > W - PAD_R) popX = cx - popW - 8;
             if (popX < PAD_L) popX = PAD_L;
@@ -3534,7 +3618,10 @@
                 ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
                 ctx.fillText(line.label, popX + 8, ly);
                 ctx.font = popFontBold;
-                ctx.fillStyle = i === 0 ? ohlcColor : (isDark ? '#eee' : '#222');
+                // 종가=캔들색, 거래량=텍스트색, 나머지=기본
+                if (i === 0) ctx.fillStyle = ohlcColor;
+                else if (i === lines.length - 1) ctx.fillStyle = isDark ? '#aaa' : '#777';
+                else ctx.fillStyle = isDark ? '#eee' : '#222';
                 ctx.textAlign = 'right';
                 ctx.fillText(line.value, popX + popW - 8, ly);
             });
@@ -3542,6 +3629,7 @@
         }
 
         // ── 현재가 Y축 라벨
+        let curPriceLabelY = null; // 겹침 방지용
         if (visible.length > 0) {
             const lastCandle = visible[visible.length - 1];
             const curPrice = lastCandle.c;
@@ -3558,6 +3646,7 @@
                 const lh = 16, lpad = 5;
                 const lx = W - PAD_R + 2;
                 const ly = curY - lh / 2;
+                curPriceLabelY = curY;
                 // 배경 사각형
                 ctx.fillStyle = labelColor;
                 ctx.beginPath();
@@ -3573,6 +3662,33 @@
                 ctx.beginPath(); ctx.moveTo(PAD_L, curY); ctx.lineTo(W - PAD_R, curY); ctx.stroke();
                 ctx.setLineDash([]);
             }
+        }
+
+        // ── 평균매입가 Y축 라벨 (주황색, 현재가와 겹치면 밀어냄)
+        if (chartAvgPrice > 0 && chartAvgPrice >= yMin && chartAvgPrice <= yMax) {
+            const avgY = toY(chartAvgPrice);
+            const avgColor = '#FF9500';
+            const isKoreaAvg = chartCurrentTicker && /^\d{6}$/.test(chartCurrentTicker);
+            const avgLabel = isKoreaAvg
+                ? Math.round(chartAvgPrice).toLocaleString()
+                : '$' + Number(chartAvgPrice).toFixed(2);
+            ctx.font = 'bold 10px -apple-system, sans-serif';
+            const alw = ctx.measureText(avgLabel).width;
+            const alh = 16, alpad = 5;
+            const alx = W - PAD_R + 2;
+            // 현재가 라벨과 겹치면 밀어내기
+            let aly = avgY - alh / 2;
+            if (curPriceLabelY !== null && Math.abs(avgY - curPriceLabelY) < alh + 2) {
+                aly = avgY < curPriceLabelY ? curPriceLabelY - alh - 3 : curPriceLabelY + alh + 3;
+            }
+            ctx.fillStyle = avgColor;
+            ctx.beginPath();
+            ctx.roundRect ? ctx.roundRect(alx, aly, alw + alpad * 2, alh, 3) : ctx.rect(alx, aly, alw + alpad * 2, alh);
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+            ctx.fillText(avgLabel, alx + alpad, aly + alh / 2);
+            ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
         }
 
         // ── 매수/매도 뱃지
