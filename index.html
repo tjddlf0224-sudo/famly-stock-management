@@ -2825,6 +2825,12 @@
         }
 
         const profit = calcInvestProfitRange(fromStr, toStr);
+        if (profit === null) {
+            amtEl.textContent = '데이터 없음';
+            amtEl.style.color = 'var(--text-sub)';
+            if (descEl) descEl.textContent = '해당 기간 이전 자산기록이 없습니다';
+            return;
+        }
         const col    = profit > 0 ? '#FF3B30' : (profit < 0 ? '#007AFF' : 'var(--text-sub)');
         const fmt    = v => (v > 0 ? '+' : '') + Math.round(v).toLocaleString() + '원';
         amtEl.textContent = fmt(profit);
@@ -2875,6 +2881,9 @@
         const prevAsset = prevRows.length ? Number(prevRows[prevRows.length-1][2]) || 0 : 0;
         const toAsset   = toRows.length   ? Number(toRows[toRows.length-1][2])     || 0 : 0;
 
+        // 기간초자산이 0이고 이전 데이터가 아예 없으면 계산 불가
+        if (prevAsset === 0 && prevRows.length === 0) return null;
+
         // RAW_DATA에서 기간 내 입출금 직접 계산
         let netInflow = 0;
         if (typeof RAW_DATA !== 'undefined' && RAW_DATA.length) {
@@ -2918,11 +2927,12 @@
         const totalEl = document.getElementById('investProfitTotal');
         if (totalEl) { totalEl.textContent = fmt(todayVal); totalEl.style.color = col(todayVal); }
 
-        const maxAbs = Math.max(Math.abs(todayVal), Math.abs(monthVal), Math.abs(yearVal), 1);
+        const maxAbs = Math.max(...[todayVal, monthVal, yearVal].filter(v => v !== null).map(Math.abs), 1);
         const setBar = (barId, amtId, val) => {
             const bar = document.getElementById(barId);
             const amt = document.getElementById(amtId);
             if (!bar || !amt) return;
+            if (val === null) { amt.textContent = '-'; amt.style.color = 'var(--text-sub)'; bar.style.height = '4px'; bar.style.background = '#ccc'; return; }
             bar.style.height     = Math.max(4, Math.abs(val) / maxAbs * 52) + 'px';
             bar.style.background = col(val);
             amt.textContent      = fmt(val);
