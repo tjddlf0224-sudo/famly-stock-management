@@ -2857,7 +2857,7 @@
             return profit;
         }
 
-        // 월별/일별/직접설정 → 자산기록 + RAW_DATA 입출금 계산
+        // 월별/일별/직접설정 → 자산기록 기준 총자산 차이만 계산 (입출금 미반영)
         const assetHist  = window._ASSET_HISTORY || [];
         const targetName = currentUser === '가족 전체' ? '가족 전체' : currentUser;
         if (!assetHist.length) return 0;
@@ -2875,28 +2875,7 @@
         const prevAsset = prevRows.length ? Number(prevRows[prevRows.length-1][2]) || 0 : 0;
         const toAsset   = toRows.length   ? Number(toRows[toRows.length-1][2])     || 0 : 0;
 
-        // RAW_DATA에서 기간 내 입출금 직접 계산
-        let netInflow = 0;
-        if (typeof RAW_DATA !== 'undefined' && RAW_DATA.length) {
-            RAW_DATA.forEach(row => {
-                const user = String(row[0]).trim();
-                if (currentUser !== '가족 전체' && user !== currentUser) return;
-                const type  = String(row[4]).trim();
-                const price = Number(row[6]) || 0;
-                // 날짜 파싱
-                let dateStr = '';
-                if (row[1] instanceof Date) {
-                    dateStr = row[1].getFullYear() + '-' + String(row[1].getMonth()+1).padStart(2,'0') + '-' + String(row[1].getDate()).padStart(2,'0');
-                } else {
-                    dateStr = String(row[1]).trim().substring(0,10);
-                }
-                if (dateStr < fromStr || dateStr > (isToToday ? todayStr : toStr)) return;
-                if (type === '입금') netInflow += price;
-                else if (type === '출금') netInflow -= price;
-            });
-        }
-
-        let profit = (toAsset - prevAsset) - netInflow;
+        let profit = toAsset - prevAsset;
         if (isToToday) profit += (window._totalTodayProfitKRW || 0);
         return profit;
     }
