@@ -2804,6 +2804,14 @@
 
         if (navEl) navEl.textContent = labelText;
 
+        // 미래 기간 차단
+        if (fromStr > todayStr) {
+            amtEl.textContent = '데이터 없음';
+            amtEl.style.color = 'var(--text-sub)';
+            if (descEl) descEl.textContent = '아직 도래하지 않은 기간입니다';
+            return;
+        }
+
         // 오늘 날짜 조회 시: 자산기록 업데이트 여부 확인
         const now      = new Date();
         const todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
