@@ -578,23 +578,23 @@
     <div class="card">
         <div style="font-size:13px;color:var(--text-sub);margin-bottom:4px;">오늘의 투자수익</div>
         <div id="investProfitTotal" style="font-size:32px;font-weight:800;color:#FF3B30;margin-bottom:12px;">+0원</div>
-        <div style="display:flex;gap:12px;align-items:flex-end;height:80px;">
+        <div style="display:flex;gap:12px;align-items:flex-end;height:96px;">
             <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
-                <div id="investAmtToday" style="font-size:11px;font-weight:600;color:var(--text-sub);white-space:nowrap;">-</div>
+                <div id="investAmtToday" style="font-size:11px;font-weight:600;color:var(--text-sub);white-space:nowrap;margin-bottom:4px;">-</div>
                 <div style="width:100%;display:flex;align-items:flex-end;justify-content:center;height:44px;">
                     <div id="investBarToday" style="width:60%;border-radius:6px 6px 0 0;height:4px;background:#FF3B30;transition:height 0.5s;"></div>
                 </div>
                 <div style="font-size:11px;font-weight:700;color:white;background:var(--primary);padding:3px 10px;border-radius:20px;">오늘</div>
             </div>
             <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
-                <div id="investAmtMonth" style="font-size:11px;font-weight:600;color:var(--text-sub);white-space:nowrap;">-</div>
+                <div id="investAmtMonth" style="font-size:11px;font-weight:600;color:var(--text-sub);white-space:nowrap;margin-bottom:4px;">-</div>
                 <div style="width:100%;display:flex;align-items:flex-end;justify-content:center;height:44px;">
                     <div id="investBarMonth" style="width:60%;border-radius:6px 6px 0 0;height:4px;background:#ccc;transition:height 0.5s;"></div>
                 </div>
                 <div style="font-size:11px;color:var(--text-sub);">이번달</div>
             </div>
             <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
-                <div id="investAmtYear" style="font-size:11px;font-weight:600;color:var(--text-sub);white-space:nowrap;">-</div>
+                <div id="investAmtYear" style="font-size:11px;font-weight:600;color:var(--text-sub);white-space:nowrap;margin-bottom:4px;">-</div>
                 <div style="width:100%;display:flex;align-items:flex-end;justify-content:center;height:44px;">
                     <div id="investBarYear" style="width:60%;border-radius:6px 6px 0 0;height:4px;background:#ccc;transition:height 0.5s;"></div>
                 </div>
@@ -2342,8 +2342,7 @@
         if(typeof renderBalanceTable === 'function') renderBalanceTable(balanceList.slice().sort((a,b) => b.profit - a.profit), totalAsset, totalCashValuation, myCashKRW, myCashUSD);
         if(typeof renderPerformanceTable === 'function') renderPerformanceTable();
         if(typeof renderInvestProfitCard === 'function') renderInvestProfitCard();
-        if(typeof renderPeriodProfit === 'function') renderPeriodProfit();
-        if (typeof renderPerformanceChartFromSheet === 'function' && typeof PERFORMANCE_DATA !== 'undefined') {
+        if(typeof renderPeriodProfit === 'function') renderPeriodProfit();        if (typeof renderPerformanceChartFromSheet === 'function' && typeof PERFORMANCE_DATA !== 'undefined') {
             let myPerfLogs = currentUser === '가족 전체'
                 ? PERFORMANCE_DATA.filter(row => row[1] && row[1] !== '가족 전체')
                 : PERFORMANCE_DATA.filter(row => row[1] === currentUser);
@@ -2568,6 +2567,7 @@
         } else {
             yearlyResults = typeof calculateYearlyProfit === 'function' ? calculateYearlyProfit(myPerfData) : [];
         }
+        window._yearlyResults = yearlyResults; // 투자수익 카드용
         let currentTotalAsset = 0;
         if (currentUser === '가족 전체') {
             // 가족 전체는 cashInfo의 현재 총자산 사용
@@ -2800,16 +2800,33 @@
     }
 
     function calcInvestProfitRange(fromStr, toStr) {
-        const assetHist  = window._ASSET_HISTORY || [];
-        const targetName = currentUser === '가족 전체' ? '가족 전체' : currentUser;
-        const now        = new Date();
-        const todayStr   = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+        const now      = new Date();
+        const todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
 
-        // 오늘 하루만 조회 → 항상 totalTodayProfitKRW 사용
+        // 오늘 하루 → totalTodayProfitKRW 사용
         if (fromStr === toStr && fromStr === todayStr) {
             return window._totalTodayProfitKRW || 0;
         }
 
+        const fromYear = parseInt(fromStr.substring(0,4));
+        const toYear   = parseInt(toStr.substring(0,4));
+        const isFullYear = fromStr === `${fromYear}-01-01` && (toStr >= `${toYear}-12-31` || toStr >= todayStr && toYear === now.getFullYear());
+        const isSingleFullYear = fromYear === toYear && isFullYear;
+
+        // 연도 단위 조회 → yearlyResults 사용 (가장 정확)
+        if (isSingleFullYear) {
+            const yearlyResults = window._yearlyResults || [];
+            const yr = yearlyResults.find(r => Number(r.year) === fromYear);
+            let profit = yr ? (yr.profit || 0) : 0;
+            if (toStr >= todayStr && fromYear === now.getFullYear()) {
+                profit += (window._totalTodayProfitKRW || 0);
+            }
+            return profit;
+        }
+
+        // 월별/일별/직접설정 → 자산기록 + RAW_DATA 입출금 계산
+        const assetHist  = window._ASSET_HISTORY || [];
+        const targetName = currentUser === '가족 전체' ? '가족 전체' : currentUser;
         if (!assetHist.length) return 0;
 
         const userHist = assetHist
@@ -2822,11 +2839,29 @@
             ? userHist.filter(r => String(r[0]).substring(0,10) < todayStr)
             : userHist.filter(r => String(r[0]).substring(0,10) <= toStr);
 
-        const prevAsset   = prevRows.length ? Number(prevRows[prevRows.length-1][2]) || 0 : 0;
-        const prevDeposit = prevRows.length ? Number(prevRows[prevRows.length-1][3]) || 0 : 0;
-        const toAsset     = toRows.length   ? Number(toRows[toRows.length-1][2])     || 0 : 0;
-        const toDeposit   = toRows.length   ? Number(toRows[toRows.length-1][3])     || 0 : 0;
-        const netInflow   = toDeposit - prevDeposit;
+        const prevAsset = prevRows.length ? Number(prevRows[prevRows.length-1][2]) || 0 : 0;
+        const toAsset   = toRows.length   ? Number(toRows[toRows.length-1][2])     || 0 : 0;
+
+        // RAW_DATA에서 기간 내 입출금 직접 계산
+        let netInflow = 0;
+        if (typeof RAW_DATA !== 'undefined' && RAW_DATA.length) {
+            RAW_DATA.forEach(row => {
+                const user = String(row[0]).trim();
+                if (currentUser !== '가족 전체' && user !== currentUser) return;
+                const type  = String(row[4]).trim();
+                const price = Number(row[6]) || 0;
+                // 날짜 파싱
+                let dateStr = '';
+                if (row[1] instanceof Date) {
+                    dateStr = row[1].getFullYear() + '-' + String(row[1].getMonth()+1).padStart(2,'0') + '-' + String(row[1].getDate()).padStart(2,'0');
+                } else {
+                    dateStr = String(row[1]).trim().substring(0,10);
+                }
+                if (dateStr < fromStr || dateStr > (isToToday ? todayStr : toStr)) return;
+                if (type === '입금') netInflow += price;
+                else if (type === '출금') netInflow -= price;
+            });
+        }
 
         let profit = (toAsset - prevAsset) - netInflow;
         if (isToToday) profit += (window._totalTodayProfitKRW || 0);
