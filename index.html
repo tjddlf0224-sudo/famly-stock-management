@@ -585,28 +585,29 @@
 <div class="card">
     <div style="font-size:13px;color:var(--text-sub);margin-bottom:4px;">오늘의 투자수익</div>
     <div id="investProfitTotal" style="font-size:32px;font-weight:800;color:#FF3B30;margin-bottom:12px;">+0원</div>
-    <div style="display:flex;gap:12px;align-items:flex-end;">
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0;">
-            <div id="investAmtToday" style="font-size:11px;font-weight:600;color:var(--text-sub);white-space:nowrap;min-height:16px;text-align:center;">-</div>
-            <div style="width:100%;display:flex;align-items:flex-end;justify-content:center;height:44px;margin-top:4px;">
-                <div id="investBarToday" style="width:60%;border-radius:6px 6px 0 0;height:4px;background:#FF3B30;transition:height 0.5s;"></div>
-            </div>
-            <div style="font-size:11px;font-weight:700;color:white;background:var(--primary);padding:3px 10px;border-radius:20px;">오늘</div>
+    <!-- 금액 행 (가로줄 맞춤) -->
+    <div style="display:flex;gap:12px;margin-bottom:6px;">
+        <div style="flex:1;text-align:center;font-size:11px;font-weight:600;color:var(--text-sub);white-space:nowrap;" id="investAmtToday">-</div>
+        <div style="flex:1;text-align:center;font-size:11px;font-weight:600;color:var(--text-sub);white-space:nowrap;" id="investAmtMonth">-</div>
+        <div style="flex:1;text-align:center;font-size:11px;font-weight:600;color:var(--text-sub);white-space:nowrap;" id="investAmtYear">-</div>
+    </div>
+    <!-- 막대 행 -->
+    <div style="display:flex;gap:12px;align-items:flex-end;height:52px;">
+        <div style="flex:1;display:flex;align-items:flex-end;justify-content:center;">
+            <div id="investBarToday" style="width:60%;border-radius:6px 6px 0 0;height:4px;background:#FF3B30;transition:height 0.5s;"></div>
         </div>
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0;">
-            <div id="investAmtMonth" style="font-size:11px;font-weight:600;color:var(--text-sub);white-space:nowrap;min-height:16px;text-align:center;">-</div>
-            <div style="width:100%;display:flex;align-items:flex-end;justify-content:center;height:44px;margin-top:4px;">
-                <div id="investBarMonth" style="width:60%;border-radius:6px 6px 0 0;height:4px;background:#ccc;transition:height 0.5s;"></div>
-            </div>
-            <div style="font-size:11px;color:var(--text-sub);">이번달</div>
+        <div style="flex:1;display:flex;align-items:flex-end;justify-content:center;">
+            <div id="investBarMonth" style="width:60%;border-radius:6px 6px 0 0;height:4px;background:#ccc;transition:height 0.5s;"></div>
         </div>
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0;">
-            <div id="investAmtYear" style="font-size:11px;font-weight:600;color:var(--text-sub);white-space:nowrap;min-height:16px;text-align:center;">-</div>
-            <div style="width:100%;display:flex;align-items:flex-end;justify-content:center;height:44px;margin-top:4px;">
-                <div id="investBarYear" style="width:60%;border-radius:6px 6px 0 0;height:4px;background:#ccc;transition:height 0.5s;"></div>
-            </div>
-            <div style="font-size:11px;color:var(--text-sub);">올해</div>
+        <div style="flex:1;display:flex;align-items:flex-end;justify-content:center;">
+            <div id="investBarYear" style="width:60%;border-radius:6px 6px 0 0;height:4px;background:#ccc;transition:height 0.5s;"></div>
         </div>
+    </div>
+    <!-- 레이블 행 -->
+    <div style="display:flex;gap:12px;margin-top:6px;">
+        <div style="flex:1;text-align:center;font-size:11px;font-weight:700;color:white;background:var(--primary);padding:3px 0;border-radius:20px;">오늘</div>
+        <div style="flex:1;text-align:center;font-size:11px;color:var(--text-sub);">이번달</div>
+        <div style="flex:1;text-align:center;font-size:11px;color:var(--text-sub);">올해</div>
     </div>
 </div>
 
@@ -1660,7 +1661,6 @@
 ```
 // ★ Firestore 그룹 인증 전역 변수
 let currentGroupId = localStorage.getItem("myGroupId") || null;
-window.currentGroupId = currentGroupId; // module 스크립트에서 업데이트 가능하도록 노출
 let REALIZED_EVENTS = [];
 let CURRENT_PRICES = [];
 let cashAdjustments = {};
@@ -2008,6 +2008,12 @@ async function fetchDataFromServer(isBackground = false) {
             const assetHistSnap = await getDoc(doc(db, "cache", "assethistory"));
             if (assetHistSnap.exists()) {
                 window._ASSET_HISTORY = JSON.parse(assetHistSnap.data().data || '[]');
+                // 업데이트 시간 저장
+                const updAt = assetHistSnap.data().updatedAt || '';
+                if (updAt) {
+                    const dt = new Date(updAt);
+                    window._ASSET_HISTORY_UPDATED = `${dt.getFullYear()}.${String(dt.getMonth()+1).padStart(2,'0')}.${String(dt.getDate()).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+                }
             }
 
             // ★ 시장분석(market_analysis) 캐시 조회
@@ -2205,13 +2211,10 @@ function updateMemberSelectors(members) {
 }
 
 function fetchData() {
-    // 항상 최신 groupId 반영 (module 스크립트의 enterGroup이 window.currentGroupId를 업데이트할 수 있음)
-    currentGroupId = window.currentGroupId || localStorage.getItem("myGroupId") || null;
     const cacheLoaded = loadFromCache();
     if (cacheLoaded) { hideLoading(); setTimeout(() => fetchDataFromServer(true), 500); }
     else { showLoading(); fetchDataFromServer(false); }
 }
-window.fetchData = fetchData; // module 스크립트(enterGroup)에서 접근 가능하도록 노출
 
 function forceRefresh() {
     localStorage.removeItem(CACHE_KEY); localStorage.removeItem(CACHE_TIME_KEY);
@@ -2647,17 +2650,21 @@ function renderPerformanceTable() {
                     : PERFORMANCE_DATA.filter(r => r[1] === currentUser && String(r[0]) < String(year));
                 if (currentUser === '가족 전체') {
                     const memberNames = [...new Set(PERFORMANCE_DATA.filter(r => r[1] && r[1] !== '가족 전체').map(r => r[1]))];
-                    let startNavSum = 0, endNavSum = 0, count = 0;
+                    let totalStartAsset = 0, totalEndAsset = 0, totalStartInflow = 0;
                     memberNames.forEach(m => {
                         const mPrev = prevLogs.filter(r => r[1] === m);
                         const mYear = yearPerfLogs.filter(r => r[1] === m);
                         if (mYear.length > 0) {
-                            const startNav = mPrev.length > 0 ? Number(mPrev[mPrev.length-1][7]) : 1000;
-                            const endNav   = Number(mYear[mYear.length-1][7]);
-                            startNavSum += startNav; endNavSum += endNav; count++;
+                            const startAsset = mPrev.length > 0 ? Number(mPrev[mPrev.length-1][3]) || 0 : 0;
+                            const endAsset   = Number(mYear[mYear.length-1][3]) || 0;
+                            const inflow     = mYear.reduce((s, r) => s + Math.max(0, Number(r[2]) || 0), 0);
+                            totalStartAsset  += startAsset;
+                            totalEndAsset    += endAsset;
+                            totalStartInflow += inflow;
                         }
                     });
-                    if (count > 0) rate = (endNavSum / startNavSum - 1) * 100;
+                    const base = totalStartAsset + totalStartInflow;
+                    if (base > 0) rate = (totalEndAsset - base) / base * 100;
                 } else {
                     const startNav = prevLogs.length > 0 ? Number(prevLogs[prevLogs.length-1][7]) : 1000;
                     const endNav   = Number(yearPerfLogs[yearPerfLogs.length-1][7]);
@@ -2765,7 +2772,7 @@ function setReturnMode(mode) {
 
 // ── 기간별 투자수익 ──────────────────────────────
 let _pTab    = 'daily';
-let _pCursor = new Date();
+let _pCursor = new Date(new Date().setDate(new Date().getDate() - 1)); // 기본값: 어제
 
 function setProfitPeriodTab(tab) {
     _pTab = tab;
@@ -2780,11 +2787,7 @@ function setProfitPeriodTab(tab) {
     const customWrap = document.getElementById('pCustomWrap');
     if (navWrap)    navWrap.style.display    = (tab === 'custom' || tab === 'total') ? 'none' : 'flex';
     if (customWrap) customWrap.style.display  = tab === 'custom' ? 'flex' : 'none';
-    _pCursor = new Date();
-    // 일별 탭은 기본적으로 어제 날짜로 시작 (오늘은 자산기록이 아직 업데이트 안 됐을 수 있음)
-    if (tab === 'daily') {
-        _pCursor.setDate(_pCursor.getDate() - 1);
-    }
+    _pCursor = new Date(new Date().setDate(new Date().getDate() - 1)); // 탭 변경 시 어제로 리셋
     renderPeriodProfit();
 }
 
@@ -2805,14 +2808,14 @@ function renderPeriodProfit() {
     const m = _pCursor.getMonth();
     const d = _pCursor.getDate();
     const pad = v => String(v).padStart(2,'0');
+    const dayNames = ['일','월','화','수','목','금','토'];
     let fromStr, toStr, labelText;
 
     if (_pTab === 'daily') {
         fromStr   = `${y}-${pad(m+1)}-${pad(d)}`;
         toStr     = fromStr;
-        const dayNames = ['일','월','화','수','목','금','토'];
-        const dayOfWeek = dayNames[_pCursor.getDay()];
-        labelText = `${y}. ${pad(m+1)}. ${pad(d)}(${dayOfWeek})`;
+        const dow = dayNames[new Date(y, m, d).getDay()];
+        labelText = `${y}. ${pad(m+1)}. ${pad(d)}(${dow})`;
     } else if (_pTab === 'monthly') {
         fromStr   = `${y}-${pad(m+1)}-01`;
         toStr     = `${y}-${pad(m+1)}-${pad(new Date(y, m+1, 0).getDate())}`;
@@ -2834,14 +2837,24 @@ function renderPeriodProfit() {
 
     if (navEl) navEl.textContent = labelText;
 
-    // 오늘 날짜 일별 조회 시 → 자산기록이 아직 업데이트 안 됐을 수 있으므로 '보류중' 표시
-    const now2     = new Date();
-    const todayStr2 = now2.getFullYear() + '-' + String(now2.getMonth()+1).padStart(2,'0') + '-' + String(now2.getDate()).padStart(2,'0');
-    if (_pTab === 'daily' && fromStr === todayStr2) {
-        amtEl.textContent = '보류중';
-        amtEl.style.color = 'var(--text-sub)';
-        if (descEl) descEl.textContent = '오늘 자산기록이 아직 업데이트되지 않았습니다';
-        return;
+    // 오늘 날짜 조회 시: 자산기록 업데이트 여부 확인
+    const now      = new Date();
+    const todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+    if (fromStr === toStr && fromStr === todayStr) {
+        const assetHist  = window._ASSET_HISTORY || [];
+        const targetName = currentUser === '가족 전체' ? '가족 전체' : currentUser;
+        const todayRows  = assetHist.filter(r => String(r[1]).trim() === targetName && String(r[0]).substring(0,10) === todayStr);
+        if (todayRows.length === 0) {
+            // 자산기록 미업데이트
+            amtEl.textContent = '업데이트 대기중…';
+            amtEl.style.color = 'var(--text-sub)';
+            if (descEl) descEl.textContent = '오늘 자산기록은 매일 자동 업데이트됩니다';
+            return;
+        } else {
+            // 업데이트 시간 표시
+            const updTime = window._ASSET_HISTORY_UPDATED || '';
+            if (descEl && updTime) descEl.textContent = `업데이트: ${updTime}`;
+        }
     }
 
     const profit = calcInvestProfitRange(fromStr, toStr);
@@ -2849,7 +2862,7 @@ function renderPeriodProfit() {
     const fmt    = v => (v > 0 ? '+' : '') + Math.round(v).toLocaleString() + '원';
     amtEl.textContent = fmt(profit);
     amtEl.style.color = col;
-    if (descEl) descEl.textContent = labelText + ' 투자수익';
+    if (descEl && fromStr !== todayStr) descEl.textContent = labelText + ' 투자수익';
 }
 
 function calcInvestProfitRange(fromStr, toStr) {
@@ -6792,19 +6805,8 @@ function _saRenderResult(text, user, holdings) {
     localStorage.setItem("myGroupId", id);
     const modal = document.getElementById('loginModal');
     if (modal) modal.style.display = 'none';
-    // module 스코프이므로 일반 script 변수는 window를 통해 접근
-    window.currentGroupId = id;
-    if (typeof window.fetchData === 'function') {
-      window.fetchData();
-    } else {
-      (function waitForFetch(retries) {
-        if (typeof window.fetchData === 'function') {
-          window.fetchData();
-        } else if (retries > 0) {
-          setTimeout(function() { waitForFetch(retries - 1); }, 100);
-        }
-      })(20);
-    }
+    if (typeof window.currentGroupId !== 'undefined') window.currentGroupId = id;
+    if (typeof fetchData === 'function') fetchData();
   }
 </script>
 
