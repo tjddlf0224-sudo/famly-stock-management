@@ -1660,6 +1660,7 @@
 ```
 // ★ Firestore 그룹 인증 전역 변수
 let currentGroupId = localStorage.getItem("myGroupId") || null;
+window.currentGroupId = currentGroupId; // module 스크립트에서 업데이트 가능하도록 노출
 let REALIZED_EVENTS = [];
 let CURRENT_PRICES = [];
 let cashAdjustments = {};
@@ -2204,10 +2205,13 @@ function updateMemberSelectors(members) {
 }
 
 function fetchData() {
+    // 항상 최신 groupId 반영 (module 스크립트의 enterGroup이 window.currentGroupId를 업데이트할 수 있음)
+    currentGroupId = window.currentGroupId || localStorage.getItem("myGroupId") || null;
     const cacheLoaded = loadFromCache();
     if (cacheLoaded) { hideLoading(); setTimeout(() => fetchDataFromServer(true), 500); }
     else { showLoading(); fetchDataFromServer(false); }
 }
+window.fetchData = fetchData; // module 스크립트(enterGroup)에서 접근 가능하도록 노출
 
 function forceRefresh() {
     localStorage.removeItem(CACHE_KEY); localStorage.removeItem(CACHE_TIME_KEY);
@@ -6788,8 +6792,19 @@ function _saRenderResult(text, user, holdings) {
     localStorage.setItem("myGroupId", id);
     const modal = document.getElementById('loginModal');
     if (modal) modal.style.display = 'none';
-    if (typeof window.currentGroupId !== 'undefined') window.currentGroupId = id;
-    if (typeof fetchData === 'function') fetchData();
+    // module 스코프이므로 일반 script 변수는 window를 통해 접근
+    window.currentGroupId = id;
+    if (typeof window.fetchData === 'function') {
+      window.fetchData();
+    } else {
+      (function waitForFetch(retries) {
+        if (typeof window.fetchData === 'function') {
+          window.fetchData();
+        } else if (retries > 0) {
+          setTimeout(function() { waitForFetch(retries - 1); }, 100);
+        }
+      })(20);
+    }
   }
 </script>
 
