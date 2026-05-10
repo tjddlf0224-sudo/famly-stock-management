@@ -3081,7 +3081,9 @@
             const yearlyResults = window._yearlyResults || [];
             const yr = yearlyResults.find(r => Number(r.year) === fromYear);
             let profit = yr ? (yr.profit || 0) : 0;
-            if (toStr >= todayStr && fromYear === now.getFullYear()) {
+            const todayDow2 = now.getDay();
+            const isWeekend2 = todayDow2 === 0 || todayDow2 === 6;
+            if (toStr >= todayStr && fromYear === now.getFullYear() && !isWeekend2) {
                 profit += (window._totalTodayProfitKRW || 0);
             }
             return profit;
@@ -3136,7 +3138,7 @@
         }
 
         let profit = (toAsset - prevAsset) - netInflow;
-        if (isToToday) profit += (window._totalTodayProfitKRW || 0);
+        if (isToToday && !isWeekend) profit += (window._totalTodayProfitKRW || 0);
         return profit;
     }
 
