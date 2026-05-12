@@ -794,18 +794,20 @@
 
 <!-- 차트 탭 -->
 <div id="tab-chart" class="container chart-tab-container">
-    <!-- 검색창 + 자동완성 -->
+    <!-- 검색창 -->
     <div style="position:relative;margin-bottom:12px;">
-        <input type="text" id="chartSearchInput" placeholder="종목명 또는 티커 검색..."
+        <input type="text" id="chartSearchInput" placeholder="종목 선택 또는 검색..."
             oninput="filterChartTickers()"
+            onfocus="showChartList()"
             autocomplete="off"
             style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid var(--border-color);border-radius:12px;font-size:15px;background:var(--card-bg);color:var(--text-main);">
+        <!-- 검색/선택 목록 -->
         <div id="chartSearchList"
-            style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--card-bg);border:1px solid var(--border-color);border-radius:12px;margin-top:4px;max-height:280px;overflow-y:auto;z-index:100;box-shadow:0 4px 16px rgba(0,0,0,0.12);">
+            style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--card-bg);border:1px solid var(--border-color);border-radius:12px;margin-top:4px;max-height:320px;overflow-y:auto;z-index:100;box-shadow:0 4px 16px rgba(0,0,0,0.15);">
         </div>
     </div>
-    <!-- 선택된 종목 표시 -->
-    <div id="chartSelectedTicker" style="display:none;margin-bottom:10px;padding:10px 14px;background:var(--bg);border-radius:10px;font-size:14px;color:var(--text-main);"></div>
+    <div id="chartHoldingList" style="display:none;"></div>
+    <div id="chartSelectedTicker" style="display:none;margin-bottom:8px;padding:8px 14px;background:var(--bg);border-radius:10px;font-size:13px;color:var(--text-sub);"></div>
     <div id="tickerBtnList" style="display:none;"></div>
     <div id="tickerDropdown" style="display:none;"></div>
     <div class="chart-card-new" id="candleChartCard" style="display:none;">
@@ -3701,50 +3703,41 @@
     let myCandleChart = null, chartAllData = [], chartTradeData = [], chartAvgPrice = 0;
     const CHART_DATA_CACHE = {}; // { ticker: { data, ts } } — 10분 캐시
     
-    function onTickerDropdownChange() {} // 호환성 유지용
+    function showChartList() {
+        const listEl = document.getElementById('chartSearchList');
+        const query  = (document.getElementById('chartSearchInput')?.value || '').trim().toLowerCase();
+        if (!listEl) return;
+        renderChartList(query);
+        listEl.style.display = 'block';
+    }
+
+    function renderChartList(query) {
+        const listEl = document.getElementById('chartSearchList');
+        if (!listEl) return;
+        const holdingSet = new Set(chartTickerMeta.filter(m => (typeof holdings !== 'undefined') && (holdings[m.ticker] || 0) > 0.000001).map(m => m.ticker));
+        let list = query
+            ? chartTickerMeta.filter(m => m.ticker.toLowerCase().includes(query) || (m.name||'').toLowerCase().includes(query))
+            : chartTickerMeta.slice();
+        list.sort((a,b) => (holdingSet.has(a.ticker)?0:1) - (holdingSet.has(b.ticker)?0:1));
+        if (list.length === 0) { listEl.innerHTML = '<div style="padding:14px;color:var(--text-sub);font-size:13px;text-align:center;">검색 결과 없음</div>'; return; }
+        let html = '';
+        list.forEach((m, i) => {
+            const isHolding = holdingSet.has(m.ticker);
+            if (i === 0 && isHolding) html += '<div style="padding:6px 14px;font-size:11px;color:var(--text-sub);font-weight:600;background:var(--bg);">보유 종목</div>';
+            if (i > 0 && !isHolding && holdingSet.has(list[i-1].ticker)) html += '<div style="padding:6px 14px;font-size:11px;color:var(--text-sub);font-weight:600;background:var(--bg);">매도 완료</div>';
+            const isKr = /^\d{6}$/.test(m.ticker);
+            const label = isKr ? `${m.name} <span style="color:var(--text-sub);font-size:12px;">${m.ticker}</span>` : `${m.ticker} <span style="color:var(--text-sub);font-size:12px;">${m.name}</span>`;
+            const badge = isHolding ? '<span style="font-size:10px;background:#34C759;color:white;padding:2px 6px;border-radius:10px;flex-shrink:0;">보유</span>' : '';
+            html += `<div onclick="selectChartFromSearch('${m.ticker}')" style="padding:12px 14px;cursor:pointer;border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;gap:8px;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''"><span style="font-size:14px;">${label}</span>${badge}</div>`;
+        });
+        listEl.innerHTML = html;
+    }
 
     function filterChartTickers() {
-        const query    = (document.getElementById('chartSearchInput')?.value || '').trim().toLowerCase();
-        const listEl   = document.getElementById('chartSearchList');
+        const query = (document.getElementById('chartSearchInput')?.value||'').trim().toLowerCase();
+        const listEl = document.getElementById('chartSearchList');
         if (!listEl) return;
-
-        if (!query) { listEl.style.display = 'none'; return; }
-
-        // 보유 먼저, 매도 나중
-        const matched = chartTickerMeta.filter(m =>
-            m.ticker.toLowerCase().includes(query) ||
-            (m.name || '').toLowerCase().includes(query)
-        );
-
-        if (matched.length === 0) {
-            listEl.innerHTML = '<div style="padding:12px 14px;color:var(--text-sub);font-size:13px;">검색 결과 없음</div>';
-            listEl.style.display = 'block';
-            return;
-        }
-
-        const holdingSet = new Set(chartTickerMeta.filter(m => {
-            const h = (typeof holdings !== 'undefined') ? holdings : {};
-            return h[m.ticker] > 0.000001;
-        }).map(m => m.ticker));
-
-        // 보유 먼저 정렬
-        matched.sort((a, b) => {
-            const aH = holdingSet.has(a.ticker) ? 0 : 1;
-            const bH = holdingSet.has(b.ticker) ? 0 : 1;
-            return aH - bH;
-        });
-
-        listEl.innerHTML = matched.map(m => {
-            const isKr      = /^\d{6}$/.test(m.ticker);
-            const isHolding = holdingSet.has(m.ticker);
-            const label     = isKr ? `${m.name} <span style="color:var(--text-sub);font-size:12px;">${m.ticker}</span>` : `${m.ticker} <span style="color:var(--text-sub);font-size:12px;">${m.name}</span>`;
-            const badge     = isHolding ? '<span style="font-size:10px;background:#34C759;color:white;padding:2px 6px;border-radius:10px;margin-left:6px;">보유</span>' : '';
-            return `<div onclick="selectChartFromSearch('${m.ticker}')"
-                style="padding:12px 14px;cursor:pointer;border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;"
-                onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
-                <span style="font-size:14px;">${label}</span>${badge}
-            </div>`;
-        }).join('');
+        renderChartList(query);
         listEl.style.display = 'block';
     }
 
@@ -3754,7 +3747,6 @@
         const selEl   = document.getElementById('chartSelectedTicker');
         const meta    = chartTickerMeta.find(m => m.ticker === ticker);
         if (!meta) return;
-
         if (listEl)  listEl.style.display = 'none';
         if (inputEl) inputEl.value = '';
         if (selEl) {
@@ -3765,13 +3757,12 @@
         selectTicker(ticker, null);
     }
 
-    // 검색창 외부 클릭 시 닫기
+    function onTickerDropdownChange() {}
+
     document.addEventListener('click', e => {
-        const input  = document.getElementById('chartSearchInput');
-        const list   = document.getElementById('chartSearchList');
-        if (list && input && !input.contains(e.target) && !list.contains(e.target)) {
-            list.style.display = 'none';
-        }
+        const input = document.getElementById('chartSearchInput');
+        const list  = document.getElementById('chartSearchList');
+        if (list && input && !input.contains(e.target) && !list.contains(e.target)) list.style.display = 'none';
     });
 
     let chartCurrentTicker = null, chartTickerMeta = [], chartTabInited = false;
@@ -3877,6 +3868,7 @@
             if (firstTicker) selectChartFromSearch(firstTicker);
             setTimeout(preloadOtherCharts, 3000);
         }
+
     } // <-- buildTickerButtons 함수 끝
 
     // 🚀 보유 종목 백그라운드 미리 불러오기 (Pre-fetching)
