@@ -1665,6 +1665,15 @@
     </div>
 </div>
 
+<!-- 종목 차트 보기 미니 모달 -->
+<div id="stockDetailModal" class="modal" onclick="closeStockDetailModal()" style="display:none;justify-content:center;align-items:center;">
+    <div onclick="event.stopPropagation()" style="background:var(--card-bg);border-radius:14px;padding:16px 20px;min-width:180px;box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+        <div id="sdName" style="font-size:14px;font-weight:700;margin-bottom:2px;"></div>
+        <div id="sdTicker" style="font-size:12px;color:var(--text-sub);margin-bottom:12px;"></div>
+        <button onclick="goToStockChart()" style="width:100%;padding:10px 24px;background:var(--primary);color:white;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">차트 보기</button>
+    </div>
+</div>
+
 <!-- 거래 수정 모달 -->
 <div id="editModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:1000;justify-content:center;align-items:center;overflow-y:auto;">
     <div style="background:var(--card-bg);border-radius:16px;padding:24px 20px;width:92%;max-width:420px;margin:20px auto;box-shadow:0 4px 20px rgba(0,0,0,0.4);">
@@ -2547,6 +2556,33 @@
         });
     }
 
+    // ── 종목 상세 모달 ────────────────────────────────
+    let _sdTicker = null;
+
+    function openStockDetailModal(item) {
+        _sdTicker = item.ticker;
+        document.getElementById('sdName').textContent   = item.name;
+        document.getElementById('sdTicker').textContent = item.ticker;
+        document.getElementById('stockDetailModal').style.display = 'flex';
+    }
+
+    function closeStockDetailModal() {
+        document.getElementById('stockDetailModal').style.display = 'none';
+        _sdTicker = null;
+    }
+
+    function goToStockChart() {
+        const ticker = _sdTicker;
+        closeStockDetailModal();
+        const chartNav = document.querySelector('[data-tab="chart"]');
+        if (chartNav) chartNav.click();
+        setTimeout(() => {
+            if (ticker && typeof selectChartFromSearch === 'function') {
+                selectChartFromSearch(ticker);
+            }
+        }, 300);
+    }
+
     function renderStockList(balanceList) {
         const listDiv = document.getElementById('stockList'); if (!listDiv) return;
         listDiv.innerHTML = '';
@@ -2557,6 +2593,8 @@
             let tColorClass = item.todayProfitAmt > 0 ? "up" : (item.todayProfitAmt < 0 ? "down" : "");
             let itemDiv = document.createElement('div');
             itemDiv.className = 'stock-item';
+            itemDiv.style.cursor = 'pointer';
+            itemDiv.onclick = () => openStockDetailModal(item);
             itemDiv.innerHTML = `<div><div class="stock-name">${item.name}</div><div class="stock-ticker">${item.ticker}</div></div><div style="text-align:right;"><div class="stock-price" style="color:#333;">${Math.round(item.evalAmt).toLocaleString()}원</div><div class="stock-change ${colorClass}">${item.rate.toFixed(1)}% (${Math.round(item.profit).toLocaleString()}원)</div><div class="${tColorClass}" style="font-size:12px;margin-top:3px;font-weight:500;">오늘 ${tSign}${Math.round(item.todayProfitAmt).toLocaleString()}원 (${tSign}${item.changePct.toFixed(2)}%)</div></div>`;
             listDiv.appendChild(itemDiv);
         });
@@ -2573,6 +2611,8 @@
             let displayAvgPrice = item.isKorea ? Math.round(item.avgPrice).toLocaleString() + "원" : `<span style="color:#008000">$${Number(item.avgPrice).toFixed(2)}</span>`;
             let displayCurPrice = item.isKorea ? Math.round(item.curPrice).toLocaleString() + "원" : `<span style="color:#008000">$${Number(item.curPrice).toFixed(2)}</span>`;
             const tr = document.createElement('tr');
+            tr.style.cursor = 'pointer';
+            tr.onclick = () => openStockDetailModal(item);
             tr.innerHTML = `<td>${item.name}</td><td class="${color}">${Math.round(item.profit).toLocaleString()}</td><td class="${color}">${item.rate.toFixed(1)}%</td><td class="${tColorClass}" style="font-weight:bold;">${tSign}${item.changePct.toFixed(2)}%</td><td>${item.qty}</td><td>${displayAvgPrice}</td><td>${displayCurPrice}</td><td>${Math.round(item.evalAmt).toLocaleString()}</td><td>${weight.toFixed(1)}%</td>`;
             tbody.appendChild(tr);
         });
