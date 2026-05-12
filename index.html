@@ -794,19 +794,20 @@
 
 <!-- 차트 탭 -->
 <div id="tab-chart" class="container chart-tab-container">
-    <!-- 검색창 + 드롭다운 -->
-    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+    <!-- 검색창 + 자동완성 -->
+    <div style="position:relative;margin-bottom:12px;">
         <input type="text" id="chartSearchInput" placeholder="종목명 또는 티커 검색..."
             oninput="filterChartTickers()"
-            style="flex:1;padding:10px 14px;border:1px solid var(--border-color);border-radius:12px;font-size:14px;background:var(--card-bg);color:var(--text-main);">
+            autocomplete="off"
+            style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid var(--border-color);border-radius:12px;font-size:15px;background:var(--card-bg);color:var(--text-main);">
+        <div id="chartSearchList"
+            style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--card-bg);border:1px solid var(--border-color);border-radius:12px;margin-top:4px;max-height:280px;overflow-y:auto;z-index:100;box-shadow:0 4px 16px rgba(0,0,0,0.12);">
+        </div>
     </div>
-    <div style="margin-bottom:12px;">
-        <select id="tickerDropdown" onchange="onTickerDropdownChange()"
-            style="width:100%;padding:12px 14px;border:1px solid var(--border-color);border-radius:12px;font-size:15px;background:var(--card-bg);color:var(--text-main);cursor:pointer;">
-            <option value="">종목 선택...</option>
-        </select>
-    </div>
+    <!-- 선택된 종목 표시 -->
+    <div id="chartSelectedTicker" style="display:none;margin-bottom:10px;padding:10px 14px;background:var(--bg);border-radius:10px;font-size:14px;color:var(--text-main);"></div>
     <div id="tickerBtnList" style="display:none;"></div>
+    <div id="tickerDropdown" style="display:none;"></div>
     <div class="chart-card-new" id="candleChartCard" style="display:none;">
         <div class="chart-header-overlay">
             <div class="chart-name-block">
@@ -3700,28 +3701,78 @@
     let myCandleChart = null, chartAllData = [], chartTradeData = [], chartAvgPrice = 0;
     const CHART_DATA_CACHE = {}; // { ticker: { data, ts } } — 10분 캐시
     
-    function onTickerDropdownChange() {
-        const dropdown = document.getElementById('tickerDropdown');
-        if (!dropdown || !dropdown.value) return;
-        selectTicker(dropdown.value, null);
-    }
+    function onTickerDropdownChange() {} // 호환성 유지용
 
     function filterChartTickers() {
         const query    = (document.getElementById('chartSearchInput')?.value || '').trim().toLowerCase();
-        const dropdown = document.getElementById('tickerDropdown');
-        if (!dropdown) return;
-        Array.from(dropdown.options).forEach(opt => {
-            if (!opt.value) return; // "종목 선택..." 유지
-            const name   = (opt.dataset?.name || opt.textContent || '').toLowerCase();
-            const ticker = (opt.value || '').toLowerCase();
-            opt.hidden = !!(query && !name.includes(query) && !ticker.includes(query));
+        const listEl   = document.getElementById('chartSearchList');
+        if (!listEl) return;
+
+        if (!query) { listEl.style.display = 'none'; return; }
+
+        // 보유 먼저, 매도 나중
+        const matched = chartTickerMeta.filter(m =>
+            m.ticker.toLowerCase().includes(query) ||
+            (m.name || '').toLowerCase().includes(query)
+        );
+
+        if (matched.length === 0) {
+            listEl.innerHTML = '<div style="padding:12px 14px;color:var(--text-sub);font-size:13px;">검색 결과 없음</div>';
+            listEl.style.display = 'block';
+            return;
+        }
+
+        const holdingSet = new Set(chartTickerMeta.filter(m => {
+            const h = (typeof holdings !== 'undefined') ? holdings : {};
+            return h[m.ticker] > 0.000001;
+        }).map(m => m.ticker));
+
+        // 보유 먼저 정렬
+        matched.sort((a, b) => {
+            const aH = holdingSet.has(a.ticker) ? 0 : 1;
+            const bH = holdingSet.has(b.ticker) ? 0 : 1;
+            return aH - bH;
         });
-        // optgroup도 숨기기
-        Array.from(dropdown.querySelectorAll('optgroup')).forEach(grp => {
-            const visible = Array.from(grp.options).some(o => !o.hidden);
-            grp.hidden = !visible;
-        });
+
+        listEl.innerHTML = matched.map(m => {
+            const isKr      = /^\d{6}$/.test(m.ticker);
+            const isHolding = holdingSet.has(m.ticker);
+            const label     = isKr ? `${m.name} <span style="color:var(--text-sub);font-size:12px;">${m.ticker}</span>` : `${m.ticker} <span style="color:var(--text-sub);font-size:12px;">${m.name}</span>`;
+            const badge     = isHolding ? '<span style="font-size:10px;background:#34C759;color:white;padding:2px 6px;border-radius:10px;margin-left:6px;">보유</span>' : '';
+            return `<div onclick="selectChartFromSearch('${m.ticker}')"
+                style="padding:12px 14px;cursor:pointer;border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;"
+                onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
+                <span style="font-size:14px;">${label}</span>${badge}
+            </div>`;
+        }).join('');
+        listEl.style.display = 'block';
     }
+
+    function selectChartFromSearch(ticker) {
+        const listEl  = document.getElementById('chartSearchList');
+        const inputEl = document.getElementById('chartSearchInput');
+        const selEl   = document.getElementById('chartSelectedTicker');
+        const meta    = chartTickerMeta.find(m => m.ticker === ticker);
+        if (!meta) return;
+
+        if (listEl)  listEl.style.display = 'none';
+        if (inputEl) inputEl.value = '';
+        if (selEl) {
+            const isKr = /^\d{6}$/.test(ticker);
+            selEl.textContent = isKr ? `${meta.name} (${ticker})` : `${ticker} — ${meta.name}`;
+            selEl.style.display = 'block';
+        }
+        selectTicker(ticker, null);
+    }
+
+    // 검색창 외부 클릭 시 닫기
+    document.addEventListener('click', e => {
+        const input  = document.getElementById('chartSearchInput');
+        const list   = document.getElementById('chartSearchList');
+        if (list && input && !input.contains(e.target) && !list.contains(e.target)) {
+            list.style.display = 'none';
+        }
+    });
 
     let chartCurrentTicker = null, chartTickerMeta = [], chartTabInited = false;
 
@@ -3812,49 +3863,18 @@
             let name = nameRow ? String(nameRow[3]).trim() : ticker;
             return { ticker, name, avgPrice, trades };
         });
-        const dropdown = document.getElementById('tickerDropdown');
-        if (!dropdown) return;
-        dropdown.innerHTML = '<option value="">종목 선택...</option>';
-
-        // 보유 종목 먼저, 매도 종목 나중
+        // 보유/매도 구분
         const holdingList = chartTickerMeta.filter(m => holdingTickers.has(m.ticker));
         const soldList    = chartTickerMeta.filter(m => !holdingTickers.has(m.ticker));
 
-        if (holdingList.length > 0) {
-            const grp1 = document.createElement('optgroup');
-            grp1.label = '▶ 보유 종목';
-            holdingList.forEach(meta => {
-                const opt = document.createElement('option');
-                opt.value = meta.ticker;
-                const isKr = /^\d{6}$/.test(meta.ticker);
-                opt.textContent = isKr ? `${meta.name} (${meta.ticker})` : `${meta.ticker} - ${meta.name}`;
-                opt.dataset.name = meta.name.toLowerCase();
-                grp1.appendChild(opt);
-            });
-            dropdown.appendChild(grp1);
-        }
-        if (soldList.length > 0) {
-            const grp2 = document.createElement('optgroup');
-            grp2.label = '▷ 매도 완료';
-            soldList.forEach(meta => {
-                const opt = document.createElement('option');
-                opt.value = meta.ticker;
-                const isKr = /^\d{6}$/.test(meta.ticker);
-                opt.textContent = isKr ? `${meta.name} (${meta.ticker})` : `${meta.ticker} - ${meta.name}`;
-                opt.dataset.name = meta.name.toLowerCase();
-                grp2.appendChild(opt);
-            });
-            dropdown.appendChild(grp2);
-        }
+        // 검색창 placeholder 업데이트
+        const inputEl = document.getElementById('chartSearchInput');
+        if (inputEl) inputEl.placeholder = `종목명 또는 티커 검색... (${chartTickerMeta.length}개)`;
+
         chartTabInited = true;
-        // ▼ 여기서부터 수정 (중괄호 { } 가 추가되고 setTimeout이 들어갑니다)
         if (chartTickerMeta.length > 0) {
             const firstTicker = holdingList.length > 0 ? holdingList[0].ticker : (chartTickerMeta[0]?.ticker);
-            if (firstTicker) {
-                dropdown.value = firstTicker;
-                selectTicker(firstTicker, null);
-            }
-            // 🚀 첫 화면이 뜨고 3초 뒤에 백그라운드 몰래 로딩 시작
+            if (firstTicker) selectChartFromSearch(firstTicker);
             setTimeout(preloadOtherCharts, 3000);
         }
     } // <-- buildTickerButtons 함수 끝
