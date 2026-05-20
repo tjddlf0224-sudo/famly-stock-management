@@ -1666,11 +1666,16 @@
 </div>
 
 <!-- 종목 차트 보기 미니 모달 -->
-<div id="stockDetailModal" class="modal" onclick="closeStockDetailModal()" style="display:none;justify-content:center;align-items:center;">
-    <div onclick="event.stopPropagation()" style="background:var(--card-bg);border-radius:14px;padding:16px 20px;min-width:180px;box-shadow:0 4px 20px rgba(0,0,0,0.3);">
-        <div id="sdName" style="font-size:14px;font-weight:700;margin-bottom:2px;"></div>
-        <div id="sdTicker" style="font-size:12px;color:var(--text-sub);margin-bottom:12px;"></div>
-        <button onclick="goToStockChart()" style="width:100%;padding:10px 24px;background:var(--primary);color:white;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">차트 보기</button>
+<div id="stockDetailModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.4);" onclick="closeStockDetailModal()">
+    <div onclick="event.stopPropagation()"
+        style="position:absolute;bottom:0;left:0;right:0;background:var(--card-bg);border-radius:20px 20px 0 0;padding:24px 20px 36px;">
+        <div style="width:40px;height:4px;background:var(--border-color);border-radius:2px;margin:0 auto 20px;"></div>
+        <div id="sdName" style="font-size:18px;font-weight:700;margin-bottom:4px;"></div>
+        <div id="sdTicker" style="font-size:13px;color:var(--text-sub);margin-bottom:20px;"></div>
+        <div style="display:flex;gap:10px;">
+            <button onclick="goToStockChart()" style="flex:1;padding:14px;background:var(--primary);color:white;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;">차트 보기</button>
+            <button onclick="closeStockDetailModal()" style="flex:1;padding:14px;background:var(--bg);color:var(--text-main);border:1px solid var(--border-color);border-radius:12px;font-size:15px;cursor:pointer;">닫기</button>
+        </div>
     </div>
 </div>
 
@@ -2563,7 +2568,7 @@
         _sdTicker = item.ticker;
         document.getElementById('sdName').textContent   = item.name;
         document.getElementById('sdTicker').textContent = item.ticker;
-        document.getElementById('stockDetailModal').style.display = 'flex';
+        document.getElementById('stockDetailModal').style.display = 'block';
     }
 
     function closeStockDetailModal() {
@@ -2711,15 +2716,19 @@
             let date = safeParseDate(row[0]); let year = date.getFullYear();
             let flow = Number(row[2]), asset = Number(row[3]);
             if (!yearlyStats[year]) yearlyStats[year] = { lastAsset: 0, totalFlow: 0 };
-            yearlyStats[year].lastAsset = asset; yearlyStats[year].totalFlow += flow;
+            yearlyStats[year].lastAsset = asset;
+            yearlyStats[year].totalFlow += flow;
         });
         let years = Object.keys(yearlyStats).sort(), prevYearAsset = 0;
         return years.map(year => {
             let stat = yearlyStats[year];
             let profit = stat.lastAsset - prevYearAsset - stat.totalFlow;
+            // 수익률 = 수익 / 기초자산 (전년도 말 자산)
+            // 기초자산이 0이면 첫해라 입금액 기준
+            let beginAsset = prevYearAsset > 0 ? prevYearAsset : (stat.totalFlow > 0 ? stat.totalFlow : 0);
+            let roi = beginAsset !== 0 ? profit / beginAsset * 100 : 0;
             prevYearAsset = stat.lastAsset;
-            let investAmt = stat.totalFlow + prevYearAsset;
-            return { year, profit, roi: investAmt !== 0 ? profit / investAmt * 100 : 0 };
+            return { year, profit, roi };
         });
     }
 
@@ -2844,9 +2853,24 @@
                         const base = totalStartAsset + totalStartInflow;
                         if (base > 0) rate = (totalEndAsset - base) / base * 100;
                     } else {
-                        const startNav = prevLogs.length > 0 ? Number(prevLogs[prevLogs.length-1][7]) : 1000;
-                        const endNav   = Number(yearPerfLogs[yearPerfLogs.length-1][7]);
-                        rate = (endNav / startNav - 1) * 100;
+                        // 전액 출금 감지: 해당 연도에 자산=0, NAV=1000인 행이 있으면
+                        const hasFullWithdrawal = yearPerfLogs.some(r => Number(r[3]) === 0 && Number(r[7]) === 1000);
+                        if (hasFullWithdrawal) {
+                            // cumulativeMultiplier 기반: 연초 vs 전액출금 직전 누적수익률 차이
+                            const prevLogs2 = PERFORMANCE_DATA.filter(r => r[1] === currentUser && String(r[0]) < String(year));
+                            const startCumReturn = prevLogs2.length > 0 ? Number(prevLogs2[prevLogs2.length-1][8]) || 0 : 0;
+                            // 전액출금 직전 마지막 유효 자산 행
+                            const lastValidRow = [...yearPerfLogs].reverse().find(r => Number(r[3]) > 0);
+                            const endCumReturn = lastValidRow ? Number(lastValidRow[8]) || 0 : startCumReturn;
+                            // 연도 수익률 = (1 + endCum) / (1 + startCum) - 1
+                            const startMult = 1 + startCumReturn;
+                            const endMult   = 1 + endCumReturn;
+                            rate = startMult > 0 ? (endMult / startMult - 1) * 100 : 0;
+                        } else {
+                            const startNav = prevLogs.length > 0 ? Number(prevLogs[prevLogs.length-1][7]) : 1000;
+                            const endNav   = Number(yearPerfLogs[yearPerfLogs.length-1][7]);
+                            rate = (endNav / startNav - 1) * 100;
+                        }
                     }
                 } else {
                     // 단순 방식: (연초자산 + 연중입금) 대비 총손익
