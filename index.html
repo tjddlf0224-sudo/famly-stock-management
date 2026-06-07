@@ -1716,6 +1716,7 @@
             <button onclick="closeEditModal()" style="flex:1;padding:12px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;background:var(--border-color);color:var(--text-main);">취소</button>
             <button id="editSaveBtn" onclick="saveEditTransaction()" style="flex:1;padding:12px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;background:var(--primary);color:white;">수정 저장</button>
         </div>
+        <button id="editDeleteBtn" onclick="deleteTransaction()" style="width:100%;margin-top:10px;padding:12px;border:1px solid #FF3B30;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;background:none;color:#FF3B30;">🗑 이 거래 삭제</button>
     </div>
 </div>
 
@@ -3623,6 +3624,47 @@
     function closeEditModal() {
         document.getElementById('editModal').style.display = 'none';
         _editDocId = null;
+    }
+
+    async function deleteTransaction() {
+        if (!_editDocId) { alert("삭제할 거래를 찾을 수 없습니다."); return; }
+        const adminPw = document.getElementById('editAdminPw').value.trim();
+        if (!adminPw) { alert("관리자 비밀번호를 입력하세요."); return; }
+        if (!confirm("이 거래를 정말 삭제할까요?\n되돌릴 수 없습니다.")) return;
+
+        const btnDel = document.getElementById('editDeleteBtn');
+        btnDel.disabled = true; btnDel.innerText = "확인 중...";
+
+        // 관리자 비밀번호 검증 (수정과 동일)
+        try {
+            const db = window._firestoreDb;
+            const { doc, getDoc } = window._firestoreApi;
+            const adminSnap = await getDoc(doc(db, "admins", "config"));
+            if (!adminSnap.exists() || adminSnap.data().password !== adminPw) {
+                alert("❌ 관리자 비밀번호가 틀렸습니다.");
+                btnDel.disabled = false; btnDel.innerText = "🗑 이 거래 삭제";
+                return;
+            }
+        } catch(e) {
+            alert("비밀번호 확인 실패: " + e.message);
+            btnDel.disabled = false; btnDel.innerText = "🗑 이 거래 삭제";
+            return;
+        }
+
+        btnDel.innerText = "삭제 중...";
+        try {
+            const db = window._firestoreDb;
+            const { doc, deleteDoc } = window._firestoreApi;
+            await deleteDoc(doc(db, "investments", _editDocId));
+            alert("삭제되었습니다.\n(스프레드시트는 다음 자동 동기화 때 반영됩니다)");
+            closeEditModal();
+            localStorage.removeItem(CACHE_KEY);
+            localStorage.removeItem(CACHE_TIME_KEY);
+            location.reload();
+        } catch(err) {
+            alert("삭제 실패: " + err.message);
+            btnDel.disabled = false; btnDel.innerText = "🗑 이 거래 삭제";
+        }
     }
 
     async function saveEditTransaction() {
@@ -7257,7 +7299,7 @@
   import { initializeApp }   from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
   import { getAnalytics }    from "https://www.gstatic.com/firebasejs/12.12.0/firebase-analytics.js";
   import {
-    getFirestore, doc, getDoc, setDoc, updateDoc,
+    getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc,
     collection, addDoc, query, where, getDocs, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 
@@ -7279,7 +7321,7 @@
   window._firestoreDb  = db;
   window._firestoreApi = {
     collection, addDoc, query, where, getDocs,
-    doc, getDoc, setDoc, updateDoc, serverTimestamp
+    doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp
   };
 
   window.loginGroup = async function() {
