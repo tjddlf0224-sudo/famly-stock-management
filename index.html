@@ -2113,8 +2113,18 @@
                 const db = window._firestoreDb;
                 const { doc, getDoc } = window._firestoreApi;
 
-                // 현재가 캐시 조회
-                const priceSnap = await getDoc(doc(db, "cache", "prices"));
+                // 캐시 7종 병렬 조회 (직렬 await 7회 → 1회 왕복으로 단축)
+                const [priceSnap, marketSnap, perfSnap, assetHistSnap, maSnap, stockListSnap, econSnap] = await Promise.all([
+                    getDoc(doc(db, "cache", "prices")),
+                    getDoc(doc(db, "cache", "marketdata")),
+                    getDoc(doc(db, "cache", "performance")),
+                    getDoc(doc(db, "cache", "assethistory")),
+                    getDoc(doc(db, "cache", "marketanalysis")),
+                    getDoc(doc(db, "cache", "stocklist")),
+                    getDoc(doc(db, "cache", "econdata")),
+                ]);
+
+                // 현재가 캐시
                 if (priceSnap.exists()) {
                     const pd = priceSnap.data();
                     pricesObj      = JSON.parse(pd.prices || '{}');
@@ -2122,20 +2132,17 @@
                     CURRENT_EXCHANGE_RATE = currentUsdRate;
                 }
 
-                // MarketData 캐시 조회
-                const marketSnap = await getDoc(doc(db, "cache", "marketdata"));
+                // MarketData 캐시
                 if (marketSnap.exists()) {
                     marketRows = JSON.parse(marketSnap.data().market || '[]');
                 }
 
-                // 성과분석 캐시 조회
-                const perfSnap = await getDoc(doc(db, "cache", "performance"));
+                // 성과분석 캐시
                 if (perfSnap.exists()) {
                     gasData.performance = JSON.parse(perfSnap.data().performance || '[]');
                 }
 
-                // ★ 자산기록 캐시 조회 (단순방식 차트용)
-                const assetHistSnap = await getDoc(doc(db, "cache", "assethistory"));
+                // ★ 자산기록 캐시 (단순방식 차트용)
                 if (assetHistSnap.exists()) {
                     window._ASSET_HISTORY = JSON.parse(assetHistSnap.data().data || '[]');
                     // 업데이트 시간 저장
@@ -2146,21 +2153,19 @@
                     }
                 }
 
-                // ★ 시장분석(market_analysis) 캐시 조회
-                const maSnap = await getDoc(doc(db, "cache", "marketanalysis"));
+                // ★ 시장분석(market_analysis) 캐시
                 if (maSnap.exists()) {
                     gasData.marketAnalysis = JSON.parse(maSnap.data().data || 'null');
                 }
 
-                // stockList/stockListUs 캐시 조회
-                const stockListSnap = await getDoc(doc(db, "cache", "stocklist"));
+                // stockList/stockListUs 캐시
                 if (stockListSnap.exists()) {
                     const sl = stockListSnap.data();
                     gasData.stockList   = JSON.parse(sl.stockList   || '[]');
                     gasData.stockListUs = JSON.parse(sl.stockListUs || '[]');
                 }
 
-                const econSnap = await getDoc(doc(db, "cache", "econdata"));
+                // 경제지표 캐시
                 if (econSnap.exists()) {
                     gasData.econData = JSON.parse(econSnap.data().data || 'null');
                 }
