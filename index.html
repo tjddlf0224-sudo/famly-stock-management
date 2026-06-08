@@ -3559,9 +3559,9 @@
             createdAt: new Date()
         };
 
-        let gasOk = false, dbOk = false;
-
-        // ① Firestore 저장
+        // Firestore에만 저장 (단일 진실원본). 스프레드시트는 GAS 일일 루틴이
+        // rebuildLedgerFromFirestore로 자동 동기화하므로 저장 시 GAS 호출 불필요.
+        let dbOk = false;
         try {
             const db = window._firestoreDb;
             const { collection, addDoc } = window._firestoreApi;
@@ -3571,38 +3571,13 @@
             console.error("Firestore 저장 실패:", err);
         }
 
-        // ② GAS(스프레드시트) 저장
-        try {
-            const gasPayload = {
-                authKey: CHART_GAS_AUTH,
-                who:     txData.who,
-                date:    txData.date,
-                ticker:  txData.ticker,
-                name:    txData.name,
-                type:    txData.type,
-                qty:     txData.qty,
-                price:   txData.price,
-                fxRate:  txData.fxRate,
-                memo:    txData.memo
-            };
-            const gasRes = await fetch(CHART_GAS_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(gasPayload)
-            });
-            gasOk = true;
-        } catch (err) {
-            console.error("GAS 저장 실패:", err);
-        }
-
         if (dbOk) {
-            alert(gasOk ? "저장되었습니다!" : "DB 저장 완료 (스프레드시트 저장 실패 — 나중에 수동 확인 필요)");
+            alert("저장되었습니다!");
             localStorage.removeItem(CACHE_KEY);
             localStorage.removeItem(CACHE_TIME_KEY);
             location.reload();
         } else {
-            alert("저장 실패: DB에 저장되지 않았습니다. 다시 시도해주세요.");
+            alert("저장 실패: 다시 시도해주세요.");
             btn.innerText = "거래 저장"; btn.disabled = false;
         }
     }
