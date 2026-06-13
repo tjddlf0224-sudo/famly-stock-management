@@ -4572,14 +4572,16 @@
         let curPriceLabelY = null; // 겹침 방지용
         if (visible.length > 0) {
             const lastCandle = visible[visible.length - 1];
-            const curPrice = lastCandle.c;
+            // 캔들 데이터가 시가/종가 반대로 저장돼 있어(색상 보정용) 실제 현재가는 o 필드에 있음
+            const curPrice = lastCandle.o;
             if (curPrice >= yMin && curPrice <= yMax) {
                 const curY = toY(curPrice);
                 const isKorea = chartCurrentTicker && /^\d{6}$/.test(chartCurrentTicker);
                 const priceLabel = isKorea
                     ? Math.round(curPrice).toLocaleString()
                     : '$' + Number(curPrice).toFixed(2);
-                const isUp = lastCandle.c >= lastCandle.o;
+                // 캔들 본체 색상 로직(o >= c = 상승)과 동일하게 맞춤
+                const isUp = lastCandle.o >= lastCandle.c;
                 const labelColor = isUp ? upColor : downColor;
                 ctx.font = 'bold 10px -apple-system, sans-serif';
                 const lw = ctx.measureText(priceLabel).width;
