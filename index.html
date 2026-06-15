@@ -1484,6 +1484,7 @@
         <button class="btn-primary" id="aiAnalysisBtn" onclick="runAiAnalysis()">
           📊 AI 분석 시작
         </button>
+        <button onclick="aiSetupKeys()" style="width:100%;margin-top:8px;padding:10px;background:none;border:1px solid var(--border-color);border-radius:10px;font-size:12px;color:var(--text-sub);cursor:pointer;">🔑 AI 키 설정 (Gemini·ChatGPT·Claude 3종 교차검증)</button>
       </div>
       <div class="card" id="aiApiKeyCard">
         <div style="font-size:14px;font-weight:600;margin-bottom:8px;">🔑 Gemini API 키 설정</div>
@@ -1537,6 +1538,7 @@
         <button class="btn-primary" id="saAnalysisBtn" onclick="runStockAnalysis()">
           🔬 종목 분석 시작
         </button>
+        <button onclick="aiSetupKeys()" style="width:100%;margin-top:8px;padding:10px;background:none;border:1px solid var(--border-color);border-radius:10px;font-size:12px;color:var(--text-sub);cursor:pointer;">🔑 AI 키 설정 (Gemini·ChatGPT·Claude 3종 교차검증)</button>
       </div>
       <div class="card" id="saApiKeyCard">
         <div style="font-size:14px;font-weight:600;margin-bottom:8px;">🔑 Gemini API 키 설정</div>
@@ -6512,8 +6514,155 @@
     // ═══════════════════════════════════════
     //  AI 매매분석  v3
     // ═══════════════════════════════════════
-    var AI_KEY_ST    = 'ai_api_key_v1';
+    var AI_KEY_ST    = 'ai_api_key_v1';        // Gemini 키 (기존)
     var AI_CACHE_ST  = 'ai_result_cache_v1';  // {user, date, html}
+    var OPENAI_KEY_ST = 'openai_api_key_v1';   // ChatGPT 키
+    var CLAUDE_KEY_ST = 'claude_api_key_v1';   // Claude 키
+
+    // ── 멀티 AI 앙상블 ──────────────────────────────────────────
+    // 모델 ID — 본인이 쓰는 모델로 바꾸려면 여기만 수정
+    var AI_MODELS = {
+        gemini: 'gemini-2.5-flash-lite',
+        openai: 'gpt-4o',          // 예: gpt-4.1, gpt-5 등으로 변경 가능
+        claude: 'claude-opus-4-8'
+    };
+    var AI_PROVIDER_LABEL = { gemini: 'Gemini', openai: 'ChatGPT', claude: 'Claude' };
+
+    function _aiGetKeys() {
+        return {
+            gemini: localStorage.getItem(AI_KEY_ST) || '',
+            openai: localStorage.getItem(OPENAI_KEY_ST) || '',
+            claude: localStorage.getItem(CLAUDE_KEY_ST) || ''
+        };
+    }
+    function _aiHasAnyKey() { var k = _aiGetKeys(); return !!(k.gemini || k.openai || k.claude); }
+
+    // 3종 키 설정 (prompt 기반 — 개인용)
+    function aiSetupKeys() {
+        var k = _aiGetKeys();
+        function mask(v) { return v ? (v.slice(0,6) + '…(' + v.length + '자)') : '(미설정)'; }
+        function ask(label, cur, st) {
+            var v = prompt(label + '\n현재: ' + mask(cur) + '\n\n• 새 키 입력 = 변경\n• 빈칸 = 그대로\n• "delete" = 삭제', '');
+            if (v === null) return;
+            v = v.trim();
+            if (v === 'delete') localStorage.removeItem(st);
+            else if (v) localStorage.setItem(st, v);
+        }
+        ask('① Gemini API 키 (AIza...)', k.gemini, AI_KEY_ST);
+        ask('② ChatGPT(OpenAI) API 키 (sk-...)', k.openai, OPENAI_KEY_ST);
+        ask('③ Claude(Anthropic) API 키 (sk-ant-...)', k.claude, CLAUDE_KEY_ST);
+        var n = _aiGetKeys();
+        alert('AI 키 상태\nGemini: ' + (n.gemini?'✅':'❌') + '\nChatGPT: ' + (n.openai?'✅':'❌') + '\nClaude: ' + (n.claude?'✅':'❌'));
+        if (typeof _aiRefreshKeyCard === 'function') _aiRefreshKeyCard();
+        if (typeof _saRefreshKeyCard === 'function') _saRefreshKeyCard();
+    }
+
+    // 단일 provider 호출 → 텍스트(실패 시 throw)
+    async function _aiCallProvider(provider, promptText, maxTokens) {
+        maxTokens = maxTokens || 4096;
+        var keys = _aiGetKeys();
+        if (provider === 'gemini') {
+            if (!keys.gemini) throw new Error('Gemini 키 없음');
+            var r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + AI_MODELS.gemini + ':generateContent?key=' + keys.gemini, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }], generationConfig: { maxOutputTokens: maxTokens } })
+            });
+            if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + (await r.text()).slice(0,140));
+            var j = await r.json();
+            var t = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts && j.candidates[0].content.parts[0] && j.candidates[0].content.parts[0].text;
+            if (!t) throw new Error('빈 응답');
+            return t;
+        }
+        if (provider === 'openai') {
+            if (!keys.openai) throw new Error('OpenAI 키 없음');
+            var r2 = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + keys.openai },
+                body: JSON.stringify({ model: AI_MODELS.openai, max_tokens: maxTokens, messages: [{ role: 'user', content: promptText }] })
+            });
+            if (!r2.ok) throw new Error('HTTP ' + r2.status + ': ' + (await r2.text()).slice(0,140));
+            var j2 = await r2.json();
+            var t2 = j2.choices && j2.choices[0] && j2.choices[0].message && j2.choices[0].message.content;
+            if (!t2) throw new Error('빈 응답');
+            return t2;
+        }
+        if (provider === 'claude') {
+            if (!keys.claude) throw new Error('Claude 키 없음');
+            var r3 = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-api-key': keys.claude, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+                body: JSON.stringify({ model: AI_MODELS.claude, max_tokens: maxTokens, messages: [{ role: 'user', content: promptText }] })
+            });
+            if (!r3.ok) throw new Error('HTTP ' + r3.status + ': ' + (await r3.text()).slice(0,140));
+            var j3 = await r3.json();
+            var blk = j3.content && j3.content.find(function(b){ return b.type === 'text'; });
+            if (!blk || !blk.text) throw new Error('빈 응답');
+            return blk.text;
+        }
+        throw new Error('알 수 없는 provider');
+    }
+
+    // 가용 provider 전부 병렬 분석
+    async function _aiEnsemble(promptText, maxTokens) {
+        var keys = _aiGetKeys();
+        var providers = ['gemini','openai','claude'].filter(function(p){ return keys[p]; });
+        if (providers.length === 0) throw new Error('NO_KEY');
+        var settled = await Promise.allSettled(providers.map(function(p){ return _aiCallProvider(p, promptText, maxTokens); }));
+        return providers.map(function(p, i){
+            var s = settled[i];
+            return { provider: p, label: AI_PROVIDER_LABEL[p], ok: s.status === 'fulfilled',
+                     text: s.status === 'fulfilled' ? s.value : ('⚠️ 분석 실패: ' + (s.reason && s.reason.message ? s.reason.message : s.reason)) };
+        });
+    }
+
+    // 성공한 답변들의 공통점/차이 종합 (claude>openai>gemini 우선 모델이 정리)
+    async function _aiConsensus(results, topic) {
+        var ok = results.filter(function(r){ return r.ok; });
+        if (ok.length <= 1) return null;
+        var combined = ok.map(function(r){ return '【' + r.label + ' 분석】\n' + r.text; }).join('\n\n──────────\n\n');
+        var p = '아래는 동일한 "' + topic + '"에 대해 서로 다른 AI(' + ok.map(function(r){ return r.label; }).join(', ') + ')가 내놓은 분석입니다.\n\n'
+            + combined + '\n\n'
+            + '이 분석들을 비교하여 한국어로 정리하세요:\n\n'
+            + '## 🤝 공통 결론\n여러 AI가 일치해서 지적한 핵심을 신뢰도 높은 순으로.\n\n'
+            + '## ⚖️ 엇갈리는 의견\nAI마다 다르게 본 부분과 어느 쪽이 더 타당한지 근거와 함께.\n\n'
+            + '## 🎯 종합 제언\n공통점 기반의 실질적 결론.\n\n'
+            + '주의: 특정 종목의 회사/사업을 단정하기 어려우면 추측하지 말고 "식별 불확실"로 표기하세요.';
+        var keys = _aiGetKeys();
+        var agg = keys.claude ? 'claude' : (keys.openai ? 'openai' : 'gemini');
+        try { return { label: AI_PROVIDER_LABEL[agg], text: await _aiCallProvider(agg, p, 6000) }; }
+        catch(e){ return { label: AI_PROVIDER_LABEL[agg], text: '⚠️ 종합 실패: ' + e.message }; }
+    }
+
+    // 경량 마크다운 → HTML
+    function _aiMd(text) {
+        return String(text)
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+            .replace(/^#{3}\s*(.*)$/gm,'<div style="font-weight:700;margin:12px 0 4px;">$1</div>')
+            .replace(/^#{2}\s*(.*)$/gm,'<div style="font-weight:700;font-size:15px;margin:16px 0 6px;">$1</div>')
+            .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+            .replace(/^\s*[-*]\s+(.*)$/gm,'&nbsp;• $1')
+            .replace(/\n/g,'<br>');
+    }
+
+    // 앙상블 결과 렌더 (종합 + 모델별 접이식) + 캐시 저장
+    function _aiRenderEnsemble(target, results, consensus, resultElId, cacheKey) {
+        var el = document.getElementById(resultElId);
+        if (!el) return;
+        var okCount = results.filter(function(r){ return r.ok; }).length;
+        var html = '';
+        if (consensus) {
+            html += '<div class="card" style="border:2px solid var(--primary,#007AFF);">'
+                + '<div style="font-weight:700;font-size:15px;margin-bottom:8px;">🤝 ' + okCount + '개 AI 종합 <span style="font-size:11px;color:var(--text-sub);font-weight:400;">(' + consensus.label + ' 정리)</span></div>'
+                + '<div style="font-size:13px;line-height:1.7;color:var(--text-main);">' + _aiMd(consensus.text) + '</div></div>';
+        }
+        results.forEach(function(r){
+            html += '<details class="card" ' + (consensus ? '' : 'open') + '>'
+                + '<summary style="cursor:pointer;font-weight:700;font-size:14px;list-style:none;">' + (r.ok ? '🟢' : '🔴') + ' ' + r.label + ' 분석 <span style="font-size:11px;color:var(--text-sub);font-weight:400;">(펼치기)</span></summary>'
+                + '<div style="font-size:13px;line-height:1.7;color:var(--text-main);margin-top:10px;">' + _aiMd(r.text) + '</div></details>';
+        });
+        el.style.display = 'block';
+        el.innerHTML = html;
+        try { localStorage.setItem(cacheKey, JSON.stringify({ user: target, date: new Date().toISOString(), html: html })); } catch(e){}
+    }
 
     function renderAiAnalysisTab() {
         _aiInitSelect();
@@ -6612,12 +6761,7 @@
 
     // 분석 실행
     async function runAiAnalysis() {
-        var key = localStorage.getItem(AI_KEY_ST);
-        if (!key) {
-            var card = document.getElementById('aiApiKeyCard');
-            if (card) { card.style.display = 'block'; card.scrollIntoView({behavior:'smooth'}); }
-            return;
-        }
+        if (!_aiHasAnyKey()) { aiSetupKeys(); if (!_aiHasAnyKey()) return; }
         var sel = document.getElementById('aiUserSelect');
         var target = sel ? sel.value : currentUser;
         var logs = (typeof RAW_DATA !== 'undefined' ? RAW_DATA : []);
@@ -6629,48 +6773,28 @@
 
         var btn = document.getElementById('aiAnalysisBtn');
         var resultEl = document.getElementById('aiAnalysisResult');
+        var nKeys = ['gemini','openai','claude'].filter(function(p){ return _aiGetKeys()[p]; }).length;
         btn.disabled = true;
         btn.textContent = '⏳ 분석 중...';
         resultEl.style.display = 'block';
         resultEl.innerHTML = '<div class="card" style="text-align:center;padding:36px 20px;">'
             + '<div style="font-size:32px;margin-bottom:14px;">⏳</div>'
-            + '<div style="font-size:14px;font-weight:600;margin-bottom:6px;">Gemini AI가 분석 중입니다</div>'
-            + '<div style="font-size:12px;color:var(--text-sub);">매매 패턴·신호·전략을 진단합니다<br>약 10~20초 소요됩니다</div>'
+            + '<div style="font-size:14px;font-weight:600;margin-bottom:6px;">' + nKeys + '개 AI가 교차 분석 중입니다</div>'
+            + '<div style="font-size:12px;color:var(--text-sub);">각 AI가 독립 분석 후 공통점을 종합합니다<br>약 30초~1분 소요됩니다</div>'
             + '</div>';
 
         var summary = _aiBuildSummary(trades);
         var prompt  = _aiBuildPrompt(summary, target);
 
         try {
-            var resp = await fetch(
-                'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=' + key,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        generationConfig: { maxOutputTokens: 8192 }
-                    })
-                }
-            );
-            if (!resp.ok) {
-                var errBody = await resp.json().catch(function() { return {}; });
-                var msg = (errBody.error && errBody.error.message) || ('HTTP ' + resp.status);
-                throw new Error(msg);
-            }
-            var data = await resp.json();
-            var text = (data.candidates && data.candidates[0] &&
-                        data.candidates[0].content && data.candidates[0].content.parts &&
-                        data.candidates[0].content.parts[0] &&
-                        data.candidates[0].content.parts[0].text) || '';
-            _aiRenderResult(text, target);
+            var results = await _aiEnsemble(prompt, 8192);
+            var consensus = await _aiConsensus(results, '주식 매매 패턴 분석');
+            _aiRenderEnsemble(target, results, consensus, 'aiAnalysisResult', AI_CACHE_ST);
         } catch(err) {
-            resultEl.innerHTML = '<div class="card" style="border-left:3px solid var(--up);padding:16px;">'
+            if (err.message === 'NO_KEY') { aiSetupKeys(); resultEl.style.display = 'none'; }
+            else resultEl.innerHTML = '<div class="card" style="border-left:3px solid var(--up);padding:16px;">'
                 + '<div style="font-weight:600;color:var(--up);margin-bottom:8px;">❌ 오류 발생</div>'
-                + '<div style="font-size:13px;color:var(--text-sub);">' + err.message + '</div>'
-                + '<div style="font-size:12px;color:var(--text-sub);margin-top:8px;">'
-                + 'API 키를 확인하거나 잠시 후 다시 시도해주세요.</div>'
-                + '</div>';
+                + '<div style="font-size:13px;color:var(--text-sub);">' + err.message + '</div></div>';
         } finally {
             btn.disabled = false;
             btn.textContent = '🔄 다시 분석';
@@ -7078,12 +7202,7 @@
 
     // 분석 실행
     async function runStockAnalysis() {
-        var key = localStorage.getItem(AI_KEY_ST);
-        if (!key) {
-            var card = document.getElementById('saApiKeyCard');
-            if (card) { card.style.display = 'block'; card.scrollIntoView({behavior:'smooth'}); }
-            return;
-        }
+        if (!_aiHasAnyKey()) { aiSetupKeys(); if (!_aiHasAnyKey()) return; }
         var sel = document.getElementById('saUserSelect');
         var target = sel ? sel.value : currentUser;
         var holdings = _saGetHoldings(target);
@@ -7092,47 +7211,27 @@
 
         var btn = document.getElementById('saAnalysisBtn');
         var resultEl = document.getElementById('saAnalysisResult');
+        var nKeys = ['gemini','openai','claude'].filter(function(p){ return _aiGetKeys()[p]; }).length;
         btn.disabled = true;
         btn.textContent = '⏳ 분석 중...';
         resultEl.style.display = 'block';
         resultEl.innerHTML = '<div class="card" style="text-align:center;padding:36px 20px;">'
             + '<div style="font-size:32px;margin-bottom:14px;">⏳</div>'
-            + '<div style="font-size:14px;font-weight:600;margin-bottom:6px;">보유 종목 분석 중입니다</div>'
-            + '<div style="font-size:12px;color:var(--text-sub);">각 종목의 현황을 분석하고 행동 추천을 생성합니다<br>약 15~30초 소요됩니다</div>'
+            + '<div style="font-size:14px;font-weight:600;margin-bottom:6px;">' + nKeys + '개 AI가 교차 분석 중입니다</div>'
+            + '<div style="font-size:12px;color:var(--text-sub);">각 AI가 독립 분석 후 공통점을 종합합니다<br>약 30초~1분 소요됩니다</div>'
             + '</div>';
 
         var prompt = _saBuildPrompt(holdings, target);
 
         try {
-            var resp = await fetch(
-                'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=' + key,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        generationConfig: { maxOutputTokens: 8192 }
-                    })
-                }
-            );
-            if (!resp.ok) {
-                var errBody = await resp.json().catch(function() { return {}; });
-                var msg = (errBody.error && errBody.error.message) || ('HTTP ' + resp.status);
-                throw new Error(msg);
-            }
-            var data = await resp.json();
-            var text = (data.candidates && data.candidates[0] &&
-                        data.candidates[0].content && data.candidates[0].content.parts &&
-                        data.candidates[0].content.parts[0] &&
-                        data.candidates[0].content.parts[0].text) || '';
-            _saRenderResult(text, target, holdings);
+            var results = await _aiEnsemble(prompt, 8192);
+            var consensus = await _aiConsensus(results, '보유 주식 포트폴리오 분석');
+            _aiRenderEnsemble(target, results, consensus, 'saAnalysisResult', SA_CACHE_ST);
         } catch(err) {
-            resultEl.innerHTML = '<div class="card" style="border-left:3px solid var(--up);padding:16px;">'
+            if (err.message === 'NO_KEY') { aiSetupKeys(); resultEl.style.display = 'none'; }
+            else resultEl.innerHTML = '<div class="card" style="border-left:3px solid var(--up);padding:16px;">'
                 + '<div style="font-weight:600;color:var(--up);margin-bottom:8px;">❌ 오류 발생</div>'
-                + '<div style="font-size:13px;color:var(--text-sub);">' + err.message + '</div>'
-                + '<div style="font-size:12px;color:var(--text-sub);margin-top:8px;">'
-                + 'API 키를 확인하거나 잠시 후 다시 시도해주세요.</div>'
-                + '</div>';
+                + '<div style="font-size:13px;color:var(--text-sub);">' + err.message + '</div></div>';
         } finally {
             btn.disabled = false;
             btn.textContent = '🔄 다시 분석';
@@ -7143,6 +7242,12 @@
         function fmtKRW(n) { return Math.round(n).toLocaleString() + '원'; }
         function fmtRate(r) { return (r >= 0 ? '+' : '') + r.toFixed(2) + '%'; }
 
+        // ★ 그라운딩: 미국 종목은 티커만으로 추측 금지 → STOCK_LIST_US의 공식 회사명을 주입
+        function usName(ticker) {
+            if (typeof STOCK_LIST_US === 'undefined') return '';
+            var hit = STOCK_LIST_US.find(function(s){ return String(s.ticker).toUpperCase() === String(ticker).toUpperCase(); });
+            return hit ? hit.name : '';
+        }
         var lines = Object.values(holdings).map(function(h) {
             var avgStr  = h.avgKRW > 0 ? fmtKRW(h.avgKRW) : '정보없음';
             var curStr  = h.curKRW > 0 ? fmtKRW(h.curKRW) : '정보없음';
@@ -7150,13 +7255,17 @@
             var profStr = h.evalAmt > 0 ? (fmtKRW(h.profit) + ' (' + fmtRate(h.rate) + ')') : '정보없음';
             var todayStr = h.changePct !== 0 ? fmtRate(h.changePct) : '0.00%';
             var market = h.isKorea ? '국내' : '해외';
-            return '- ' + h.name + ' [' + market + '] 수량:' + h.qty
+            // 종목 식별 라벨: 국내=종목명, 해외=티커(공식회사명)
+            var label = h.isKorea ? h.name : (h.ticker + (usName(h.ticker) ? ' (' + usName(h.ticker) + ')' : ''));
+            return '- ' + label + ' [' + market + '] 수량:' + h.qty
                 + ' 평균단가:' + avgStr + ' 현재가:' + curStr
                 + ' 평가금액:' + evalStr + ' 손익:' + profStr + ' 당일변동:' + todayStr;
         });
 
         return '아래는 ' + user + '의 현재 보유 주식 포트폴리오입니다.\n\n'
             + '=== 보유 종목 현황 ===\n' + lines.join('\n') + '\n\n'
+            + '⚠️ 종목 식별 주의: 위 괄호 안 회사명이 그 티커의 정확한 회사입니다. 반드시 이 회사명 기준으로 분석하세요. '
+            + '회사명이 없거나 그 회사를 잘 모르면 사업 내용을 추측하지 말고 "회사 식별 불확실"이라고 명시하세요. (예: 티커만 보고 다른 회사로 오인하지 말 것)\n\n'
             + '위 보유 종목 각각에 대해 아래 형식으로 한국어로 분석해주세요.\n'
             + '현재가/손익 데이터 외에 각 종목의 최근 업황, 섹터 동향, 밸류에이션 등 일반 투자 지식을 활용하여 실질적인 의견을 주세요.\n\n'
             + '각 종목마다 반드시 아래 4가지를 포함해주세요:\n'
