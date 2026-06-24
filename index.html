@@ -6650,11 +6650,12 @@
                 }
                 var errBody = await resp.json().catch(function() { return {}; });
                 lastErr = new Error((errBody.error && errBody.error.message) || ('HTTP ' + resp.status));
+                if (resp.status === 404) { break; }             // 모델 미존재/중지 → 재시도 말고 다음 모델로 폴백
                 if (RETRIABLE[resp.status]) {                   // 과부하 → 재시도 후 폴백
                     if (attempt < 2) { await sleep(700 * Math.pow(2, attempt)); continue; }
                     break;                                      // 재시도 소진 → 다음 모델
                 }
-                throw lastErr;                                  // 400/401/403 등 → 즉시 실패(폴백 무의미)
+                throw lastErr;                                  // 400/401/403 등 → 즉시 실패(키·요청오류, 폴백 무의미)
             }
         }
         throw lastErr || new Error('AI 응답을 받지 못했습니다.');
