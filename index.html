@@ -6611,6 +6611,55 @@
     }
 
     // 분석 실행
+    // ===== Gemini 호출 공용 헬퍼: 과부하(503/429) 자동 재시도 + 모델 폴백 =====
+    // 반환: 응답 텍스트(string). 실패 시 throw.
+    async function _geminiGenerate(key, prompt, maxTokens) {
+        var MODELS = ['gemini-2.5-flash-lite', 'gemini-2.0-flash-lite', 'gemini-2.0-flash'];
+        var RETRIABLE = { 429:1, 500:1, 502:1, 503:1 };  // 과부하/일시오류만 재시도
+        var sleep = function(ms){ return new Promise(function(r){ setTimeout(r, ms); }); };
+        var lastErr = null;
+
+        for (var mi = 0; mi < MODELS.length; mi++) {
+            for (var attempt = 0; attempt < 3; attempt++) {
+                var resp = null, netErr = null;
+                try {
+                    resp = await fetch(
+                        'https://generativelanguage.googleapis.com/v1beta/models/' + MODELS[mi] + ':generateContent?key=' + key,
+                        {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                contents: [{ parts: [{ text: prompt }] }],
+                                generationConfig: { maxOutputTokens: maxTokens || 8192 }
+                            })
+                        }
+                    );
+                } catch (e) { netErr = e; }
+
+                if (netErr) {                                   // 네트워크 예외 → 재시도
+                    lastErr = netErr;
+                    if (attempt < 2) { await sleep(700 * Math.pow(2, attempt)); continue; }
+                    break;                                      // 다음 모델로 폴백
+                }
+                if (resp.ok) {
+                    var data = await resp.json();
+                    return (data.candidates && data.candidates[0] &&
+                            data.candidates[0].content && data.candidates[0].content.parts &&
+                            data.candidates[0].content.parts[0] &&
+                            data.candidates[0].content.parts[0].text) || '';
+                }
+                var errBody = await resp.json().catch(function() { return {}; });
+                lastErr = new Error((errBody.error && errBody.error.message) || ('HTTP ' + resp.status));
+                if (RETRIABLE[resp.status]) {                   // 과부하 → 재시도 후 폴백
+                    if (attempt < 2) { await sleep(700 * Math.pow(2, attempt)); continue; }
+                    break;                                      // 재시도 소진 → 다음 모델
+                }
+                throw lastErr;                                  // 400/401/403 등 → 즉시 실패(폴백 무의미)
+            }
+        }
+        throw lastErr || new Error('AI 응답을 받지 못했습니다.');
+    }
+
     async function runAiAnalysis() {
         var key = localStorage.getItem(AI_KEY_ST);
         if (!key) {
@@ -6642,27 +6691,7 @@
         var prompt  = _aiBuildPrompt(summary, target);
 
         try {
-            var resp = await fetch(
-                'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=' + key,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        generationConfig: { maxOutputTokens: 8192 }
-                    })
-                }
-            );
-            if (!resp.ok) {
-                var errBody = await resp.json().catch(function() { return {}; });
-                var msg = (errBody.error && errBody.error.message) || ('HTTP ' + resp.status);
-                throw new Error(msg);
-            }
-            var data = await resp.json();
-            var text = (data.candidates && data.candidates[0] &&
-                        data.candidates[0].content && data.candidates[0].content.parts &&
-                        data.candidates[0].content.parts[0] &&
-                        data.candidates[0].content.parts[0].text) || '';
+            var text = await _geminiGenerate(key, prompt, 8192);
             _aiRenderResult(text, target);
         } catch(err) {
             resultEl.innerHTML = '<div class="card" style="border-left:3px solid var(--up);padding:16px;">'
@@ -7104,27 +7133,7 @@
         var prompt = _saBuildPrompt(holdings, target);
 
         try {
-            var resp = await fetch(
-                'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=' + key,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        generationConfig: { maxOutputTokens: 8192 }
-                    })
-                }
-            );
-            if (!resp.ok) {
-                var errBody = await resp.json().catch(function() { return {}; });
-                var msg = (errBody.error && errBody.error.message) || ('HTTP ' + resp.status);
-                throw new Error(msg);
-            }
-            var data = await resp.json();
-            var text = (data.candidates && data.candidates[0] &&
-                        data.candidates[0].content && data.candidates[0].content.parts &&
-                        data.candidates[0].content.parts[0] &&
-                        data.candidates[0].content.parts[0].text) || '';
+            var text = await _geminiGenerate(key, prompt, 8192);
             _saRenderResult(text, target, holdings);
         } catch(err) {
             resultEl.innerHTML = '<div class="card" style="border-left:3px solid var(--up);padding:16px;">'
