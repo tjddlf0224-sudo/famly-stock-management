@@ -6730,25 +6730,56 @@
     }
 
     function _aiBuildSummary(trades) {
-        // REALIZED_EVENTS 기반으로 정확한 실현손익 계산
-        var byName = {};
+        // ★ 종목코드(ticker) 기준 집계 — 증권사마다 종목명이 달라도 코드로 합산(TQQQ 등 분리 방지)
+        var norm = function(t) {
+            t = String(t || '').trim().toUpperCase();
+            if (/^\d{1,5}$/.test(t)) t = t.padStart(6, '0');   // 국내 5자리 이하 → 6자리 코드
+            return t;
+        };
+        var isKR = function(t) { return /^\d{6}$/.test(t) || /^\d+[A-Z]$/.test(t); };
+        // 미국 종목 공식 회사명(그라운딩): 티커→정식명
+        var usName = function(ticker) {
+            if (typeof STOCK_LIST_US === 'undefined') return '';
+            var hit = STOCK_LIST_US.find(function(s){ return norm(s.ticker) === norm(ticker); });
+            return hit ? hit.name : '';
+        };
+
+        var byTicker = {};
+        var ensure = function(code, dispName) {
+            if (!byTicker[code]) byTicker[code] = { ticker: code, name: dispName || code, pnl: 0, sc: 0, bc: 0 };
+            else if (dispName && (byTicker[code].name === code || !byTicker[code].name)) byTicker[code].name = dispName;
+            return byTicker[code];
+        };
+
+        // 실현손익 (REALIZED_EVENTS) — 코드 기준
         if (typeof REALIZED_EVENTS !== 'undefined') {
             REALIZED_EVENTS.forEach(function(e) {
                 if (e.type === '배당') return;
-                var name = e.name || e.ticker || '알수없음';
-                if (!byName[name]) byName[name] = { name: name, pnl: 0, sc: 0, bc: 0 };
-                byName[name].pnl += e.profit || 0;
-                byName[name].sc++;
+                var code = norm(e.ticker || e.name);
+                if (!code) return;
+                var it = ensure(code, e.name);
+                it.pnl += e.profit || 0;
+                it.sc++;
             });
         }
-        // 매수 횟수는 거래내역에서
+        // 매수 횟수 (거래내역) — 코드 기준
         trades.forEach(function(r) {
-            var name = String(r[3] || r[2] || '').trim() || '알수없음';
-            var type = r[4];
-            if (type === '매수') {
-                if (!byName[name]) byName[name] = { name: name, pnl: 0, sc: 0, bc: 0 };
-                byName[name].bc++;
+            if (String(r[4]).trim() !== '매수') return;
+            var code = norm(r[2] || r[3]);
+            if (!code) return;
+            ensure(code, String(r[3] || '').trim()).bc++;
+        });
+
+        // 표시 라벨: 국내=종목명(코드), 해외=코드(공식회사명) — AI가 종목을 정확히 식별하도록
+        var labelOf = {};
+        Object.values(byTicker).forEach(function(t) {
+            if (isKR(t.ticker)) {
+                t.label = (t.name && t.name !== t.ticker ? t.name : t.ticker) + ' (' + t.ticker + ')';
+            } else {
+                var off = usName(t.ticker);
+                t.label = t.ticker + (off ? ' (' + off + ')' : '');
             }
+            labelOf[t.ticker] = t.label;
         });
 
         var journals = trades
@@ -6756,39 +6787,64 @@
             .slice(-150)
             .map(function(r) {
                 var d = r[1] ? String(r[1]).slice(0,10) : '';
-                return '[' + d + '][' + (r[3]||r[2]||'') + '][' + r[4] + '] ' + String(r[8]).trim();
+                var code = norm(r[2] || r[3]);
+                var lab = labelOf[code] || code || String(r[3] || '');
+                return '[' + d + '][' + lab + '][' + r[4] + '] ' + String(r[8]).trim();
             });
-        var pnl = Object.values(byName)
+        var pnl = Object.values(byTicker)
             .filter(function(t) { return t.sc > 0; })
             .sort(function(a,b) { return b.pnl - a.pnl; });
         return { pnl: pnl, journals: journals, total: trades.length };
     }
 
     function _aiBuildPrompt(s, user) {
-        function fmt(n) { return (n >= 0 ? '+' : '') + Math.round(n/10000) + '만'; }
-        var top = s.pnl.slice(0,6).map(function(t) {
-            return '  ' + t.name + ': ' + fmt(t.pnl) + ' (매수' + t.bc + '/매도' + t.sc + ')';
-        }).join('\n');
-        var bot = s.pnl.slice(-5).map(function(t) {
-            return '  ' + t.name + ': ' + fmt(t.pnl) + ' (매수' + t.bc + '/매도' + t.sc + ')';
-        }).join('\n');
-        return '아래는 ' + user + '의 실제 주식 매매일지 데이터입니다.\n\n'
-            + '=== 매매 요약 ===\n총 매매: ' + s.total + '건\n\n'
-            + '손익 상위:\n' + top + '\n\n손익 하위:\n' + bot + '\n\n'
-            + '=== 매매일지 ===\n' + s.journals.join('\n') + '\n\n'
-            + '위 매매 데이터를 깊이 있게 분석해주세요. 종목명과 구체적 수치를 반드시 포함하고, 매매일지의 감정/실수 기록도 적극 반영해주세요.\\n\\n'
-            + '## ✅ 잘한 점\\n'
-            + '수익을 낸 종목, 좋은 타이밍, 올바른 판단 등 구체적으로 3~4가지.\\n'
-            + '종목명과 수익금액을 포함해 상세히 설명하세요.\\n\\n'
-            + '## ❌ 아쉬운 점\\n'
-            + '손실 종목, 잘못된 타이밍, 감정적 매매, 실수 등 3~4가지.\\n'
-            + '종목명·손실금액·어떤 실수였는지 구체적으로 설명하세요.\\n\\n'
-            + '## 💭 매매일지 감정 분석\\n'
-            + '매매일지에 나타난 감정 패턴(공포, 탐욕, 조급함 등)과 그로 인한 실수를 분석해주세요.\\n\\n'
-            + '## 📊 매매 패턴 진단\\n'
-            + '반복되는 매매 습관, 종목 선택 기준, 보유 기간, 손절/익절 패턴 등을 진단해주세요.\\n\\n'
-            + '## 🎯 개선 방향\\n'
-            + '위 분석을 바탕으로 실질적인 개선 방향 3가지를 구체적으로 제시해주세요.';
+        function fmt(n) { return (n >= 0 ? '+' : '') + Math.round(n/10000) + '만원'; }
+        var line = function(t) {
+            return '  - ' + t.label + ' : 실현손익 ' + fmt(t.pnl) + ' (매수 ' + t.bc + '회 / 매도 ' + t.sc + '회)';
+        };
+        var top = s.pnl.slice(0, 6).map(line).join('\n');
+        var bot = s.pnl.slice(-5).map(line).join('\n');
+
+        return [
+            '당신은 신중하고 정직한 한국어 투자 코치입니다. 아래는 ' + user + '의 실제 주식 매매 기록입니다.',
+            '종목은 증권사마다 이름이 달라 코드(괄호 안)로 집계했습니다. 같은 코드는 같은 종목입니다.',
+            '',
+            '=== 매매 요약 (종목코드 기준) ===',
+            '총 매매 건수: ' + s.total + '건',
+            '',
+            '실현손익 상위:',
+            top || '  (실현된 손익 없음)',
+            '',
+            '실현손익 하위:',
+            bot || '  (실현된 손익 없음)',
+            '',
+            '=== 매매일지 메모 ===',
+            s.journals.length ? s.journals.join('\n') : '(기록된 메모 없음)',
+            '',
+            '──────────────────────────',
+            '## 🚫 반드시 지킬 규칙 (어기면 분석 실패로 간주)',
+            '1. 위에 주어진 데이터(숫자·종목·메모)에 있는 사실만 쓰세요. 데이터에 없는 거래·금액·날짜·종목·뉴스를 절대 지어내지 마세요.',
+            '2. 손익 금액은 위 표의 값을 그대로 인용하세요. 직접 계산하거나 어림짐작으로 바꾸지 마세요. 값이 없으면 "데이터 없음"이라고 쓰세요.',
+            '3. 종목은 위 괄호 안 코드/회사명으로만 식별하세요. 코드가 가리키는 회사를 잘 모르면 사업내용을 추측하지 말고 "회사 식별 불확실"이라고 명시하세요.',
+            '4. 확신이 없으면 단정하지 말고 "추정"이라고 밝히세요. 모르면 모른다고 솔직히 쓰세요 — 그럴듯한 거짓말보다 정직한 "불확실"이 훨씬 낫습니다.',
+            '5. 매매일지 메모는 인용해도 되지만, 적혀 있지 않은 감정·동기를 상상해서 덧붙이지 마세요.',
+            '',
+            '## 작성 형식 (한국어 마크다운, 각 항목에 실제 종목·수치 인용)',
+            '## ✅ 잘한 점',
+            '실제로 수익을 낸 종목과 좋은 판단 3~4가지. 종목과 실현손익 금액을 위 데이터에서 그대로 인용해 설명.',
+            '',
+            '## ❌ 아쉬운 점',
+            '손실 종목·잘못된 타이밍·감정적 매매 3~4가지. 종목·손실금액·무엇이 문제였는지 데이터 근거로 설명.',
+            '',
+            '## 💭 매매일지 감정 분석',
+            '메모에 실제로 드러난 감정 패턴(공포·탐욕·조급함 등)만 분석. 메모가 적으면 "메모가 부족해 분석이 제한적"이라고 솔직히 밝히세요.',
+            '',
+            '## 📊 매매 패턴 진단',
+            '반복되는 매매 습관·종목 선택 기준·보유 기간·손절/익절 패턴을 데이터 범위 안에서 진단.',
+            '',
+            '## 🎯 개선 방향',
+            '위 분석에 근거한 실질적 개선책 3가지. 일반론 말고 이 사람의 실제 매매 패턴에 맞춘 조언으로.'
+        ].join('\n');
     }
 
     function _aiRenderResult(text, user) {
