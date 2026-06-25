@@ -2230,6 +2230,36 @@
                 console.warn("fearGreed 조회 실패:", e.message);
             }
 
+            // ★ 신규 매수 등으로 cache/prices에 아직 없는 보유 종목은 실시간 시세 온디맨드 보강
+            //   (거래 저장이 Firestore 전용 → 새 종목은 다음 일일루틴 전까지 현재가 시트에 없어 0% 표시되던 문제)
+            try {
+                const heldQty = {};
+                logs.forEach(r => {
+                    let t = String(r[2] || '').trim().toUpperCase();
+                    if (/^\d{1,5}$/.test(t)) t = t.padStart(6, '0');
+                    if (!t) return;
+                    const type = String(r[4] || '').trim();
+                    const q = Number(r[5]) || 0;
+                    if (['매수', '액면분할입고', '입고'].includes(type)) heldQty[t] = (heldQty[t] || 0) + q;
+                    else if (['매도', '액면분할출고', '출고'].includes(type)) heldQty[t] = (heldQty[t] || 0) - q;
+                });
+                const missing = Object.keys(heldQty).filter(t => heldQty[t] > 0.000001 && !pricesObj[t]);
+                if (missing.length > 0) {
+                    const qUrl = `${CHART_GAS_URL}?authKey=${CHART_GAS_AUTH}&action=quotes&tickers=${encodeURIComponent(missing.join(','))}`;
+                    const qRes = await fetch(qUrl);
+                    const qText = await qRes.text();
+                    if (!qText.trim().startsWith("<")) {
+                        const quotes = (JSON.parse(qText).quotes) || {};
+                        Object.keys(quotes).forEach(t => {
+                            const v = quotes[t];
+                            if (v && v.price) pricesObj[t] = { price: v.price, changePct: v.changePct, prevClose: v.prevClose };
+                        });
+                    }
+                }
+            } catch (e) {
+                console.warn("신규 종목 실시간 시세 보강 실패:", e.message);
+            }
+
             const pricesFinal = Object.entries(pricesObj).map(([ticker, v]) => [ticker, v.price, v.changePct, v.prevClose]);
 
             const data = {
