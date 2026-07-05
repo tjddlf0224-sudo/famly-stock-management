@@ -553,6 +553,7 @@
     <div class="card">
         <h3>오늘의 자산</h3>
         <div class="big-text" id="totalAsset">0원</div>
+        <canvas id="assetSparkline" width="300" height="40" style="width:100%;height:40px;display:none;margin:2px 0 10px;"></canvas>
         <div class="flex-row"><span class="sub-text">총 손익</span><span id="totalProfit" class="up">0원 (0%)</span></div>
         <div class="flex-row"><span class="sub-text">오늘 손익</span><span id="todayProfit" class="up">0원 (0%)</span></div>
         <div class="divider"></div>
@@ -775,8 +776,12 @@
                 <button onclick="filterHistory()" style="flex: 1; padding: 10px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: bold;">조회</button>
                 <button onclick="resetHistory()" style="flex: 1; padding: 10px; background: #999; color: white; border: none; border-radius: 8px; font-weight: bold;">초기화</button>
             </div>
+            <div id="historyTypeChips" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
         </div>
-        <div id="historyList"><p style="text-align:center; color:#999;">데이터 불러오는 중...</p></div>
+        <div id="historyList"><p style="text-align:center; color:var(--text-sub);">데이터 불러오는 중...</p></div>
+        <div id="historyMoreWrap" style="display:none; margin-top:12px; text-align:center;">
+            <button onclick="loadMoreHistory()" style="width:100%; padding:10px; background:var(--bg); color:var(--text-main); border:1px solid var(--border-color); border-radius:8px; font-weight:bold; cursor:pointer;">더보기</button>
+        </div>
     </div>
 </div>
 
@@ -1808,6 +1813,13 @@
     function showLoading() { const l = document.getElementById('loader'); if (l) l.style.display = 'flex'; }
     function hideLoading() { const l = document.getElementById('loader'); if (l) l.style.display = 'none'; }
 
+    // ★ SHA-256 해시 (WebCrypto) — 그룹/관리자 비밀번호 평문 저장 완화용
+    async function sha256Hex(str) {
+        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(str)));
+        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+    window.sha256Hex = sha256Hex; // module 스크립트(loginGroup)에서도 사용
+
     // ★ tryLogin 제거 — 그룹 로그인은 Firebase module 스크립트의 window.loginGroup()으로 처리
 
     document.addEventListener('DOMContentLoaded', function() {
@@ -2111,7 +2123,8 @@
                 window._firestoreDocMap[key] = d._docId;
             });
 
-            const memberSet = new Set(logs.map(r => r[0]).filter(Boolean));
+            // ★ '가족 전체'/'그룹 전체'는 실제 구성원이 아니므로 멤버 목록에서 제외 (4933·4971줄과 동일 규칙)
+            const memberSet = new Set(logs.map(r => r[0]).filter(n => n && n !== '가족 전체' && n !== '그룹 전체'));
             if (memberSet.size > 0) updateMemberSelectors([...memberSet]);
 
             // ★ 현재가/시장데이터는 Firestore cache에서 먼저 조회, 없으면 GAS fallback
@@ -2332,6 +2345,11 @@
                     else stats[user].cashKRW += price; break;
                 case "잔고수정":
                     stats[user].cashUSD += qty; stats[user].cashKRW += price; break;
+                // ★ 환전: price=달러금액, fx=환전환율 (onTypeChange/submitTransaction 규약)
+                case "환전매입":
+                    stats[user].cashKRW -= price * fx; stats[user].cashUSD += price; break;
+                case "환전매도":
+                    stats[user].cashUSD -= price; stats[user].cashKRW += price * fx; break;
                 case "입고": case "액면분할입고":
                     stats[user].holdings[ticker] = (stats[user].holdings[ticker] || 0) + qty; break;
                 case "출고": case "액면분할출고":
@@ -2362,13 +2380,13 @@
         ['userSelect', 'inputUser'].forEach(id => {
             const el = document.getElementById(id);
             if (!el) return;
+            const prevValue = el.value; // ★ 갱신 전 선택값 (보존용)
             el.innerHTML = '';
             if (id === 'userSelect') {
-                // ★ 그룹 전체를 항상 첫 번째 + 기본 선택
+                // ★ 그룹 전체를 항상 첫 번째
                 const allOpt = document.createElement('option');
                 allOpt.value = '가족 전체';
                 allOpt.textContent = '그룹 전체';
-                allOpt.selected = true;
                 el.appendChild(allOpt);
             }
             members.forEach(m => {
@@ -2376,12 +2394,16 @@
                 opt.value = m; opt.textContent = m;
                 el.appendChild(opt);
             });
-            // userSelect는 항상 가족 전체로, inputUser는 첫 번째 멤버로
+            // ★ 기존 선택 보존 — 목록에 더 이상 없을 때만 기본값으로 리셋
             if (id === 'userSelect') {
-                el.value = '가족 전체';
-                currentUser = '가족 전체';
+                if (currentUser === '가족 전체' || members.includes(currentUser)) {
+                    el.value = currentUser;
+                } else {
+                    el.value = '가족 전체';
+                    currentUser = '가족 전체';
+                }
             } else if (id === 'inputUser' && members.length > 0) {
-                el.value = members[0];
+                el.value = members.includes(prevValue) ? prevValue : members[0];
             }
         });
     }
@@ -2459,7 +2481,8 @@
             let amount = price * qty * fx, amountOrigin = price * qty;
             let isTargetUser = (currentUser === '가족 전체' || name === currentUser);
             if (isTargetUser) {
-                userLogs.push({ date, ticker, name: logName, type, amount, price, qty, userName: name });
+                // ★ renderHistory는 배열 행(row) 포맷을 가정하므로 원본 행 그대로 저장
+                userLogs.push(row);
                 if (type === '입금') totalDeposit += price;
                 else if (type === '출금') totalWithdrawal += price;
             }
@@ -2535,6 +2558,7 @@
         let finalRate = totalDeposit === 0 ? 0 : (finalProfit / totalDeposit) * 100;
         window._totalFinalProfit = finalProfit; // 성과 메뉴 누적용
         const elAsset = document.getElementById('totalAsset'); if (elAsset) elAsset.innerText = Math.round(totalAsset).toLocaleString() + "원";
+        if (typeof renderAssetSparkline === 'function') renderAssetSparkline();
         const elProfit = document.getElementById('totalProfit');
         if (elProfit) { elProfit.innerText = `${Math.round(finalProfit).toLocaleString()}원 (${finalRate.toFixed(1)}%)`; elProfit.className = finalProfit >= 0 ? 'up' : 'down'; }
         const elTodayProfit = document.getElementById('todayProfit');
@@ -2556,7 +2580,8 @@
         balanceList.sort((a, b) => b.profit - a.profit);
         window._lastBalanceList = balanceList;  // 종목분석 탭에서 재활용
         if(typeof renderStockList === 'function') renderStockList(balanceList);
-        if(typeof renderHistory === 'function') renderHistory(userLogs.slice().reverse().slice(0, 20));
+        // ★ userLogs는 날짜 오름차순 그대로 전달 — 유형 필터·더보기 페이지네이션은 renderHistory 내부에서 처리
+        if(typeof renderHistory === 'function') renderHistory(userLogs);
         if(typeof renderBalanceTable === 'function') renderBalanceTable(balanceList.slice().sort((a,b) => b.profit - a.profit), totalAsset, totalCashValuation, myCashKRW, myCashUSD);
         if(typeof renderPerformanceTable === 'function') renderPerformanceTable();
         // _yearlyResults가 없으면 직접 계산 (renderPerformanceTable이 return했을 경우 대비)
@@ -2634,10 +2659,59 @@
         }, 300);
     }
 
+    // ── 홈 '오늘의 자산' 카드: 최근 3개월 자산 추이 미니 스파크라인 ──────────
+    // 추가 조회 없이 이미 로드된 window._ASSET_HISTORY(자산기록 캐시)만으로 렌더.
+    function renderAssetSparkline() {
+        const canvas = document.getElementById('assetSparkline'); if (!canvas) return;
+        const assetHist = window._ASSET_HISTORY || [];
+        const targetName = currentUser === '가족 전체' ? '가족 전체' : currentUser;
+        // row: [날짜, 이름, 자산, ...] — 날짜 오름차순 정렬 후 최근 3개월만 추출
+        const rows = assetHist
+            .filter(r => String(r[1]).trim() === targetName)
+            .map(r => ({ date: String(r[0]).substring(0,10), asset: Number(r[2]) || 0 }))
+            .filter(r => r.date && !isNaN(new Date(r.date).getTime()))
+            .sort((a,b) => a.date < b.date ? -1 : 1);
+        const cutoff = new Date(); cutoff.setMonth(cutoff.getMonth() - 3);
+        const cutoffStr = cutoff.getFullYear() + '-' + String(cutoff.getMonth()+1).padStart(2,'0') + '-' + String(cutoff.getDate()).padStart(2,'0');
+        const recent = rows.filter(r => r.date >= cutoffStr);
+
+        if (recent.length < 2) { canvas.style.display = 'none'; return; }
+        canvas.style.display = 'block';
+
+        const dpr = window.devicePixelRatio || 1;
+        const W = canvas.offsetWidth || 300, H = canvas.offsetHeight || 40;
+        canvas.width = W * dpr; canvas.height = H * dpr;
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, W, H);
+
+        const values = recent.map(r => r.asset);
+        const vMin = Math.min(...values), vMax = Math.max(...values);
+        const pad = 3;
+        const toX = i => (values.length <= 1) ? pad : pad + (i / (values.length - 1)) * (W - pad*2);
+        const toY = v => (vMax === vMin) ? H/2 : (H - pad) - ((v - vMin) / (vMax - vMin)) * (H - pad*2);
+
+        const isUpTrend = values[values.length-1] >= values[0];
+        const isDark = document.body.classList.contains('dark-mode') || (!document.body.classList.contains('light-mode') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        const lineColor = isUpTrend
+            ? (isDark ? '#FF453A' : '#FF3B30')
+            : (isDark ? '#0A84FF' : '#007AFF');
+
+        ctx.beginPath();
+        values.forEach((v, i) => { const x = toX(i), y = toY(v); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); });
+        ctx.strokeStyle = lineColor; ctx.lineWidth = 1.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+        ctx.stroke();
+
+        // 마지막 지점 점 찍기
+        const lastX = toX(values.length - 1), lastY = toY(values[values.length - 1]);
+        ctx.beginPath(); ctx.arc(lastX, lastY, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = lineColor; ctx.fill();
+    }
+
     function renderStockList(balanceList) {
         const listDiv = document.getElementById('stockList'); if (!listDiv) return;
         listDiv.innerHTML = '';
-        if (balanceList.length === 0) { listDiv.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">보유 종목이 없습니다.</p>'; return; }
+        if (balanceList.length === 0) { listDiv.innerHTML = '<p style="text-align:center; color:var(--text-sub); padding:20px;">보유 종목이 없습니다.</p>'; return; }
         balanceList.forEach(item => {
             let colorClass = item.profit >= 0 ? 'up' : 'down';
             let tSign = item.todayProfitAmt > 0 ? "+" : "";
@@ -2646,7 +2720,7 @@
             itemDiv.className = 'stock-item';
             itemDiv.style.cursor = 'pointer';
             itemDiv.onclick = () => openStockDetailModal(item);
-            itemDiv.innerHTML = `<div><div class="stock-name">${item.name}</div><div class="stock-ticker">${item.ticker}</div></div><div style="text-align:right;"><div class="stock-price" style="color:#333;">${Math.round(item.evalAmt).toLocaleString()}원</div><div class="stock-change ${colorClass}">${item.rate.toFixed(1)}% (${Math.round(item.profit).toLocaleString()}원)</div><div class="${tColorClass}" style="font-size:12px;margin-top:3px;font-weight:500;">오늘 ${tSign}${Math.round(item.todayProfitAmt).toLocaleString()}원 (${tSign}${item.changePct.toFixed(2)}%)</div></div>`;
+            itemDiv.innerHTML = `<div><div class="stock-name">${item.name}</div><div class="stock-ticker">${item.ticker}</div></div><div style="text-align:right;"><div class="stock-price" style="color:var(--text-main);">${Math.round(item.evalAmt).toLocaleString()}원</div><div class="stock-change ${colorClass}">${item.rate.toFixed(1)}% (${Math.round(item.profit).toLocaleString()}원)</div><div class="${tColorClass}" style="font-size:12px;margin-top:3px;font-weight:500;">오늘 ${tSign}${Math.round(item.todayProfitAmt).toLocaleString()}원 (${tSign}${item.changePct.toFixed(2)}%)</div></div>`;
             listDiv.appendChild(itemDiv);
         });
     }
@@ -2681,22 +2755,82 @@
         return y*10000+m*100+day;
     }
 
-    function renderHistory(customData = null) {
+    // ── 내역 탭: 유형 필터 + 페이지네이션 상태 ──────────────
+    // _historyBaseData: 현재 조회 범위(전체/기간조회)의 전체 로그(날짜 오름차순), 필터/더보기의 기준 데이터
+    // _historyTypeFilter: 'all' | '매수' | '매도' | '배당' | '환전'  ('환전'은 환전매입+환전매도 묶음)
+    // _historyShowCount: 현재 몇 건까지 보여주는지 (20건 단위 증가)
+    let _historyBaseData = null, _historyTypeFilter = 'all', _historyShowCount = 20;
+    const HISTORY_TYPE_CHIPS = [
+        { key: 'all',   label: '전체' },
+        { key: '매수',  label: '매수' },
+        { key: '매도',  label: '매도' },
+        { key: '배당',  label: '배당' },
+        { key: '환전',  label: '환전' },
+    ];
+
+    function _historyMatchesTypeFilter(row) {
+        if (_historyTypeFilter === 'all') return true;
+        const type = String(row[4] || '').trim();
+        if (_historyTypeFilter === '환전') return type === '환전매입' || type === '환전매도';
+        return type === _historyTypeFilter;
+    }
+
+    function renderHistoryTypeChips() {
+        const wrap = document.getElementById('historyTypeChips'); if (!wrap) return;
+        wrap.innerHTML = HISTORY_TYPE_CHIPS.map(c => {
+            const active = _historyTypeFilter === c.key;
+            return `<button onclick="setHistoryTypeFilter('${c.key}')" style="padding:6px 12px;border-radius:14px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid ${active ? 'var(--primary)' : 'var(--border-color)'};background:${active ? 'var(--primary)' : 'var(--card-bg)'};color:${active ? '#fff' : 'var(--text-sub)'};">${c.label}</button>`;
+        }).join('');
+    }
+
+    function setHistoryTypeFilter(key) {
+        _historyTypeFilter = key;
+        _historyShowCount = 20; // 유형을 바꾸면 표시 개수 초기화
+        renderHistory(_historyBaseData, { keepBase: true });
+    }
+
+    function loadMoreHistory() {
+        _historyShowCount += 20;
+        renderHistory(_historyBaseData, { keepBase: true });
+    }
+
+    // customData: null이면 기존 로직대로 RAW_DATA에서 currentUser 기준 최근분 사용.
+    //             배열이면 그 배열을 기준 데이터(날짜 오름차순 가정)로 사용.
+    // opts.keepBase: true면 _historyBaseData를 갱신하지 않고(칩 필터/더보기 재호출) 그대로 재사용.
+    function renderHistory(customData = null, opts = {}) {
         const listDiv = document.getElementById('historyList'); if (!listDiv) return;
         listDiv.innerHTML = '';
-        let dataToRender;
-        if (customData === null) {
-            dataToRender = RAW_DATA.filter(r => r[0] === currentUser).sort((a,b) => new Date(a[1])-new Date(b[1])).slice(-20).reverse();
-        } else { dataToRender = customData.slice().reverse(); }
-        if (!dataToRender || dataToRender.length === 0) { listDiv.innerHTML = '<div style="padding:20px;text-align:center;color:#999;">검색 결과가 없습니다.</div>'; return; }
+
+        if (!opts.keepBase) {
+            if (customData === null) {
+                _historyBaseData = RAW_DATA.filter(r => currentUser === '가족 전체' || r[0] === currentUser).sort((a,b) => new Date(a[1])-new Date(b[1]));
+            } else {
+                _historyBaseData = customData.slice();
+            }
+            _historyShowCount = 20;
+        }
+        renderHistoryTypeChips();
+
+        // 유형 필터 적용 (기준 데이터는 날짜 오름차순 유지)
+        const filteredBase = (_historyBaseData || []).filter(_historyMatchesTypeFilter);
+        const total = filteredBase.length;
+        const showCount = Math.min(_historyShowCount, total);
+        // 최신순으로 showCount건만 표시
+        const dataToRender = filteredBase.slice(Math.max(0, total - showCount)).reverse();
+
+        const moreWrap = document.getElementById('historyMoreWrap');
+        if (moreWrap) moreWrap.style.display = (total > showCount) ? 'block' : 'none';
+
+        if (!dataToRender || dataToRender.length === 0) { listDiv.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-sub);">검색 결과가 없습니다.</div>'; return; }
         dataToRender.forEach(row => {
             if (!row || row.length < 7) return;
             let dateRaw = safeParseDate(row[1]);
             let dateStr = dateRaw.getFullYear().toString().slice(2) + '.' + (dateRaw.getMonth()+1).toString().padStart(2,'0') + '.' + dateRaw.getDate().toString().padStart(2,'0');
             let ticker = row[2] || '', name = row[3] || '', type = row[4] || '';
             let qty = Number(row[5]) || 0, rawPrice = Number(row[6]) || 0, fx = Number(row[7]) || 0;
+            // ★ 숫자+영문 한국 티커(예: 04020K 금현물)도 한국 종목으로 인식 (processData의 isKorea 규칙과 동일)
             let isUS = false;
-            if (ticker && !/^\d{6}$/.test(ticker)) isUS = true;
+            if (ticker && !/^\d{6}$/.test(ticker) && !/^\d+[A-Z]$/i.test(ticker)) isUS = true;
             else if (!ticker && fx > 100) isUS = true;
             if (isUS && fx < 100) fx = (typeof CURRENT_EXCHANGE_RATE !== 'undefined') ? CURRENT_EXCHANGE_RATE : 1450;
             else if (!isUS) fx = 1;
@@ -2706,18 +2840,19 @@
             else if (type === '매도') badgeColor = 'var(--down)';
             else if (type === '배당') badgeColor = '#2ECC71';
             else if (type === '입금' || type === '출금') badgeColor = '#95a5a6';
+            else if (type === '환전매입' || type === '환전매도') badgeColor = '#AF52DE';
             let priceStr = Math.round(totalAmountKRW).toLocaleString();
             let qtyStr = qty > 0 ? `${qty}주` : '';
             let subPriceInfo = '';
-            if (isUS) { if (type === '매수' || type === '매도') subPriceInfo = `<span style="font-size:11px;color:#aaa;margin-left:4px;">($${rawPrice} / 환율 ${Math.round(fx)}원)</span>`; else subPriceInfo = `<span style="font-size:11px;color:#aaa;margin-left:4px;">($${rawPrice})</span>`; }
-            else if ((type === '매수' || type === '매도') && qty > 0) subPriceInfo = `<span style="font-size:11px;color:#aaa;margin-left:4px;">(${rawPrice.toLocaleString()}원)</span>`;
+            if (isUS) { if (type === '매수' || type === '매도') subPriceInfo = `<span style="font-size:11px;color:var(--text-sub);margin-left:4px;">($${rawPrice} / 환율 ${Math.round(fx)}원)</span>`; else subPriceInfo = `<span style="font-size:11px;color:var(--text-sub);margin-left:4px;">($${rawPrice})</span>`; }
+            else if ((type === '매수' || type === '매도') && qty > 0) subPriceInfo = `<span style="font-size:11px;color:var(--text-sub);margin-left:4px;">(${rawPrice.toLocaleString()}원)</span>`;
             let descHtml = '';
-            if(type === '입금' || type === '출금') descHtml = `<div class="stock-price" style="font-weight:bold;font-size:15px;">${priceStr}원</div>${isUS?`<div style="font-size:11px;color:#aaa;margin-top:2px;">($${rawPrice} / 환율 ${Math.round(fx)}원)</div>`:''}`;
-            else if (type === '배당') descHtml = `<div class="stock-price" style="font-weight:bold;color:#2ECC71;font-size:15px;">+${priceStr}원</div><div style="font-size:11px;color:#aaa;margin-top:2px;">(배당금) ${isUS?`$${rawPrice}`:''}</div>`;
-            else descHtml = `<div class="stock-price" style="font-weight:bold;font-size:15px;">${priceStr}원</div><div class="stock-change" style="color:#666;font-size:12px;margin-top:2px;">${qtyStr} ${subPriceInfo}</div>`;
+            if(type === '입금' || type === '출금') descHtml = `<div class="stock-price" style="font-weight:bold;font-size:15px;">${priceStr}원</div>${isUS?`<div style="font-size:11px;color:var(--text-sub);margin-top:2px;">($${rawPrice} / 환율 ${Math.round(fx)}원)</div>`:''}`;
+            else if (type === '배당') descHtml = `<div class="stock-price" style="font-weight:bold;color:#2ECC71;font-size:15px;">+${priceStr}원</div><div style="font-size:11px;color:var(--text-sub);margin-top:2px;">(배당금) ${isUS?`$${rawPrice}`:''}</div>`;
+            else descHtml = `<div class="stock-price" style="font-weight:bold;font-size:15px;">${priceStr}원</div><div class="stock-change" style="color:var(--text-sub);font-size:12px;margin-top:2px;">${qtyStr} ${subPriceInfo}</div>`;
             let itemDiv = document.createElement('div');
             itemDiv.className = 'stock-item';
-            itemDiv.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #eee;';
+            itemDiv.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border-color);';
             // ★ row를 전역 맵에 저장하고 docId로만 참조 (onclick에 JSON 직접 삽입 시 특수문자 깨짐 방지)
             const docKey = [row[1], row[0], row[2], row[4], row[5], row[6]].join('|');
             const docId = (window._firestoreDocMap && window._firestoreDocMap[docKey]) || null;
@@ -2728,7 +2863,7 @@
             const editBtnHtml = docId
                 ? `<button onclick="openEditModal('${docId}')" style="background:none;border:1px solid var(--border-color);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--text-sub);cursor:pointer;margin-top:4px;white-space:nowrap;">✏️ 수정</button>`
                 : '';
-            itemDiv.innerHTML = `<div style="display:flex;align-items:center;flex:1;min-width:0;margin-right:10px;"><div style="margin-right:8px;color:#999;font-size:11px;white-space:nowrap;flex-shrink:0;">${dateStr}</div><div style="flex:1;min-width:0;display:flex;align-items:center;"><div style="font-weight:bold;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;"><span class="badge" style="display:inline-block;vertical-align:middle;margin-right:6px;font-size:11px;padding:3px 6px;border-radius:4px;color:white;background:${badgeColor};">${type}</span><span style="vertical-align:middle;">${name}</span></div>${ticker?`<span style="font-size:12px;color:#888;margin-left:4px;white-space:nowrap;">(${ticker})</span>`:''}</div></div><div style="text-align:right;flex-shrink:0;">${descHtml}${editBtnHtml}</div>`;
+            itemDiv.innerHTML = `<div style="display:flex;align-items:center;flex:1;min-width:0;margin-right:10px;"><div style="margin-right:8px;color:var(--text-sub);font-size:11px;white-space:nowrap;flex-shrink:0;">${dateStr}</div><div style="flex:1;min-width:0;display:flex;align-items:center;"><div style="font-weight:bold;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;"><span class="badge" style="display:inline-block;vertical-align:middle;margin-right:6px;font-size:11px;padding:3px 6px;border-radius:4px;color:white;background:${badgeColor};">${type}</span><span style="vertical-align:middle;">${name}</span></div>${ticker?`<span style="font-size:12px;color:var(--text-sub);margin-left:4px;white-space:nowrap;">(${ticker})</span>`:''}</div></div><div style="text-align:right;flex-shrink:0;">${descHtml}${editBtnHtml}</div>`;
             listDiv.appendChild(itemDiv);
         });
     }
@@ -2739,21 +2874,24 @@
         if (!startVal || !endVal) { alert("시작 날짜와 종료 날짜를 모두 선택해주세요."); return; }
         const startNum = parseInt(startVal.replace(/-/g, '')), endNum = parseInt(endVal.replace(/-/g, ''));
         const filtered = RAW_DATA.filter(row => {
-            if (row[0] !== currentUser) return false;
+            if (currentUser !== '가족 전체' && row[0] !== currentUser) return false;
             let d = new Date(row[1]); if (isNaN(d)) return false;
             let rowNum = parseInt(`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`);
             return rowNum >= startNum && rowNum <= endNum;
         });
         if (filtered.length === 0) alert("해당 기간의 거래 내역이 없습니다.");
+        filtered.sort((a,b) => new Date(a[1])-new Date(b[1]));
+        _historyTypeFilter = 'all';
         renderHistory(filtered);
     }
 
     function resetHistory() {
         const startEl = document.getElementById('startDate'), endEl = document.getElementById('endDate');
         if (startEl) startEl.value = ''; if (endEl) endEl.value = '';
-        let myLogs = RAW_DATA.filter(r => r[0] === currentUser);
+        let myLogs = RAW_DATA.filter(r => currentUser === '가족 전체' || r[0] === currentUser);
         myLogs.sort((a,b) => new Date(a[1])-new Date(b[1]));
-        renderHistory(myLogs.slice(-20));
+        _historyTypeFilter = 'all';
+        renderHistory(myLogs);
     }
 
     function calculateYearlyProfit(perfData) {
@@ -2789,7 +2927,9 @@
         myLogs.forEach(row => {
             let dateObj2 = new Date(row[1]); if (isNaN(dateObj2)) return;
             let date = dateObj2.getFullYear() + '-' + String(dateObj2.getMonth()+1).padStart(2,'0') + '-' + String(dateObj2.getDate()).padStart(2,'0');
-            let year = dateObj2.getFullYear(), ticker = String(row[2]).trim(), name = String(row[3]).trim();
+            let year = dateObj2.getFullYear(), ticker = String(row[2]).trim().toUpperCase(), name = String(row[3]).trim();
+            // ★ 한국 티커 6자리 패딩 정규화 (processData와 동일 — 매수 '5930' vs 매도 '005930' 분리 방지)
+            if (/^\d{1,5}$/.test(ticker)) ticker = ticker.padStart(6, '0');
             let type = String(row[4]).trim(), qty = Number(row[5]), price = Number(row[6]);
             let fx = row[7] ? Number(row[7]) : 1;
             let calcQty = (type === '배당' && qty === 0) ? 1 : qty;
@@ -2941,9 +3081,9 @@
                     rateHtml = `<span style="font-size:11px;color:${rate >= 0 ? '#FF3B30' : '#007AFF'};">(${rate >= 0 ? '+' : ''}${rate.toFixed(1)}%)</span>`;
                 }
             }
-            return `<tr style="border-bottom:1px solid #eee;"><td style="padding:12px 8px;text-align:center;">${year}</td><td style="padding:12px 8px;text-align:right;" class="${color(totalProfit)}">${fmt(totalProfit)} ${rateHtml}</td><td style="padding:12px 8px;text-align:right;font-weight:bold;color:#333;">${fmt(realized)}</td></tr>`;
+            return `<tr style="border-bottom:1px solid var(--border-color);"><td style="padding:12px 8px;text-align:center;color:var(--text-main);">${year}</td><td style="padding:12px 8px;text-align:right;" class="${color(totalProfit)}">${fmt(totalProfit)} ${rateHtml}</td><td style="padding:12px 8px;text-align:right;font-weight:bold;color:var(--text-main);">${fmt(realized)}</td></tr>`;
         }).join('');
-        let tableHtml = `<div style="overflow-x:auto;margin-bottom:20px;border:1px solid #eee;border-radius:8px;"><table style="width:100%;font-size:13px;border-collapse:collapse;"><thead><tr style="background:#f8f9fa;border-bottom:2px solid #ddd;color:#555;"><th style="padding:10px;text-align:center;">기간</th><th style="padding:10px;text-align:right;">총손익</th><th style="padding:10px;text-align:right;">실현손익</th></tr></thead><tbody><tr style="background:#e8f4ff;border-bottom:2px solid #ccc;font-weight:bold;"><td style="padding:12px 8px;text-align:center;">전체</td><td style="padding:12px 8px;text-align:right;" class="${color(grandTotalProfit)}">${fmt(grandTotalProfit)}</td><td style="padding:12px 8px;text-align:right;color:#333;">${fmt(grandRealizedProfit)}</td></tr>${rowsHtml}</tbody></table></div><div id="detailContainer"></div>`;
+        let tableHtml = `<div style="overflow-x:auto;margin-bottom:20px;border:1px solid var(--border-color);border-radius:8px;"><table style="width:100%;font-size:13px;border-collapse:collapse;"><thead><tr style="background:var(--bg);border-bottom:2px solid var(--border-color);color:var(--text-sub);"><th style="padding:10px;text-align:center;">기간</th><th style="padding:10px;text-align:right;">총손익</th><th style="padding:10px;text-align:right;">실현손익</th></tr></thead><tbody><tr style="background:var(--bg);border-bottom:2px solid var(--border-color);font-weight:bold;"><td style="padding:12px 8px;text-align:center;color:var(--text-main);">전체</td><td style="padding:12px 8px;text-align:right;" class="${color(grandTotalProfit)}">${fmt(grandTotalProfit)}</td><td style="padding:12px 8px;text-align:right;color:var(--text-main);">${fmt(grandRealizedProfit)}</td></tr>${rowsHtml}</tbody></table></div><div id="detailContainer"></div>`;
         if (listDiv) listDiv.innerHTML = tableHtml;
         const yearSelect = document.getElementById('yearSelect');
         if (yearSelect) {
@@ -2971,22 +3111,22 @@
         const selectedValue = yearSelect.value;
         const headerTitle = selectedValue === 'all' ? "전체 매도 상세 내역" : `${selectedValue}년 매도 상세 내역`;
         const detailDiv = document.createElement('div');
-        detailDiv.innerHTML = `<div style="margin-top:20px;font-weight:bold;font-size:14px;margin-bottom:10px;border-bottom:2px solid #333;padding-bottom:5px;color:#333;">📄 ${headerTitle}</div>`;
+        detailDiv.innerHTML = `<div style="margin-top:20px;font-weight:bold;font-size:14px;margin-bottom:10px;border-bottom:2px solid var(--text-main);padding-bottom:5px;color:var(--text-main);">📄 ${headerTitle}</div>`;
         container.appendChild(detailDiv);
         const filteredEvents = REALIZED_EVENTS.filter(item => {
             if (item.type !== '매도') return false;
             if (selectedValue === 'all') return true;
             return String(item.date).substring(0,4) == selectedValue;
         }).sort((a,b) => String(b.date) > String(a.date) ? 1 : -1);
-        if (filteredEvents.length === 0) { let emptyDiv = document.createElement('div'); emptyDiv.innerHTML = `<div style="text-align:center;padding:30px;color:#999;font-size:13px;">매도 기록이 없습니다.</div>`; container.appendChild(emptyDiv); return; }
+        if (filteredEvents.length === 0) { let emptyDiv = document.createElement('div'); emptyDiv.innerHTML = `<div style="text-align:center;padding:30px;color:var(--text-sub);font-size:13px;">매도 기록이 없습니다.</div>`; container.appendChild(emptyDiv); return; }
         filteredEvents.forEach(item => {
             let isProfit = item.profit >= 0;
-            let profitColor = isProfit ? '#ff3b30' : '#007aff';
+            let profitColor = isProfit ? 'var(--up)' : 'var(--down)';
             let profitSign = isProfit ? '+' : '';
             let dateStr = String(item.date).substring(0, 10);
             let itemDiv = document.createElement('div');
             itemDiv.className = 'stock-item';
-            itemDiv.innerHTML = `<div style="width:100%;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;padding:12px 4px;border-bottom:1px solid #f0f0f0;"><div style="text-align:left;flex:1;"><div style="font-weight:bold;font-size:14px;color:#333;margin-bottom:3px;">${item.name}</div><div style="font-size:12px;color:#999;">${dateStr}</div></div><div style="text-align:right;flex-shrink:0;"><div style="font-weight:bold;font-size:14px;color:${profitColor};margin-bottom:3px;">${profitSign}${Math.round(item.profit).toLocaleString()}</div><div style="font-size:12px;color:${profitColor};">${item.returnRate.toFixed(1)}%</div></div></div>`;
+            itemDiv.innerHTML = `<div style="width:100%;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;padding:12px 4px;border-bottom:1px solid var(--border-color);"><div style="text-align:left;flex:1;"><div style="font-weight:bold;font-size:14px;color:var(--text-main);margin-bottom:3px;">${item.name}</div><div style="font-size:12px;color:var(--text-sub);">${dateStr}</div></div><div style="text-align:right;flex-shrink:0;"><div style="font-weight:bold;font-size:14px;color:${profitColor};margin-bottom:3px;">${profitSign}${Math.round(item.profit).toLocaleString()}</div><div style="font-size:12px;color:${profitColor};">${item.returnRate.toFixed(1)}%</div></div></div>`;
             container.appendChild(itemDiv);
         });
     }
@@ -3575,16 +3715,28 @@
         let tickerRaw = document.getElementById('inputTicker').value.trim().toUpperCase();
         if (/^\d{1,5}$/.test(tickerRaw)) tickerRaw = tickerRaw.padStart(6, '0');
 
+        // ★ 환율 처리: 라벨 약속("입력 안하면 자동")대로 미국 종목은 미입력 시 현재 환율 적용
+        const txType = document.getElementById('inputType').value;
+        let fxVal = Number(document.getElementById('inputFx').value) || 0;
+        if ((txType === '환전매입' || txType === '환전매도') && fxVal <= 0) {
+            alert("환전 환율을 입력해주세요. (필수)");
+            btn.innerText = "거래 저장"; btn.disabled = false; return;
+        }
+        if (fxVal <= 0) {
+            const isKoreanTicker = /^\d{6}$/.test(tickerRaw) || /^\d+[A-Z]$/.test(tickerRaw);
+            fxVal = (tickerRaw && !isKoreanTicker) ? CURRENT_EXCHANGE_RATE : 1;
+        }
+
         const txData = {
             groupId:  currentGroupId,
             who:      document.getElementById('inputUser').value,
             date:     document.getElementById('inputDate').value,
             ticker:   tickerRaw,
             name:     document.getElementById('inputName').value,
-            type:     document.getElementById('inputType').value,
+            type:     txType,
             qty:      Number(document.getElementById('inputQty').value) || 0,
             price:    Number(document.getElementById('inputPrice').value) || 0,
-            fxRate:   Number(document.getElementById('inputFx').value) || 1,
+            fxRate:   fxVal,
             memo:     document.getElementById('inputMemo').value,
             createdAt: new Date()
         };
@@ -3641,6 +3793,24 @@
         _editDocId = null;
     }
 
+    // ★ 관리자 비밀번호 검증 — SHA-256 해시 대조.
+    //    기존 평문(password) 문서는 일치 시 해시(passwordHash)로 자동 마이그레이션 후 평문 제거.
+    async function verifyAdminPassword(adminPw) {
+        const db = window._firestoreDb;
+        const { doc, getDoc, updateDoc, deleteField } = window._firestoreApi;
+        const adminSnap = await getDoc(doc(db, "admins", "config"));
+        if (!adminSnap.exists()) return false;
+        const data = adminSnap.data();
+        const hash = await sha256Hex(adminPw);
+        if (data.passwordHash) return data.passwordHash === hash;
+        if (data.password === adminPw) {
+            try { await updateDoc(doc(db, "admins", "config"), { passwordHash: hash, password: deleteField() }); }
+            catch (e) { console.warn("관리자 비밀번호 해시 마이그레이션 실패:", e); }
+            return true;
+        }
+        return false;
+    }
+
     async function deleteTransaction() {
         if (!_editDocId) { alert("삭제할 거래를 찾을 수 없습니다."); return; }
         const adminPw = document.getElementById('editAdminPw').value.trim();
@@ -3652,10 +3822,7 @@
 
         // 관리자 비밀번호 검증 (수정과 동일)
         try {
-            const db = window._firestoreDb;
-            const { doc, getDoc } = window._firestoreApi;
-            const adminSnap = await getDoc(doc(db, "admins", "config"));
-            if (!adminSnap.exists() || adminSnap.data().password !== adminPw) {
+            if (!(await verifyAdminPassword(adminPw))) {
                 alert("❌ 관리자 비밀번호가 틀렸습니다.");
                 btnDel.disabled = false; btnDel.innerText = "🗑 이 거래 삭제";
                 return;
@@ -3691,10 +3858,7 @@
 
         // Firestore에서 관리자 비밀번호 검증
         try {
-            const db = window._firestoreDb;
-            const { doc, getDoc } = window._firestoreApi;
-            const adminSnap = await getDoc(doc(db, "admins", "config"));
-            if (!adminSnap.exists() || adminSnap.data().password !== adminPw) {
+            if (!(await verifyAdminPassword(adminPw))) {
                 alert("❌ 관리자 비밀번호가 틀렸습니다.");
                 btnSave.disabled = false; btnSave.innerText = "수정 저장";
                 return;
@@ -3766,6 +3930,11 @@
     }
 
     function toggleCashEdit(type) {
+        // ★ '가족 전체' 뷰에서는 who='가족 전체' 유령 거래가 생기므로 구성원 선택을 요구
+        if (currentUser === '가족 전체') {
+            alert("가족 전체 상태에서는 예수금을 수정할 수 없습니다.\n상단에서 구성원을 먼저 선택해주세요.");
+            return;
+        }
         const wrap = document.getElementById('edit' + (type === 'krw' ? 'Krw' : 'Usd') + 'Wrap');
         if (!wrap) return;
         wrap.style.display = wrap.style.display === 'none' ? 'flex' : 'none';
@@ -3774,6 +3943,11 @@
 
     function closeCashEditModal() { document.getElementById('cashEditModal').style.display = 'none'; }
     async function saveCashEdit() {
+        // ★ 이중 방어: who='가족 전체' 잔고수정 거래 생성 차단
+        if (currentUser === '가족 전체') {
+            alert("가족 전체 상태에서는 예수금을 수정할 수 없습니다.\n상단에서 구성원을 먼저 선택해주세요.");
+            return;
+        }
         const realKRW = parseFloat(document.getElementById('edit-krw').value) || 0;
         const realUSD = parseFloat(document.getElementById('edit-usd').value) || 0;
         if (realKRW === 0 && realUSD === 0) { if (!confirm("원화와 달러 잔고를 모두 0원으로 수정하시겠습니까?")) return; }
@@ -3840,7 +4014,9 @@
     function renderChartList(query) {
         const listEl = document.getElementById('chartSearchList');
         if (!listEl) return;
-        const holdingSet = new Set(chartTickerMeta.filter(m => (typeof holdings !== 'undefined') && (holdings[m.ticker] || 0) > 0.000001).map(m => m.ticker));
+        // ★ [버그수정] 전역 holdings가 없어(각 함수 지역변수라 여기선 항상 undefined) holdingSet이 절대 채워지지 않던 문제.
+        //    buildTickerButtons()에서 채워둔 chartTickerMeta[].qty(보유수량)로 직접 판정.
+        const holdingSet = new Set(chartTickerMeta.filter(m => (m.qty || 0) > 0.000001).map(m => m.ticker));
         let list = query
             ? chartTickerMeta.filter(m => m.ticker.toLowerCase().includes(query) || (m.name||'').toLowerCase().includes(query))
             : chartTickerMeta.slice();
@@ -3978,7 +4154,8 @@
             let avgPrice = portfolio.qty > 0 ? portfolio.totalCost/portfolio.qty : 0;
             let nameRow = (typeof RAW_DATA !== 'undefined' ? RAW_DATA : []).find(r => String(r[2]).trim().toUpperCase() === ticker && r[3]);
             let name = nameRow ? String(nameRow[3]).trim() : ticker;
-            return { ticker, name, avgPrice, trades };
+            // ★ qty: 현재 보유수량 — renderChartList의 보유 배지/그룹핑 판정용 (미정의 전역 holdings 대신 사용)
+            return { ticker, name, avgPrice, trades, qty: portfolio.qty };
         });
         // 보유/매도 구분
         const holdingList = chartTickerMeta.filter(m => holdingTickers.has(m.ticker));
@@ -4555,7 +4732,8 @@
                 if (v >= 1e4) return (v/1e4).toFixed(1)+'만주';
                 return v.toLocaleString()+'주';
             };
-            const isUp = vd.c >= vd.o;
+            // ★ [버그수정] 캔들 몸통 판정(isUp = d.o >= d.c, 4612줄)과 반대로 되어 있어 종가 색상이 상승/하락 뒤바뀌던 문제 수정
+            const isUp = vd.o >= vd.c;
             const ohlcColor = isUp ? upColor : downColor;
             const lines = [
                 { label: '종가', value: fmt(vd.c) },
@@ -5683,13 +5861,16 @@
             if (updEl) updEl.textContent = '⚠️ MarketData F열(KOSPI_VOL) 데이터가 없습니다';
             if (valEl) valEl.textContent = '-';
             maSetBadge('maKospiVolBadge', '데이터 없음', '');
+            window._kospiVolMult = 1; // ★ 데이터 없으면 승수 중립
             return;
         }
 
         const cur = vols[vols.length - 1];
         // 20일 평균 (최대 20개, 당일 제외)
-        const window = vols.slice(Math.max(0, vols.length - 21), vols.length - 1);
-        const avg20 = window.length > 0 ? window.reduce((a,b)=>a+b,0) / window.length : cur;
+        // [버그수정] 지역변수명을 window→volWindow로 변경: 전역 window를 가려서 window._kospiVolMult 대입이
+        // (a) 데이터 부족 시 TDZ ReferenceError 크래시, (b) 정상 시 지역 배열에 써져 승수가 종합신호에 미반영되던 문제 해결
+        const volWindow = vols.slice(Math.max(0, vols.length - 21), vols.length - 1);
+        const avg20 = volWindow.length > 0 ? volWindow.reduce((a,b)=>a+b,0) / volWindow.length : cur;
         const ratio = avg20 > 0 ? Math.round((cur / avg20) * 1000) / 10 : 100;
 
         const _toMD = (v) => {
@@ -5700,24 +5881,25 @@
             return (kst.getUTCMonth()+1) + '/' + kst.getUTCDate();
         };
         const lastDate = _toMD(volRows[volRows.length-1][0]);
-        const dataCount = window.length;
+        const dataCount = volWindow.length;
 
         if (valEl) valEl.textContent = ratio.toFixed(1);
         if (updEl) updEl.textContent = `기준일: ${lastDate} · 평균 산출 ${dataCount}일치 (20일 목표)`;
 
         // 승수 결정
-        let mult, label, colorClass, thumbPct;
+        let mult, multNum, label, colorClass, thumbPct;
         if (ratio >= 150) {
-            mult='×1.15'; label='거래 폭증 — 신호 15% 강화'; colorClass='ma-hot'; thumbPct=95;
+            mult='×1.15'; multNum=1.15; label='거래 폭증 — 신호 15% 강화'; colorClass='ma-hot'; thumbPct=95;
         } else if (ratio >= 120) {
-            mult='×1.08'; label='거래 활발 — 신호 8% 강화'; colorClass='ma-warn'; thumbPct=75;
+            mult='×1.08'; multNum=1.08; label='거래 활발 — 신호 8% 강화'; colorClass='ma-warn'; thumbPct=75;
         } else if (ratio >= 85) {
-            mult='×1.00'; label='거래 정상 — 신호 변화 없음'; colorClass='ma-cool'; thumbPct=50;
+            mult='×1.00'; multNum=1.00; label='거래 정상 — 신호 변화 없음'; colorClass='ma-cool'; thumbPct=50;
         } else if (ratio >= 60) {
-            mult='×0.90'; label='거래 저조 — 신호 10% 약화'; colorClass='ma-fear'; thumbPct=25;
+            mult='×0.90'; multNum=0.90; label='거래 저조 — 신호 10% 약화'; colorClass='ma-fear'; thumbPct=25;
         } else {
-            mult='×0.78'; label='거래 침체 — 신호 22% 약화'; colorClass='ma-panic'; thumbPct=5;
+            mult='×0.78'; multNum=0.78; label='거래 침체 — 신호 22% 약화'; colorClass='ma-panic'; thumbPct=5;
         }
+        window._kospiVolMult = multNum; // ★ 종합신호(renderSignalBannerKR)에서 volApplied 지표 가중치 승수로 사용
 
         maSetCard('maKospiVolCard', colorClass);
         maSetBadge('maKospiVolBadge', `승수 ${mult}`, colorClass);
@@ -6092,10 +6274,19 @@
         const el005930=document.getElementById('maForeign005930'),el000660=document.getElementById('maForeign000660');
         if(el005930){el005930.textContent=ss?fmtNet(ss.net5d):'-';el005930.className='ma-foreigner-val '+(ss?colorNet(ss.net5d):'');}
         if(el000660){el000660.textContent=sk?fmtNet(sk.net5d):'-';el000660.className='ma-foreigner-val '+(sk?colorNet(sk.net5d):'');}
-        const ssBuy=ss&&Number(ss.net5d)>0,skBuy=sk&&Number(sk.net5d)>0,bothBuy=ssBuy&&skBuy,bothSell=!ssBuy&&!skBuy;
-        if(sigEl){if(bothBuy){sigEl.textContent='🟢 동반 순매수';sigEl.className='ma-net-buy';}else if(bothSell){sigEl.textContent='🔴 동반 순매도';sigEl.className='ma-net-sell';}else{sigEl.textContent='⚪ 혼조세';sigEl.style.color='var(--text-sub)';}}
-        maSetCard('maForeignCard',bothBuy?'ma-cool':(bothSell?'ma-hot':'ma-normal'));
-        maSetBadge('maForeignBadge',bothBuy?'🎯 동반매수':(bothSell?'⚠️ 동반매도':'혼조'),bothBuy?'ma-cool':(bothSell?'ma-hot':'ma-normal'));
+        // ★ null 인지 판정 — 점수 계산부(renderSignalBannerKR ⑤)와 동일 기준: 동반매수=둘 다 양수, 동반매도=둘 다 음수
+        const ssVal=(ss&&ss.net5d!==null&&ss.net5d!==undefined)?Number(ss.net5d):null;
+        const skVal=(sk&&sk.net5d!==null&&sk.net5d!==undefined)?Number(sk.net5d):null;
+        if(ssVal===null&&skVal===null){
+            if(sigEl){sigEl.textContent='-';sigEl.className='';sigEl.style.color='';}
+            maSetCard('maForeignCard','ma-normal');
+            maSetBadge('maForeignBadge','데이터없음','');
+        }else{
+            const bothBuy=ssVal!==null&&ssVal>0&&skVal!==null&&skVal>0,bothSell=ssVal!==null&&ssVal<0&&skVal!==null&&skVal<0;
+            if(sigEl){if(bothBuy){sigEl.textContent='🟢 동반 순매수';sigEl.className='ma-net-buy';sigEl.style.color='';}else if(bothSell){sigEl.textContent='🔴 동반 순매도';sigEl.className='ma-net-sell';sigEl.style.color='';}else{sigEl.textContent='⚪ 혼조세';sigEl.className='';sigEl.style.color='var(--text-sub)';}}
+            maSetCard('maForeignCard',bothBuy?'ma-cool':(bothSell?'ma-hot':'ma-normal'));
+            maSetBadge('maForeignBadge',bothBuy?'🎯 동반매수':(bothSell?'⚠️ 동반매도':'혼조'),bothBuy?'ma-cool':(bothSell?'ma-hot':'ma-normal'));
+        }
         if(updEl){const dates=[ss&&ss.updated,sk&&sk.updated].filter(Boolean);updEl.textContent='업데이트: '+fmtDateSlash(dates[0]||'-');}
     }
     function renderADRatio(data){
@@ -6163,6 +6354,7 @@
         // ★ v61: 6개 지표 가중 평균 종합 신호
         // 점수 0~100: 높을수록 강세/과열, 낮을수록 약세/바닥권
         // 가중치: 20일선25% | RSI20% | 52주위치20% | VKOSPI15% | 외국인수급12% | 신용잔고8%
+        // (20일선·RSI·52주·외국인 수급 4개는 거래량 신뢰도 승수를 가중치에 곱해 실시간 조절)
 
         const maData = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA)
                        ? (LAST_FETCHED_DATA.marketAnalysis || null) : null;
@@ -6171,37 +6363,42 @@
         const kRows  = market.filter(r => Number(r[3]) > 0);
         const kClose = kRows.map(r => Number(r[3]));
 
+        // ★ 거래량 신뢰도 승수 — 설명 모달 약속대로 volApplied 지표(20일선·RSI·52주·외국인 수급)의
+        //    가중치를 실시간으로 조절. renderKospiVol()이 먼저 실행되어 window._kospiVolMult를 채움.
+        const volMult = (typeof window._kospiVolMult === 'number' && isFinite(window._kospiVolMult) && window._kospiVolMult > 0)
+                        ? window._kospiVolMult : 1;
+
         let weightedSum = 0, weightTotal = 0, signals = [];
 
-        // ① 20일선 위/아래 (가중치 25) — 위=강세(100), 아래=약세(0)
+        // ① 20일선 위/아래 (가중치 25 × 거래량 승수) — 위=강세(100), 아래=약세(0)
         if (kClose.length >= 20) {
             const ma20 = calcMA(kClose, 20);
             const cur  = kClose[kClose.length - 1];
             if (ma20 !== null) {
                 const s = cur >= ma20 ? 100 : 0;
-                weightedSum += s * 25; weightTotal += 25;
+                weightedSum += s * 25 * volMult; weightTotal += 25 * volMult;
                 signals.push(cur >= ma20 ? '20일선 위✅' : '20일선 아래🔴');
             }
         }
 
-        // ② RSI(14) (가중치 20) — 선형 매핑: RSI 그대로 0~100점
+        // ② RSI(14) (가중치 20 × 거래량 승수) — 선형 매핑: RSI 그대로 0~100점
         if (kClose.length >= 15) {
             const rsiObj = calcRSI(kClose, 14);
             if (rsiObj && rsiObj.rsi !== null) {
                 const rsi = rsiObj.rsi;
                 // RSI 50 기준 중립, 70+ 과열, 30- 과매도
                 // 점수 = RSI 값 그대로 (0~100)
-                weightedSum += rsi * 20; weightTotal += 20;
+                weightedSum += rsi * 20 * volMult; weightTotal += 20 * volMult;
                 if (rsi >= 70) signals.push('RSI 과매수⚠️');
                 else if (rsi <= 30) signals.push('RSI 과매도🎯');
             }
         }
 
-        // ③ 52주 위치 (가중치 20) — 위치% 그대로 점수화
+        // ③ 52주 위치 (가중치 20 × 거래량 승수) — 위치% 그대로 점수화
         if (kClose.length >= 50) {
             const w52 = calc52Week(kClose);
             if (w52 && w52.pct !== null) {
-                weightedSum += w52.pct * 20; weightTotal += 20;
+                weightedSum += w52.pct * 20 * volMult; weightTotal += 20 * volMult;
                 if (w52.pct >= 80) signals.push('52주고점권⚠️');
                 else if (w52.pct <= 15) signals.push('52주저점권🎯');
             }
@@ -6219,7 +6416,7 @@
             else if (v >= 40) signals.push('VKOSPI 공포(' + v.toFixed(0) + ')');
         }
 
-        // ⑤ 외국인 수급 — 삼성+하이닉스 (가중치 12)
+        // ⑤ 외국인 수급 — 삼성+하이닉스 (가중치 12 × 거래량 승수)
         if (maData && maData.foreign) {
             const ss = maData.foreign['005930'], sk = maData.foreign['000660'];
             const ssVal = ss && ss.net5d !== null ? Number(ss.net5d) : null;
@@ -6229,7 +6426,7 @@
                 const bothSell = ssVal !== null && ssVal < 0 && skVal !== null && skVal < 0;
                 // 동반매수=100, 혼조=50, 동반매도=0
                 const s = bothBuy ? 100 : bothSell ? 0 : 50;
-                weightedSum += s * 12; weightTotal += 12;
+                weightedSum += s * 12 * volMult; weightTotal += 12 * volMult;
                 if (bothBuy)  signals.push('외국인 동반매수📈');
                 else if (bothSell) signals.push('외국인 동반매도📉');
             }
@@ -6745,7 +6942,7 @@
             + '<div style="font-size:12px;color:var(--text-sub);">매매 패턴·신호·전략을 진단합니다<br>약 10~20초 소요됩니다</div>'
             + '</div>';
 
-        var summary = _aiBuildSummary(trades);
+        var summary = _aiBuildSummary(trades, userLogs);
         var prompt  = _aiBuildPrompt(summary, target);
 
         try {
@@ -6759,7 +6956,7 @@
         }
     }
 
-    function _aiBuildSummary(trades) {
+    function _aiBuildSummary(trades, allLogs) {
         // ★ 종목코드(ticker) 기준 집계 — 증권사마다 종목명이 달라도 코드로 합산(TQQQ 등 분리 방지)
         var norm = function(t) {
             t = String(t || '').trim().toUpperCase();
@@ -6781,17 +6978,39 @@
             return byTicker[code];
         };
 
-        // 실현손익 (REALIZED_EVENTS) — 코드 기준
-        if (typeof REALIZED_EVENTS !== 'undefined') {
-            REALIZED_EVENTS.forEach(function(e) {
-                if (e.type === '배당') return;
-                var code = norm(e.ticker || e.name);
-                if (!code) return;
-                var it = ensure(code, e.name);
-                it.pnl += e.profit || 0;
-                it.sc++;
-            });
-        }
+        // 실현손익 — ★ 분석 대상(target) 로그 기준 FIFO(평균단가) 재계산.
+        //    전역 REALIZED_EVENTS는 홈 화면 사용자(currentUser) 기준이라 다른 가족의 손익이 섞이므로 사용하지 않음.
+        var fifoRows = (allLogs || trades).filter(function(r) {
+            var t = String(r[4]).trim();
+            return t === '매수' || t === '매도' || t === '액면분할입고' || t === '액면분할출고';
+        }).slice().sort(function(a, b) { return new Date(a[1]) - new Date(b[1]); });
+        var port = {};
+        fifoRows.forEach(function(r) {
+            var code = norm(r[2] || r[3]);
+            if (!code) return;
+            var t = String(r[4]).trim();
+            var qty = Number(r[5]) || 0, price = Number(r[6]) || 0, fx = Number(r[7]) || 1;
+            var amount = price * qty * fx;
+            if (t === '매수') {
+                if (!port[code]) port[code] = { qty: 0, cost: 0 };
+                port[code].qty += qty; port[code].cost += amount;
+            } else if (t === '매도') {
+                if (port[code] && port[code].qty > 0) {
+                    var avgCost = port[code].cost / port[code].qty;
+                    var costBasis = avgCost * qty;
+                    var it = ensure(code, String(r[3] || '').trim());
+                    it.pnl += amount - costBasis;
+                    it.sc++;
+                    port[code].qty -= qty; port[code].cost -= costBasis;
+                    if (port[code].qty <= 0.000001) delete port[code];
+                }
+            } else if (t === '액면분할입고') {
+                if (!port[code]) port[code] = { qty: 0, cost: 0 };
+                port[code].qty += qty;
+            } else if (t === '액면분할출고') {
+                if (port[code]) port[code].qty -= qty;
+            }
+        });
         // 매수 횟수 (거래내역) — 코드 기준
         trades.forEach(function(r) {
             if (String(r[4]).trim() !== '매수') return;
@@ -7374,7 +7593,9 @@
                 if (actionMatch) {
                     flushItems();
                     var ac = actionColors[actionMatch[1]] || actionColors['관망'];
-                    var rest = l.replace(/\[' + actionMatch[1] + '\]/, '').replace(/^[\d]+\.\s*행동 추천[：:]\s*/,'').trim();
+                    // ★ [버그수정] 정규식 리터럴 안에 문자열 연결을 넣었던 실수로 매치가 항상 실패 —
+                    //    실제 매치된 전체 문자열(actionMatch[0], 예: "[관망]")을 그대로 제거하도록 수정
+                    var rest = l.replace(actionMatch[0], '').replace(/^[\d]+\.\s*행동 추천[：:]\s*/,'').trim();
                     // 행동 추천 배지 (큰 카드)
                     out.push(
                         '<div style="margin:12px 0 8px;padding:12px 16px;border-radius:12px;'
@@ -7501,7 +7722,7 @@
   import { getAnalytics }    from "https://www.gstatic.com/firebasejs/12.12.0/firebase-analytics.js";
   import {
     getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc,
-    collection, addDoc, query, where, getDocs, serverTimestamp
+    collection, addDoc, query, where, getDocs, serverTimestamp, deleteField
   } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -7522,7 +7743,7 @@
   window._firestoreDb  = db;
   window._firestoreApi = {
     collection, addDoc, query, where, getDocs,
-    doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp
+    doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, deleteField
   };
 
   window.loginGroup = async function() {
@@ -7546,16 +7767,28 @@
     try {
       const groupRef = doc(db, "groups", id);
       const snap     = await getDoc(groupRef);
+      // ★ 비밀번호는 SHA-256 해시로 저장·대조 (평문 저장 완화)
+      const pwHash   = await window.sha256Hex(pw);
 
       if (snap.exists()) {
-        if (snap.data().password === pw) {
+        const g = snap.data();
+        let ok = false;
+        if (g.passwordHash) {
+          ok = (g.passwordHash === pwHash);
+        } else if (g.password === pw) {
+          ok = true;
+          // 기존 평문 문서 → 로그인 성공 시 해시로 자동 마이그레이션 (평문 제거)
+          try { await updateDoc(groupRef, { passwordHash: pwHash, password: deleteField() }); }
+          catch (e) { console.warn("그룹 비밀번호 해시 마이그레이션 실패:", e); }
+        }
+        if (ok) {
           enterGroup(id);
         } else {
           showErr("❌ 비밀번호가 틀렸습니다.");
         }
       } else {
         if (confirm(`"${id}" 그룹이 없습니다.\n이 비밀번호로 새 그룹을 만드시겠습니까?`)) {
-          await setDoc(groupRef, { password: pw, createdAt: serverTimestamp() });
+          await setDoc(groupRef, { passwordHash: pwHash, createdAt: serverTimestamp() });
           enterGroup(id);
         } else {
           if (btn) { btn.disabled = false; btn.innerText = "입장 / 그룹 만들기"; }
