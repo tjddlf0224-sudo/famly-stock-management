@@ -2292,6 +2292,7 @@
             };
 
             saveToCache(data);
+            _snapshotFresh = true;   // 서버에서 받은 신선한 데이터 → 이후 processData에서 스냅샷 저장 허용
             applyDataToApp(data);
 
             if (!isBackground) hideLoading();
@@ -2611,6 +2612,51 @@
                 : PERFORMANCE_DATA.filter(row => row[1] === currentUser);
             renderPerformanceChartFromSheet(myPerfLogs, MARKET_DATA, currentUser);
         }
+
+        // ── claude.ai '주식투자' 프로젝트 연동: 포트폴리오 스냅샷 저장 (fire-and-forget) ──
+        try {
+            const _rlz = (typeof REALIZED_EVENTS !== 'undefined') ? REALIZED_EVENTS : [];
+            const _thisYear = String(new Date().getFullYear());
+            const _fmtDate = v => { const d = new Date(v); return isNaN(d.getTime()) ? String(v).substring(0, 10) : d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
+            _writePortfolioSnapshot({
+                user: currentUser,
+                usdRate: (typeof CURRENT_EXCHANGE_RATE !== 'undefined' ? CURRENT_EXCHANGE_RATE : 1),
+                totalAsset, stockValuation,
+                cashKRW: myCashKRW, cashUSD: myCashUSD, cashValuation: totalCashValuation,
+                totalDeposit, totalWithdrawal,
+                totalProfit: finalProfit, totalProfitPct: finalRate,
+                todayProfitKRW: totalTodayProfitKRW,
+                todayPct: (totalAsset - totalTodayProfitKRW) !== 0 ? (totalTodayProfitKRW / (totalAsset - totalTodayProfitKRW)) * 100 : 0,
+                holdings: balanceList.map(b => ({ ticker: b.ticker, name: b.name, qty: b.qty, avgPrice: b.avgPrice, curPrice: b.curPrice, evalAmt: b.evalAmt, profit: b.profit, rate: b.rate, isKorea: b.isKorea, changePct: b.changePct, todayProfitAmt: b.todayProfitAmt })),
+                realized: {
+                    total: _rlz.reduce((s, e) => s + (e.profit || 0), 0),
+                    thisYear: _rlz.filter(e => String(e.date || '').startsWith(_thisYear)).reduce((s, e) => s + (e.profit || 0), 0)
+                },
+                recentTrades: userLogs.slice(-10).reverse().map(r => [_fmtDate(r[1]), r[0], r[3], r[2], r[4], r[5], r[6], r[7], String(r[8] || '').slice(0, 60)])
+            });
+        } catch (e) { console.log('포트폴리오 스냅샷 준비 실패(무시):', e); }
+    }
+
+    // ── claude.ai '주식투자' 프로젝트 연동: 포트폴리오 스냅샷 저장 ──────────────
+    // Firestore 규칙이 클라이언트의 cache/* 쓰기를 막으므로 GAS(doPost saveSnapshot) 경유로 기록.
+    // GAS의 action=portfolio 가 이 스냅샷을 읽어 시세만 실시간 갱신해 claude.ai에 응답한다.
+    let _lastSnapshotJson = null;
+    let _snapshotFresh = false;   // 서버에서 받은 신선한 데이터로 렌더할 때만 true (낡은 캐시 렌더 시 저장 안 함)
+    function _writePortfolioSnapshot(scope) {
+        try {
+            // ★ 캐시 렌더(낡은 데이터)로 다른 기기의 최신 스냅샷을 덮어쓰지 않도록, 서버 데이터일 때만 저장.
+            if (!_snapshotFresh) return;
+            const scopeJson = JSON.stringify(scope);
+            if (scopeJson === _lastSnapshotJson) return;   // 값 변동 없으면 스킵
+            const payload = Object.assign({}, scope, { updatedAt: new Date().toISOString() });
+            fetch(CHART_GAS_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },   // 단순 요청 → CORS preflight 없음
+                body: JSON.stringify({ authKey: CHART_GAS_AUTH, type: 'saveSnapshot', scope: payload })
+            }).then(r => r.json())
+              .then(j => { if (j && j.status === 'success') _lastSnapshotJson = scopeJson; })
+              .catch(e => console.log('포트폴리오 스냅샷 저장 실패(무시):', e && e.message));
+        } catch (e) { console.log('포트폴리오 스냅샷 저장 실패(무시):', e); }
     }
 
     function renderDonutChart(labels, values, cash, totalAsset) {
