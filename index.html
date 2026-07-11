@@ -541,6 +541,10 @@
             <span style="width:20px; text-align:center;">🔄</span>
             <span>새로고침</span>
         </button>
+        <button onclick="exportPortfolioText();" style="width:100%; background:none; border:none; padding:12px 16px; text-align:left; font-size:15px; color:var(--text-main); cursor:pointer; display:flex; align-items:center; gap:10px;">
+            <span style="width:20px; text-align:center;">📋</span>
+            <span>포트폴리오 내보내기</span>
+        </button>
         <div style="height:1px; background:var(--border-color); margin:4px 0;"></div>
         <button onclick="_closeSettings(); if(confirm('로그아웃하시겠습니까?')){localStorage.removeItem('myGroupId'); location.reload();}" style="width:100%; background:none; border:none; padding:12px 16px; text-align:left; font-size:15px; color:#FF3B30; cursor:pointer; display:flex; align-items:center; gap:10px;">
             <span style="width:20px; text-align:center;">↩</span>
@@ -2618,7 +2622,7 @@
             const _rlz = (typeof REALIZED_EVENTS !== 'undefined') ? REALIZED_EVENTS : [];
             const _thisYear = String(new Date().getFullYear());
             const _fmtDate = v => { const d = new Date(v); return isNaN(d.getTime()) ? String(v).substring(0, 10) : d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
-            _writePortfolioSnapshot({
+            const _snapScope = {
                 user: currentUser,
                 usdRate: (typeof CURRENT_EXCHANGE_RATE !== 'undefined' ? CURRENT_EXCHANGE_RATE : 1),
                 totalAsset, stockValuation,
@@ -2633,7 +2637,9 @@
                     thisYear: _rlz.filter(e => String(e.date || '').startsWith(_thisYear)).reduce((s, e) => s + (e.profit || 0), 0)
                 },
                 recentTrades: userLogs.slice(-10).reverse().map(r => [_fmtDate(r[1]), r[0], r[3], r[2], r[4], r[5], r[6], r[7], String(r[8] || '').slice(0, 60)])
-            });
+            };
+            window._portfolioExport = _snapScope;   // 설정 > 포트폴리오 내보내기(텍스트 복사)에서 재사용
+            _writePortfolioSnapshot(_snapScope);
         } catch (e) { console.log('포트폴리오 스냅샷 준비 실패(무시):', e); }
     }
 
@@ -2657,6 +2663,120 @@
               .then(j => { if (j && j.status === 'success') _lastSnapshotJson = scopeJson; })
               .catch(e => console.log('포트폴리오 스냅샷 저장 실패(무시):', e && e.message));
         } catch (e) { console.log('포트폴리오 스냅샷 저장 실패(무시):', e); }
+    }
+
+    // ── 설정 > 포트폴리오 내보내기: 현재 조회중인 유저의 포트폴리오를 텍스트로 복사 ──────────
+    function _pfMoney(n) { return Math.round(Number(n) || 0).toLocaleString() + '원'; }
+    function _pfSigned(n) { const v = Math.round(Number(n) || 0); return (v > 0 ? '+' : '') + v.toLocaleString() + '원'; }
+    function _pfPct(n) { const v = Number(n) || 0; return (v > 0 ? '+' : '') + v.toFixed(2) + '%'; }
+    function _pfNative(v, isKorea) {
+        return isKorea ? (Math.round(Number(v) || 0).toLocaleString() + '원')
+                       : ('$' + (Number(v) || 0).toFixed(2));
+    }
+
+    function buildPortfolioText() {
+        const s = window._portfolioExport;
+        if (!s) return null;
+        const now = new Date();
+        const stamp = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0')
+            + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+        const total = Number(s.totalAsset) || 0;
+        const weight = amt => total > 0 ? ((Number(amt) || 0) / total * 100) : 0;
+
+        const holds = (s.holdings || []).slice().sort((a,b) => (Number(b.evalAmt)||0) - (Number(a.evalAmt)||0));
+
+        const L = [];
+        L.push('■ 포트폴리오 — ' + (s.user || '가족 전체') + ' (' + stamp + ' 앱 기준)');
+        L.push('');
+        L.push('총자산: ' + _pfMoney(total));
+        L.push('총손익: ' + _pfSigned(s.totalProfit) + ' (' + _pfPct(s.totalProfitPct) + ')');
+        L.push('오늘손익: ' + _pfSigned(s.todayProfitKRW) + ' (' + _pfPct(s.todayPct) + ')');
+        L.push('예수금: ' + _pfMoney(s.cashValuation) + ' [비중 ' + weight(s.cashValuation).toFixed(1) + '%]'
+            + '  (원화 ' + _pfMoney(s.cashKRW) + ' / 외화 $' + (Number(s.cashUSD)||0).toLocaleString(undefined,{maximumFractionDigits:2}) + ')');
+        L.push('주식평가금: ' + _pfMoney(s.stockValuation));
+        L.push('총입금: ' + _pfMoney(s.totalDeposit) + ' / 총출금: ' + _pfMoney(s.totalWithdrawal));
+        if (s.realized) L.push('실현손익: 누적 ' + _pfSigned(s.realized.total) + ' / 올해 ' + _pfSigned(s.realized.thisYear));
+        L.push('환율(USD): ' + (Number(s.usdRate)||0).toLocaleString() + '원');
+        L.push('');
+        L.push('■ 보유 종목 (' + holds.length + '개, 비중순)');
+        holds.forEach((h, i) => {
+            L.push((i+1) + ') ' + (h.name || h.ticker) + ' (' + h.ticker + ')  비중 ' + weight(h.evalAmt).toFixed(1) + '%');
+            L.push('   평가금액 ' + _pfMoney(h.evalAmt)
+                + ' | 수익률 ' + _pfPct(h.rate)
+                + ' | 평가손익 ' + _pfSigned(h.profit));
+            L.push('   수량 ' + (Number(h.qty)||0).toLocaleString(undefined,{maximumFractionDigits:4})
+                + ' | 평단가 ' + _pfNative(h.avgPrice, h.isKorea)
+                + ' | 현재가 ' + _pfNative(h.curPrice, h.isKorea)
+                + ' | 오늘 ' + _pfPct(h.changePct));
+        });
+        L.push('');
+        L.push('※ 금액은 KRW(원), 종목 평단가/현재가만 원통화(한국=원, 미국=$). 앱 화면 기준 시세.');
+        return L.join('\n');
+    }
+
+    function _pfToast(msg) {
+        let t = document.getElementById('_pfToast');
+        if (!t) {
+            t = document.createElement('div');
+            t.id = '_pfToast';
+            t.style.cssText = 'position:fixed;left:50%;bottom:80px;transform:translateX(-50%);background:rgba(0,0,0,0.85);color:#fff;padding:12px 20px;border-radius:22px;font-size:14px;z-index:2000;max-width:80%;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.3);transition:opacity .3s;';
+            document.body.appendChild(t);
+        }
+        t.textContent = msg;
+        t.style.opacity = '1';
+        clearTimeout(t._h);
+        t._h = setTimeout(() => { t.style.opacity = '0'; }, 2200);
+    }
+
+    // 복사 실패(iOS 등) 대비 수동 복사 모달
+    function _pfShowManual(text) {
+        let ov = document.getElementById('_pfManualOverlay');
+        if (!ov) {
+            ov = document.createElement('div');
+            ov.id = '_pfManualOverlay';
+            ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:2001;display:flex;align-items:center;justify-content:center;padding:20px;';
+            ov.onclick = e => { if (e.target === ov) ov.style.display = 'none'; };
+            ov.innerHTML = '<div style="background:var(--card-bg);border-radius:16px;padding:16px;max-width:520px;width:100%;max-height:80vh;display:flex;flex-direction:column;gap:10px;">'
+                + '<div style="font-weight:600;color:var(--text-main);">아래 내용을 길게 눌러 전체 선택 → 복사하세요</div>'
+                + '<textarea id="_pfManualText" readonly style="flex:1;min-height:300px;width:100%;box-sizing:border-box;font-size:12px;line-height:1.5;padding:10px;border-radius:10px;border:1px solid var(--border-color);background:var(--bg);color:var(--text-main);"></textarea>'
+                + '<button onclick="document.getElementById(\'_pfManualOverlay\').style.display=\'none\'" style="padding:12px;border:none;border-radius:10px;background:var(--accent,#007AFF);color:#fff;font-size:15px;cursor:pointer;">닫기</button>'
+                + '</div>';
+            document.body.appendChild(ov);
+        }
+        ov.style.display = 'flex';
+        const ta = document.getElementById('_pfManualText');
+        ta.value = text;
+        ta.focus(); ta.select();
+    }
+
+    function exportPortfolioText() {
+        _closeSettings();
+        const text = buildPortfolioText();
+        if (!text) { alert('아직 포트폴리오 데이터가 없습니다. 홈 화면을 한 번 불러온 뒤 다시 시도해주세요.'); return; }
+        // 1순위: Clipboard API (HTTPS + 사용자 제스처)
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text)
+                .then(() => _pfToast('📋 포트폴리오를 복사했어요. Claude에 붙여넣으세요.'))
+                .catch(() => _pfCopyFallback(text));
+        } else {
+            _pfCopyFallback(text);
+        }
+    }
+
+    function _pfCopyFallback(text) {
+        try {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+            document.body.appendChild(ta);
+            ta.focus(); ta.select();
+            const ok = document.execCommand('copy');
+            document.body.removeChild(ta);
+            if (ok) _pfToast('📋 포트폴리오를 복사했어요. Claude에 붙여넣으세요.');
+            else _pfShowManual(text);
+        } catch (e) {
+            _pfShowManual(text);
+        }
     }
 
     function renderDonutChart(labels, values, cash, totalAsset) {
