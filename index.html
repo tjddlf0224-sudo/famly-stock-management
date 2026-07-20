@@ -4573,6 +4573,35 @@
     let candleViewMin = 0, candleViewMax = 0, candleW_fixed = 0, candleH_fixed = 0;
     let candleDisplayData = []; // 현재 표시 중인 봉 배열 (집계 후)
 
+    // ★ 라이브 현재가를 차트 마지막(오늘) 캔들에 반영 — 백엔드 sync 없이 실시간에 가깝게.
+    //   이 차트 규약: o=최신가(종가), c=시가 (의도적 뒤바뀜 — 절대 건드리지 말 것). MA는 .c(시가) 사용.
+    //   렌더 시점에만 적용(원본 chartAllData 불변). 현재가는 CURRENT_PRICES(10분 갱신)에서 조회.
+    function _applyLivePriceToCandles(ticker, candles) {
+        if (!candles || candles.length === 0 || typeof CURRENT_PRICES === 'undefined' || !CURRENT_PRICES.length) return candles;
+        let norm = String(ticker || '').trim().toUpperCase().replace(/^KRX:/, '');
+        if (/^\d{1,5}$/.test(norm)) norm = norm.padStart(6, '0');
+        const isKR = /^\d{6}$/.test(norm);
+        let price = 0, prevClose = 0;
+        for (const r of CURRENT_PRICES) {
+            let k = String(r[0]).trim().toUpperCase().replace(/^KRX:/, '');
+            if (/^\d{1,5}$/.test(k)) k = k.padStart(6, '0');
+            if (k === norm) { price = Number(r[1]) || 0; prevClose = Number(r[3]) || 0; break; }
+        }
+        if (price <= 0) return candles;
+        const now = new Date();
+        const todayTs = new Date(now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + 'T00:00:00Z').getTime();
+        const out = candles.slice();
+        const last = out[out.length - 1];
+        if (last.x === todayTs) {
+            // 오늘 캔들 존재 → 최신가(o)만 현재가로 갱신, 고/저 확장 (시가 c·MA 불변)
+            out[out.length - 1] = { x: last.x, o: price, c: last.c, h: Math.max(last.h, price), l: (last.l > 0 ? Math.min(last.l, price) : price), v: last.v };
+        } else if (isKR && last.x < todayTs && prevClose > 0) {
+            // 오늘 캔들 없음(장중, 국내) → 합성 오늘 캔들 추가 (o=현재가, c=전일종가)
+            out.push({ x: todayTs, o: price, c: prevClose, h: Math.max(price, prevClose), l: Math.min(price, prevClose), v: 0 });
+        }
+        return out;
+    }
+
     // ★ isLoadMore 플래그 추가
     function renderCandleChart(isLoadMore = false) {
         try {
@@ -4583,7 +4612,7 @@
             canvas.width = W*dpr; canvas.height = H*dpr;
             candleW_fixed = W; candleH_fixed = H;
 
-            candleDisplayData = aggregateCandles(chartAllData, currentCandleType);
+            candleDisplayData = aggregateCandles(_applyLivePriceToCandles(chartCurrentTicker, chartAllData), currentCandleType);
             console.log('[차트] candleDisplayData 길이:', candleDisplayData ? candleDisplayData.length : 'null');
             if (!candleDisplayData || candleDisplayData.length === 0) { showCandleEmpty(); return; }
             
