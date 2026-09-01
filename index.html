@@ -869,7 +869,7 @@
     <div class="dividend-member-grid" id="fxMemberGrid"></div>
     <div class="card">
         <h3>📈 원/달러 환율 추이 <span style="font-size:11px;color:var(--text-sub);font-weight:400;">🟢 매입 · 🟠 매도</span></h3>
-        <div style="position:relative;height:240px;margin-top:8px;"><canvas id="fxRateChart"></canvas></div>
+        <div id="fxRateChartWrap" style="position:relative;height:240px;margin-top:8px;touch-action:none;user-select:none;"><canvas id="fxRateChart"></canvas></div>
     </div>
     <div class="card">
         <h3>연도별 환차손익</h3>
@@ -3847,12 +3847,18 @@
     }
 
     function attachLineChartTouch() {
-        const wrap = document.getElementById('lineChartWrap');
-        if (!wrap || !myLineChart || wrap._touchBound) return;
+        attachChartPinchZoom(document.getElementById('lineChartWrap'), () => myLineChart);
+    }
+
+    // 카테고리축 라인차트 공용 핀치줌/드래그 팬 (성과 차트·환율 차트 등에서 재사용)
+    // getChart: 최신 Chart 인스턴스를 돌려주는 함수 (재렌더로 인스턴스가 바뀌어도 안전)
+    function attachChartPinchZoom(wrap, getChart) {
+        if (!wrap || !getChart() || wrap._touchBound) return;
         wrap._touchBound = true;
         let isDragging = false, isPinching = false, lastTouchX = 0, pinchStartDist = 0, pinchStartMin = 0, pinchStartMax = 0;
-        const totalLen = () => myLineChart.data.labels.length;
-        function getScale() { return myLineChart.options.scales.x; }
+        const chart = () => getChart();
+        const totalLen = () => chart().data.labels.length;
+        function getScale() { return chart().options.scales.x; }
         function clamp(min, max) {
             const n = totalLen(), minSpan = Math.max(5, Math.floor(n*0.05));
             let span = max - min;
@@ -3861,11 +3867,11 @@
             if (max >= n) { min -= (max-n+1); max = n-1; }
             return { min: Math.max(0, Math.round(min)), max: Math.min(n-1, Math.round(max)) };
         }
-        function applyRange(min, max) { const r = clamp(min, max); const scale = getScale(); scale.min = r.min; scale.max = r.max; myLineChart.update('none'); }
+        function applyRange(min, max) { if (!isFinite(min) || !isFinite(max)) return; const r = clamp(min, max); const scale = getScale(); scale.min = r.min; scale.max = r.max; chart().update('none'); }
         function pinchDist(t) { const dx=t[0].clientX-t[1].clientX; const dy=t[0].clientY-t[1].clientY; return Math.sqrt(dx*dx+dy*dy); }
-        function initRange() { const scale = getScale(); if (scale.min === undefined || scale.max === undefined) { scale.min = 0; scale.max = totalLen()-1; myLineChart.update('none'); } }
-        wrap.addEventListener('touchstart', e => { initRange(); if (e.touches.length===1){isDragging=true;isPinching=false;lastTouchX=e.touches[0].clientX;} else if(e.touches.length===2){isDragging=false;isPinching=true;pinchStartDist=pinchDist(e.touches);pinchStartMin=getScale().min;pinchStartMax=getScale().max;} }, {passive:true});
-        wrap.addEventListener('touchmove', e => { e.preventDefault(); if (!myLineChart) return; if(isDragging&&e.touches.length===1){const dx=e.touches[0].clientX-lastTouchX;lastTouchX=e.touches[0].clientX;const scale=getScale();const span=scale.max-scale.min;const delta=-(dx/wrap.offsetWidth)*span;applyRange(scale.min+delta,scale.max+delta);} else if(isPinching&&e.touches.length===2){const ratio=pinchStartDist/pinchDist(e.touches);const center=(pinchStartMin+pinchStartMax)/2;const half=(pinchStartMax-pinchStartMin)/2*ratio;applyRange(center-half,center+half);} }, {passive:false});
+        function initRange() { const scale = getScale(); if (scale.min === undefined || scale.max === undefined) { scale.min = 0; scale.max = totalLen()-1; chart().update('none'); } }
+        wrap.addEventListener('touchstart', e => { if (!chart()) return; initRange(); if (e.touches.length===1){isDragging=true;isPinching=false;lastTouchX=e.touches[0].clientX;} else if(e.touches.length===2){isDragging=false;isPinching=true;pinchStartDist=pinchDist(e.touches);pinchStartMin=getScale().min;pinchStartMax=getScale().max;} }, {passive:true});
+        wrap.addEventListener('touchmove', e => { if (!chart()) return; e.preventDefault(); const W = wrap.offsetWidth; if (!W) return; /* 숨겨진 탭 등 폭 0이면 0나눗셈으로 NaN → 차트 깨짐 */ if(isDragging&&e.touches.length===1){const dx=e.touches[0].clientX-lastTouchX;lastTouchX=e.touches[0].clientX;const scale=getScale();const span=scale.max-scale.min;const delta=-(dx/W)*span;applyRange(scale.min+delta,scale.max+delta);} else if(isPinching&&e.touches.length===2){const d=pinchDist(e.touches); if(!d) return; const ratio=pinchStartDist/d;const center=(pinchStartMin+pinchStartMax)/2;const half=(pinchStartMax-pinchStartMin)/2*ratio;applyRange(center-half,center+half);} }, {passive:false});
         wrap.addEventListener('touchend', () => { isDragging=false; isPinching=false; });
     }
 
@@ -5437,6 +5443,8 @@
                 }
             }
         });
+        // 두 손가락 확대/축소 + 드래그 이동 (성과 차트와 동일 동작)
+        attachChartPinchZoom(document.getElementById('fxRateChartWrap'), () => myFxChart);
     }
 
     // ====== 매수 경고 팝업 ======
