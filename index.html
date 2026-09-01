@@ -5326,8 +5326,8 @@
             const ticker = String(row[2]).trim().toUpperCase();
             const isKorean = /^\d{6}$/.test(ticker);
             if (fxRate > 100) return price * fxRate;           // fxRate 명시된 경우
-            if (!isKorean && fxRate <= 1) return price * usdRate; // 미국주식인데 fxRate 없음 → 현재환율 적용
-            return price;                                        // 국내주식 배당 (원화)
+            if (ticker && !isKorean && fxRate <= 1) return price * usdRate; // 미국주식인데 fxRate 없음 → 현재환율 적용 (ticker 없는 이자수익 등은 제외)
+            return price;                                        // 국내주식 배당 또는 티커없는 현금성 항목(이자 등) — 원화 그대로
         }
         const memberStats = {};
         members.forEach(m => { memberStats[m] = { totalKRW: 0, count: 0 }; });
