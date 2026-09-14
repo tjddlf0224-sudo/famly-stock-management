@@ -2,7 +2,12 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- ★ UI 배율 1.15배 (Safari 'AA' 한 단계 확대와 동일). 2026-09-14 추가.
+         원리: width=device-width를 빼고 initial-scale만 주면 뷰포트 폭 = 기기폭 / 1.15 로 계산돼
+               글꼴뿐 아니라 여백·아이콘까지 레이아웃 전체가 비례 확대된다(브라우저 확대와 같은 방식).
+         ※ width=device-width를 함께 두면 둘 중 큰 값이 채택돼 확대가 무효화되므로 반드시 빼야 함.
+         ※ 데스크톱 브라우저는 viewport meta를 무시하므로 영향 없음. -->
+    <meta name="viewport" content="initial-scale=1.15, maximum-scale=1.15, user-scalable=no">
     <title>Family Stock Manager</title>
     <link rel="manifest" href="./manifest.json">
     <link rel="apple-touch-icon" href="./icon-192.png">
@@ -92,7 +97,10 @@
         .dividend-total-card .label { font-size: 13px; opacity: 0.85; margin-bottom: 6px; }
         .dividend-total-card .amount { font-size: 32px; font-weight: 800; letter-spacing: -1px; }
         .dividend-total-card .sub { font-size: 12px; opacity: 0.75; margin-top: 6px; }
-        .dividend-member-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
+        /* 구성원 카드: 폭에 따라 열 수 자동 조절.
+   3열 고정이면 좁은 화면에서 "+3,955,790원"이 한 줄에 안 들어가 "+3,955,790 / 원"으로 줄바꿈됨
+   (12px까지 줄여도 안 맞음 — 실측). 최소 140px를 주면 폰에서는 2열, 넓은 화면에서는 3열이 된다. */
+        .dividend-member-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 15px; }
         .dividend-member-card { background: var(--card-bg); border-radius: 14px; padding: 16px 12px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .dividend-member-card .member-name { font-size: 12px; color: var(--text-sub); margin-bottom: 8px; font-weight: 600; }
         .dividend-member-card .member-amount { font-size: 16px; font-weight: 800; color: #FF9500; line-height: 1.2; }
@@ -777,9 +785,9 @@
         <h3>최근 거래 내역</h3>
         <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
             <div style="display: flex; align-items: center; gap: 5px;">
-                <input type="date" id="startDate" style="flex:1; padding: 8px; border: 1px solid #ddd; border-radius: 8px;">
+                <input type="date" id="startDate" style="flex:1; min-width:0; padding: 8px; border: 1px solid #ddd; border-radius: 8px;">
                 <span>~</span>
-                <input type="date" id="endDate" style="flex:1; padding: 8px; border: 1px solid #ddd; border-radius: 8px;">
+                <input type="date" id="endDate" style="flex:1; min-width:0; padding: 8px; border: 1px solid #ddd; border-radius: 8px;">
             </div>
             <div style="display: flex; gap: 10px;">
                 <button onclick="filterHistory()" style="flex: 1; padding: 10px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: bold;">조회</button>
