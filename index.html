@@ -7,7 +7,12 @@
     <link rel="manifest" href="./manifest.json">
     <link rel="apple-touch-icon" href="./icon-192.png">
     <link rel="icon" type="image/png" href="./icon-192.png">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- ★ 성능: 첫 요청 전에 TLS 핸드셰이크를 미리 (Firestore·Firebase SDK·CDN·GAS) -->
+    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="dns-prefetch" href="https://script.google.com">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <style>
         :root {
@@ -1927,6 +1932,23 @@
     const CACHE_TIME_KEY = 'portfolio_cache_time';
     const CACHE_VALIDITY_MINUTES = 30;
 
+    // ★ 종목 리스트(KR 약 4천·US 약 1.1만개, ~945KB)는 자동완성·종목명 조회에만 쓰이고 GAS가 주 1회 갱신하므로
+    //   메인 데이터 캐시(30분)와 분리해 7일 캐시. 콜드 로딩마다 945KB 재다운로드하던 것을 제거.
+    const STOCKLIST_CACHE_KEY = 'stocklist_cache_v1';
+    const STOCKLIST_VALIDITY_MS = 7 * 24 * 60 * 60 * 1000;
+    function loadStockListCache() {
+        try {
+            const raw = localStorage.getItem(STOCKLIST_CACHE_KEY); if (!raw) return null;
+            const o = JSON.parse(raw);
+            if (!o || !o.ts || (Date.now() - o.ts) > STOCKLIST_VALIDITY_MS) return null;
+            if (!Array.isArray(o.kr) || !Array.isArray(o.us) || (o.kr.length === 0 && o.us.length === 0)) return null;
+            return o;
+        } catch (e) { return null; }
+    }
+    function saveStockListCache(kr, us) {
+        try { localStorage.setItem(STOCKLIST_CACHE_KEY, JSON.stringify({ ts: Date.now(), kr: kr || [], us: us || [] })); } catch (e) {}
+    }
+
     function loadFromCache() {
         try {
             const cachedData = localStorage.getItem(CACHE_KEY);
@@ -1942,7 +1964,8 @@
 
     function saveToCache(data) {
         try {
-            localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+            const { stockList, stockListUs, ...slim } = data;   // 종목 리스트는 별도 캐시(saveStockListCache)
+            localStorage.setItem(CACHE_KEY, JSON.stringify(slim));
             localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
         } catch (e) {
             if (e.name === 'QuotaExceededError') { localStorage.removeItem(CACHE_KEY); localStorage.removeItem(CACHE_TIME_KEY); }
@@ -1957,8 +1980,12 @@
         else MARKET_DATA = [];
         PERFORMANCE_DATA = data.performance || [];
         // ── 종목 자동완성용 목록 저장 ──
-        if (data.stockList)   STOCK_LIST_KR = data.stockList;
-        if (data.stockListUs) STOCK_LIST_US = data.stockListUs;
+        if (data.stockList && data.stockList.length)     STOCK_LIST_KR = data.stockList;
+        if (data.stockListUs && data.stockListUs.length) STOCK_LIST_US = data.stockListUs;
+        if (!(data.stockList && data.stockList.length)) {            // 메인 캐시엔 없음 → 별도 7일 캐시에서 복원
+            const sc = loadStockListCache();
+            if (sc) { STOCK_LIST_KR = sc.kr; STOCK_LIST_US = sc.us; }
+        }
         if (RAW_DATA.length > 0) processData(RAW_DATA);
     }
 
@@ -2085,6 +2112,24 @@
                 collection(db, "investments"),
                 where("groupId", "==", currentGroupId)
             );
+            // ★ 성능: 캐시 문서 조회를 investments 조회와 '동시에' 시작 (캐시 단계는 logs에 의존하지 않음)
+            //   종목 리스트는 7일 캐시가 유효하면 아예 조회하지 않음(945KB 절약).
+            const _slCache = loadStockListCache();
+            const _cacheP = (function () {
+                try {
+                    const { doc, getDoc } = window._firestoreApi;
+                    return Promise.all([
+                        getDoc(doc(db, "cache", "prices")),
+                        getDoc(doc(db, "cache", "marketdata")),
+                        getDoc(doc(db, "cache", "performance")),
+                        getDoc(doc(db, "cache", "assethistory")),
+                        getDoc(doc(db, "cache", "marketanalysis")),
+                        _slCache ? Promise.resolve(null) : getDoc(doc(db, "cache", "stocklist")),
+                        getDoc(doc(db, "cache", "econdata")),
+                    ]).catch(e => ({ __err: e }));
+                } catch (e) { return Promise.resolve({ __err: e }); }
+            })();
+
             const logsSnap = await getDocs(logsQuery);
 
             const logs = [];
@@ -2138,16 +2183,10 @@
                 const db = window._firestoreDb;
                 const { doc, getDoc } = window._firestoreApi;
 
-                // 캐시 7종 병렬 조회 (직렬 await 7회 → 1회 왕복으로 단축)
-                const [priceSnap, marketSnap, perfSnap, assetHistSnap, maSnap, stockListSnap, econSnap] = await Promise.all([
-                    getDoc(doc(db, "cache", "prices")),
-                    getDoc(doc(db, "cache", "marketdata")),
-                    getDoc(doc(db, "cache", "performance")),
-                    getDoc(doc(db, "cache", "assethistory")),
-                    getDoc(doc(db, "cache", "marketanalysis")),
-                    getDoc(doc(db, "cache", "stocklist")),
-                    getDoc(doc(db, "cache", "econdata")),
-                ]);
+                // 캐시 7종 — investments 조회와 동시에 시작해 둔 결과를 받음
+                const _cr = await _cacheP;
+                if (_cr && _cr.__err) throw _cr.__err;
+                const [priceSnap, marketSnap, perfSnap, assetHistSnap, maSnap, stockListSnap, econSnap] = _cr;
 
                 // 현재가 캐시
                 if (priceSnap.exists()) {
@@ -2184,11 +2223,15 @@
                     gasData.marketAnalysisHistory = JSON.parse(maSnap.data().history || 'null');
                 }
 
-                // stockList/stockListUs 캐시
-                if (stockListSnap.exists()) {
+                // stockList/stockListUs — 7일 로컬 캐시 우선, 없을 때만 Firestore에서 받아 캐시 저장
+                if (stockListSnap && stockListSnap.exists()) {
                     const sl = stockListSnap.data();
                     gasData.stockList   = JSON.parse(sl.stockList   || '[]');
                     gasData.stockListUs = JSON.parse(sl.stockListUs || '[]');
+                    saveStockListCache(gasData.stockList, gasData.stockListUs);
+                } else if (_slCache) {
+                    gasData.stockList   = _slCache.kr;
+                    gasData.stockListUs = _slCache.us;
                 }
 
                 // 경제지표 캐시
@@ -2234,18 +2277,24 @@
                 }
             }
 
-            // fearGreed만 GAS에서 별도 경량 호출
-            try {
-                const fgUrl = `${CHART_GAS_URL}?authKey=${CHART_GAS_AUTH}&action=fearGreed`;
-                const fgRes = await fetch(fgUrl);
-                const fgText = await fgRes.text();
-                if (!fgText.trim().startsWith("<")) {
-                    const fgParsed = JSON.parse(fgText);
-                    if (fgParsed.fearGreed) gasData.fearGreed = fgParsed.fearGreed;
-                }
-            } catch (e) {
-                console.warn("fearGreed 조회 실패:", e.message);
-            }
+            // ★ 성능: fearGreed GAS 호출은 백그라운드로. (실측 2.8~3.1초 동안 메인 로딩을 붙잡았고,
+            //   GAS는 CNN 접근이 막혀 사실상 항상 null → 프론트 fetchFearGreed()가 브라우저 직접조회 폴백을 이미 가짐)
+            (function () {
+                try {
+                    fetch(`${CHART_GAS_URL}?authKey=${CHART_GAS_AUTH}&action=fearGreed`)
+                        .then(r => r.text())
+                        .then(t => {
+                            if (t.trim().startsWith("<")) return;
+                            const p = JSON.parse(t);
+                            if (p.fearGreed && LAST_FETCHED_DATA) {
+                                LAST_FETCHED_DATA.fearGreed = p.fearGreed;
+                                const mt = document.getElementById('tab-market');
+                                if (mt && mt.classList.contains('active') && typeof fetchFearGreed === 'function') fetchFearGreed();
+                            }
+                        })
+                        .catch(e => console.warn("fearGreed 백그라운드 조회 실패:", e.message));
+                } catch (e) {}
+            })();
 
             // ★ 신규 매수 등으로 cache/prices에 아직 없는 보유 종목은 실시간 시세 온디맨드 보강
             //   (거래 저장이 Firestore 전용 → 새 종목은 다음 일일루틴 전까지 현재가 시트에 없어 0% 표시되던 문제)
@@ -3832,7 +3881,7 @@
                 { label: 'KOSPI', data: dataK, borderColor: '#FF9F40', backgroundColor: '#FF9F40', borderWidth: 1, pointRadius: 0, fill: false }
             ]},
             options: {
-                responsive: true, maintainAspectRatio: false,
+                responsive: true, maintainAspectRatio: false, animation: false,   // ★ 897점×4선 애니메이션 비활성(초기 렌더 CPU)
                 interaction: { mode: 'index', intersect: false },
                 scales: { x: { type: 'category', display: false }, y: { grid: { color: '#f0f0f0' }, ticks: { callback: v => v + '%' } } },
                 plugins: {
