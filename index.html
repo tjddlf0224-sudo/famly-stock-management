@@ -2,12 +2,12 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <!-- ★ UI 배율 1.15배 (Safari 'AA' 한 단계 확대와 동일). 2026-09-14 추가.
-         원리: width=device-width를 빼고 initial-scale만 주면 뷰포트 폭 = 기기폭 / 1.15 로 계산돼
+    <!-- ★ UI 배율 1.08배. 2026-09-14 1.15로 추가 → 2026-09-17 사용자 요청으로 한 단계 축소(사파리 AA 확대와 겹쳐 너무 컸음).
+         원리: width=device-width를 빼고 initial-scale만 주면 뷰포트 폭 = 기기폭 / 배율 로 계산돼
                글꼴뿐 아니라 여백·아이콘까지 레이아웃 전체가 비례 확대된다(브라우저 확대와 같은 방식).
          ※ width=device-width를 함께 두면 둘 중 큰 값이 채택돼 확대가 무효화되므로 반드시 빼야 함.
          ※ 데스크톱 브라우저는 viewport meta를 무시하므로 영향 없음. -->
-    <meta name="viewport" content="initial-scale=1.15, maximum-scale=1.15, user-scalable=no">
+    <meta name="viewport" content="initial-scale=1.08, maximum-scale=1.08, user-scalable=no">
     <title>Family Stock Manager</title>
     <link rel="manifest" href="./manifest.json">
     <link rel="apple-touch-icon" href="./icon-192.png">
@@ -55,6 +55,7 @@
             --text-main: #333; --text-sub: #666; --up: #FF3B30;
             --down: #007AFF; --border-color: #eee; --divider-color: #eee;
         }
+        html, body { overscroll-behavior-x: none; }   /* iOS 가로 튕김 방지 */
         body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text-main); padding-bottom: var(--nav-height); -webkit-tap-highlight-color: transparent; }
         header { background: var(--card-bg); padding: 15px 20px; position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
         h1 { margin: 0; font-size: 18px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
@@ -150,6 +151,14 @@
         .ticker-text { font-size: 12px; color: #888; margin-left: 4px; font-weight: normal; }
         .edit-cash-btn { background: var(--primary); color: white; border: none; padding: 4px 12px; border-radius: 12px; font-size: 12px; cursor: pointer; margin-left: 8px; }
         .edit-cash-btn:active { opacity: 0.8; }
+        .more-btn { width: 100%; margin-top: 10px; padding: 10px; background: var(--bg); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; }
+        .footnote-link { text-align: right; font-size: 12px; color: var(--text-sub); margin: -6px 4px 14px; }
+        .footnote-link span { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+        .sheet-modal { display: none; position: fixed; inset: 0; z-index: 1500; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; transition: transform .25s ease; padding: 0 16px calc(24px + env(safe-area-inset-bottom, 0px)); box-sizing: border-box; }
+        .sheet-modal.open { display: block; }
+        .sheet-modal .sheet-head { position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between; padding: calc(12px + env(safe-area-inset-top, 0px)) 0 12px; background: var(--bg); z-index: 1; }
+        .sheet-modal .sheet-title { font-size: 18px; font-weight: 800; }
+        .sheet-modal .sheet-close { width: 34px; height: 34px; border-radius: 17px; border: none; background: var(--card-bg); color: var(--text-main); font-size: 18px; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); }
         .modal-content { background-color: var(--card-bg); margin: 15% auto; padding: 20px; border-radius: 16px; width: 90%; max-width: 400px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
         .modal-header { font-size: 18px; font-weight: 700; margin-bottom: 20px; color: var(--text-main); }
@@ -673,11 +682,8 @@
             <div id="pProfitDesc" style="font-size:12px;color:var(--text-sub);margin-top:4px;"></div>
         </div>
 
-        <!-- 물가 반영 실질 수익 -->
-        <div class="card">
-            <h3>물가 반영 실질 수익</h3>
-            <div id="realReturnBody"><div style="color:var(--text-sub);font-size:13px;">불러오는 중...</div></div>
-        </div>
+        <!-- 물가 반영 실질 수익: 각주 → 모달(#realReturnModal) -->
+        <div class="footnote-link">※ <span onclick="openRealReturnModal()">물가</span></div>
 
         <!-- 연도별 손익 카드 -->
         <div class="card">
@@ -715,8 +721,6 @@
         <div class="card">
             <h3>하락 위험 (최대낙폭·변동성)</h3>
             <div id="riskMetricsBody"></div>
-            <div style="font-size:12px;color:var(--text-sub);margin:6px 0 2px;">최근 1년 고점 대비 낙폭</div>
-            <div class="chart-container" style="height:140px;"><canvas id="ddChart"></canvas></div>
         </div>
     </div>
 
@@ -807,14 +811,9 @@
     </div>
     <div class="card">
         <h3>📄 문서로 거래 가져오기 <span style="font-size:11px;color:var(--text-sub);font-weight:400;">AI</span></h3>
-        <div style="font-size:12.5px;color:var(--text-sub);line-height:1.55;margin-bottom:10px;">증권사 거래내역 PDF·캡처를 올리거나 글을 붙여넣으면 AI가 읽어서 앱 기록과 대조합니다. 고른 것만 저장됩니다.<br>미래에셋 보안메일은 비밀번호로 연 뒤 <b>인쇄 → PDF로 저장</b>한 파일을 올리세요.</div>
         <div class="form-group"><label>거래자</label>
             <select id="aimUser"><option value="윤성일">윤성일</option><option value="윤채현">윤채현</option><option value="윤시환">윤시환</option></select></div>
         <div class="form-group"><label>파일 (PDF·사진, 여러 개 가능)</label><input type="file" id="aimFiles" accept="application/pdf,image/*" multiple style="width:100%;box-sizing:border-box;"></div>
-        <div class="form-group"><label>또는 글 붙여넣기</label><textarea id="aimText" rows="3" placeholder="거래내역 화면의 글을 복사해 붙여넣기 (계좌번호·주민번호는 자동으로 가립니다)"></textarea></div>
-        <label style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--text-sub);line-height:1.5;margin-bottom:10px;">
-            <input type="checkbox" id="aimAgree" style="margin-top:2px;width:18px;height:18px;flex:none;">
-            <span>무료 Gemini 키는 구글이 올린 내용을 서비스 개선에 쓰고 사람이 검토할 수 있습니다. <b>계좌번호·주민번호·주소가 보이는 부분은 잘라내고</b> 올리겠습니다.</span></label>
         <button class="btn-primary" onclick="runAiImport()">AI로 읽기</button>
         <div id="aimResult" style="margin-top:12px;"></div>
     </div>
@@ -1736,6 +1735,12 @@
 </div>
 
 <!-- 종목 차트 보기 미니 모달 -->
+<!-- 물가 반영 실질 수익 모달: X 버튼 또는 화면 왼쪽 끝에서 오른쪽으로 밀어서 닫기 -->
+<div id="realReturnModal" class="sheet-modal" role="dialog" aria-modal="true">
+    <div class="sheet-head"><div class="sheet-title">물가 반영 실질 수익</div><button class="sheet-close" onclick="closeRealReturnModal()" aria-label="닫기">✕</button></div>
+    <div class="card"><div id="realReturnBody"><div style="color:var(--text-sub);font-size:13px;">불러오는 중...</div></div></div>
+</div>
+
 <div id="stockDetailModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.4);" onclick="closeStockDetailModal()">
     <div onclick="event.stopPropagation()"
         style="position:absolute;bottom:0;left:0;right:0;background:var(--card-bg);border-radius:20px 20px 0 0;padding:24px 20px 36px;">
@@ -3028,8 +3033,8 @@
     // ── 내역 탭: 유형 필터 + 페이지네이션 상태 ──────────────
     // _historyBaseData: 현재 조회 범위(전체/기간조회)의 전체 로그(날짜 오름차순), 필터/더보기의 기준 데이터
     // _historyTypeFilter: 'all' | '매수' | '매도' | '배당' | '환전'  ('환전'은 환전매입+환전매도 묶음)
-    // _historyShowCount: 현재 몇 건까지 보여주는지 (20건 단위 증가)
-    let _historyBaseData = null, _historyTypeFilter = 'all', _historyShowCount = 20;
+    // _historyShowCount: 현재 몇 건까지 보여주는지 (처음 5건, 더보기마다 10건)
+    let _historyBaseData = null, _historyTypeFilter = 'all', _historyShowCount = 5;
     const HISTORY_TYPE_CHIPS = [
         { key: 'all',   label: '전체' },
         { key: '매수',  label: '매수' },
@@ -3055,12 +3060,12 @@
 
     function setHistoryTypeFilter(key) {
         _historyTypeFilter = key;
-        _historyShowCount = 20; // 유형을 바꾸면 표시 개수 초기화
+        _historyShowCount = 5; // 유형을 바꾸면 표시 개수 초기화
         renderHistory(_historyBaseData, { keepBase: true });
     }
 
     function loadMoreHistory() {
-        _historyShowCount += 20;
+        _historyShowCount += 10;
         renderHistory(_historyBaseData, { keepBase: true });
     }
 
@@ -3077,7 +3082,7 @@
             } else {
                 _historyBaseData = customData.slice();
             }
-            _historyShowCount = 20;
+            _historyShowCount = 5;
         }
         renderHistoryTypeChips();
 
@@ -3389,16 +3394,30 @@
             return String(item.date).substring(0,4) == selectedValue;
         }).sort((a,b) => String(b.date) > String(a.date) ? 1 : -1);
         if (filteredEvents.length === 0) { let emptyDiv = document.createElement('div'); emptyDiv.innerHTML = `<div style="text-align:center;padding:30px;color:var(--text-sub);font-size:13px;">매도 기록이 없습니다.</div>`; container.appendChild(emptyDiv); return; }
-        filteredEvents.forEach(item => {
+        const listDiv = document.createElement('div');
+        container.appendChild(listDiv);
+        renderPagedList(listDiv, 'realized', filteredEvents, item => {
             let isProfit = item.profit >= 0;
             let profitColor = isProfit ? 'var(--up)' : 'var(--down)';
             let profitSign = isProfit ? '+' : '';
             let dateStr = String(item.date).substring(0, 10);
-            let itemDiv = document.createElement('div');
-            itemDiv.className = 'stock-item';
-            itemDiv.innerHTML = `<div style="width:100%;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;padding:12px 4px;border-bottom:1px solid var(--border-color);"><div style="text-align:left;flex:1;"><div style="font-weight:bold;font-size:14px;color:var(--text-main);margin-bottom:3px;">${item.name}</div><div style="font-size:12px;color:var(--text-sub);">${dateStr}</div></div><div style="text-align:right;flex-shrink:0;"><div style="font-weight:bold;font-size:14px;color:${profitColor};margin-bottom:3px;">${profitSign}${Math.round(item.profit).toLocaleString()}</div><div style="font-size:12px;color:${profitColor};">${item.returnRate.toFixed(1)}%</div></div></div>`;
-            container.appendChild(itemDiv);
+            return `<div class="stock-item"><div style="width:100%;box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;padding:12px 4px;border-bottom:1px solid var(--border-color);"><div style="text-align:left;flex:1;"><div style="font-weight:bold;font-size:14px;color:var(--text-main);margin-bottom:3px;">${item.name}</div><div style="font-size:12px;color:var(--text-sub);">${dateStr}</div></div><div style="text-align:right;flex-shrink:0;"><div style="font-weight:bold;font-size:14px;color:${profitColor};margin-bottom:3px;">${profitSign}${Math.round(item.profit).toLocaleString()}</div><div style="font-size:12px;color:${profitColor};">${item.returnRate.toFixed(1)}%</div></div></div></div>`;
         });
+    }
+
+    // ── 공용 '더보기' 목록: 처음 5건, 누를 때마다 10건씩 ──
+    const _pagers = {};
+    function renderPagedList(el, key, items, rowHtml, opts) {
+        const first = (opts && opts.first) || 5;
+        const st = _pagers[key] = { el, items, rowHtml, first, shown: (opts && opts.keep && _pagers[key]) ? _pagers[key].shown : first };
+        const n = Math.min(st.shown, items.length);
+        el.innerHTML = items.slice(0, n).map(rowHtml).join('') +
+            (items.length > n ? `<button class="more-btn" onclick="pagedListMore('${key}')">더보기 (${items.length - n}건 남음)</button>` : '');
+    }
+    function pagedListMore(key) {
+        const st = _pagers[key]; if (!st) return;
+        st.shown += 10;
+        renderPagedList(st.el, key, st.items, st.rowHtml, { first: st.first, keep: true });
     }
 
     // ── 수익률 모드 토글 ──────────────────────────────
@@ -4847,7 +4866,7 @@
             // 세로로 쓸면 페이지가 스크롤되도록(차트는 가로 이동·핀치 확대만 담당)
             handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
             handleScale: { axisPressedMouseMove: { time: true, price: false }, mouseWheel: true, pinch: true },
-            kineticScroll: { touch: true, mouse: false },
+            kineticScroll: { touch: false, mouse: false },   // 관성 이동 끔(손 떼도 차트가 옆으로 미끄러지던 현상 — 2026-09-17 사용자 지적)
         });
 
         const candle = chart.addSeries(LC.CandlestickSeries, {
@@ -5053,17 +5072,17 @@
         document.getElementById('dividendHistoryCount').textContent = `(${dividendRows.length}건)`;
         const listEl = document.getElementById('dividendHistoryList');
         if (sorted.length === 0) { listEl.innerHTML = '<div style="color:var(--text-sub);font-size:13px;text-align:center;padding:20px 0;">배당 내역이 없습니다</div>'; return; }
-        listEl.innerHTML = sorted.map(row => {
+        renderPagedList(listEl, 'dividend', sorted, row => {
             const name=String(row[0]).trim(), date=String(row[1]).substring(0,10), ticker=String(row[2]).trim()||'-', stkName=String(row[3]).trim()||'', price=Number(row[6])||0, fxRate=Number(row[7])||1, krw=toKRW(row), isDollar=fxRate>100;
             const originalStr = isDollar ? `$${price.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} × ${Math.round(fxRate).toLocaleString()}원` : '';
             return `<div class="dividend-history-item"><div class="left"><div class="ticker">${ticker}${stkName&&stkName!==ticker?` <span style="font-weight:400;color:var(--text-sub);">${stkName}</span>`:''}</div><div class="meta">${date} · ${name}</div></div><div class="right"><div class="krw">₩${Math.round(krw).toLocaleString()}</div>${originalStr?`<div class="original">${originalStr}</div>`:''}</div></div>`;
-        }).join('');
+        });
     }
 
     // ====== 부가 분석 카드 (2026-09-17): ②집중도 ④MDD·변동성 ⑦실질수익 ⑪배당·실적 일정 ⑥공시 ======
     // 데이터: 앱 원장(RAW_DATA)·성과분석(PERFORMANCE_DATA)·시장(MARKET_DATA) + GAS가 모아둔 cache/extras(CPI·실적일·공시)
     window._EXTRAS = null;
-    let _extrasLoading = null, _ddChart = null;
+    let _extrasLoading = null;
 
     function loadExtras() {
         if (_extrasLoading) return _extrasLoading;
@@ -5093,9 +5112,13 @@
     const _won = v => (v < 0 ? '-' : '') + (Math.abs(v) >= 1e8 ? (Math.abs(v) / 1e8).toFixed(2) + '억' : Math.round(Math.abs(v) / 1e4).toLocaleString() + '만') + '원';
 
     // ② 집중도 점검 (홈)
+    // 홈에서 숨긴 카드(2026-09-17 사용자 요청). false로 바꾸면 다시 보임
+    const HOME_HIDDEN_CARDS = { risk: true, disclosure: true };
+
     function renderConcentrationCard(balanceList, totalAsset, cash) {
         const card = document.getElementById('riskCard'), body = document.getElementById('riskBody');
         if (!card || !body) return;
+        if (HOME_HIDDEN_CARDS.risk) { card.style.display = 'none'; return; }
         if (!balanceList.length || totalAsset <= 0) { card.style.display = 'none'; return; }
         card.style.display = '';
         const nameOf = {}; (RAW_DATA || []).forEach(r => { const t = String(r[2] || '').trim().toUpperCase(); if (t && r[3]) nameOf[t.length < 6 && /^\d+$/.test(t) ? t.padStart(6, '0') : t] = String(r[3]); });
@@ -5174,34 +5197,55 @@
         const bmK = _mdd(bm.filter(b => b.k > 0).map(b => ({ t: b.t, v: b.k }))), bmS = _mdd(bm.filter(b => b.s > 0).map(b => ({ t: b.t, v: b.s })));
         const volK = _annVol(bm.filter(b => b.k > 0).map(b => ({ t: b.t, v: b.k }))), volS = _annVol(bm.filter(b => b.s > 0).map(b => ({ t: b.t, v: b.s })));
         const pct = (x, d = 1) => x == null ? '-' : (x > 0 ? '+' : '') + (x * 100).toFixed(d) + '%';
-        const cell = (label, val, sub, color) => `<div style="flex:1;min-width:0;background:var(--bg);border-radius:10px;padding:9px 6px;text-align:center;"><div style="font-size:11px;color:var(--text-sub);">${label}</div><div style="font-size:18px;font-weight:800;color:${color || 'var(--text-main)'};">${val}</div><div style="font-size:10.5px;color:var(--text-sub);margin-top:2px;">${sub || ''}</div></div>`;
-        const volLabel = !vol ? '-' : vol.vol < 0.15 ? '낮음' : vol.vol < 0.3 ? '보통' : vol.vol < 0.5 ? '높음' : '매우 높음';
         body.innerHTML = `
-            <div style="display:flex;gap:6px;margin-bottom:6px;">
-                ${cell('최근 1년 최대낙폭', pct(one.dd), one.troughT ? _fmtD(one.peakT) + '→' + _fmtD(one.troughT) : '', '#007AFF')}
-                ${cell('지금 고점 대비', pct(one.cur), one.cur > -0.005 ? '고점 부근' : '1년 최고점 ' + _fmtD(one.peakT), one.cur < -0.2 ? '#FF3B30' : '')}
-                ${cell('연 변동성', vol ? (vol.vol * 100).toFixed(0) + '%' : '-', volLabel)}
-            </div>
             <table style="width:100%;font-size:12.5px;border-collapse:collapse;margin-top:6px;">
                 <tr style="color:var(--text-sub);"><td>최근 1년</td><td style="text-align:right;">수익률</td><td style="text-align:right;">최대낙폭</td><td style="text-align:right;">변동성</td></tr>
                 <tr><td><b>${currentUser === '가족 전체' ? '가족 전체' : '내 계좌'}</b></td><td style="text-align:right;" class="${ret1 >= 0 ? 'up' : 'down'}">${pct(ret1)}</td><td style="text-align:right;">${pct(one.dd)}</td><td style="text-align:right;">${vol ? (vol.vol * 100).toFixed(0) + '%' : '-'}</td></tr>
                 <tr><td>KOSPI</td><td style="text-align:right;">${bm.length > 1 ? pct(bm[bm.length - 1].k / bm[0].k - 1) : '-'}</td><td style="text-align:right;">${pct(bmK.dd)}</td><td style="text-align:right;">${volK ? (volK.vol * 100).toFixed(0) + '%' : '-'}</td></tr>
                 <tr><td>S&amp;P500</td><td style="text-align:right;">${bm.length > 1 ? pct(bm[bm.length - 1].s / bm[0].s - 1) : '-'}</td><td style="text-align:right;">${pct(bmS.dd)}</td><td style="text-align:right;">${volS ? (volS.vol * 100).toFixed(0) + '%' : '-'}</td></tr>
-            </table>
-            <div style="font-size:11px;color:var(--text-sub);margin:8px 0 4px;line-height:1.5;">최대낙폭 = 고점에서 가장 많이 떨어졌던 폭. 입출금 영향을 뺀 기준가(NAV)로, 최근 1년만 봅니다. 변동성 = 하루 등락폭을 1년 단위로 환산한 값(S&amp;P500 약 15% 안팎이 보통).</div>`;
-        // 1년 낙폭(underwater) 차트
-        const ctx = document.getElementById('ddChart'); if (!ctx || typeof Chart === 'undefined') return;
-        if (_ddChart) { _ddChart.destroy(); _ddChart = null; }
-        let pk = -Infinity; const pts = [];
-        y1.forEach(p => { if (p.v > pk) pk = p.v; pts.push({ x: _fmtD(p.t), y: (p.v / pk - 1) * 100 }); });
-        const isDark = document.body.classList.contains('dark-mode') || (!document.body.classList.contains('light-mode') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        _ddChart = new Chart(ctx, {
-            type: 'line',
-            data: { labels: pts.map(p => p.x), datasets: [{ data: pts.map(p => p.y), borderColor: '#007AFF', backgroundColor: 'rgba(0,122,255,0.18)', fill: 'origin', borderWidth: 1.5, pointRadius: 0, tension: 0.1 }] },
-            options: { responsive: true, maintainAspectRatio: false, animation: false,
-                plugins: { legend: { display: false }, datalabels: { display: false }, tooltip: { callbacks: { label: c => '고점 대비 ' + c.parsed.y.toFixed(1) + '%' } } },
-                scales: { x: { ticks: { maxTicksLimit: 5, color: isDark ? '#8E8E93' : '#666', font: { size: 10 } }, grid: { display: false } },
-                          y: { max: 0, ticks: { callback: v => v + '%', color: isDark ? '#8E8E93' : '#666', font: { size: 10 } }, grid: { color: isDark ? 'rgba(255,255,255,0.08)' : '#f0f0f0' } } } }
+            </table>`;
+    }
+
+    // ⑦ 실질 수익 모달 — X 버튼 / 화면 왼쪽 끝(28px 안)에서 오른쪽으로 밀면 닫힘(아이폰 뒤로가기 제스처처럼)
+    function openRealReturnModal() {
+        const m = document.getElementById('realReturnModal'); if (!m) return;
+        renderRealReturnCard();
+        m.style.transform = 'translateX(0)';
+        m.classList.add('open');
+        m.scrollTop = 0;
+        document.body.style.overflow = 'hidden';
+        _bindEdgeSwipeClose(m, closeRealReturnModal);
+    }
+    function closeRealReturnModal() {
+        const m = document.getElementById('realReturnModal'); if (!m) return;
+        m.style.transform = 'translateX(100%)';
+        document.body.style.overflow = '';
+        setTimeout(() => { m.classList.remove('open'); m.style.transform = ''; }, 250);
+    }
+    function _bindEdgeSwipeClose(el, onClose) {
+        if (el._edgeBound) return; el._edgeBound = true;
+        let sx = null, sy = 0, dx = 0, horiz = null;
+        el.addEventListener('touchstart', e => {
+            const t = e.touches[0];
+            sx = (e.touches.length === 1 && t.clientX <= 28) ? t.clientX : null;
+            sy = t.clientY; dx = 0; horiz = null;
+            if (sx !== null) el.style.transition = 'none';
+        }, { passive: true });
+        el.addEventListener('touchmove', e => {
+            if (sx === null) return;
+            const t = e.touches[0];
+            dx = Math.max(0, t.clientX - sx);
+            if (horiz === null && (dx > 6 || Math.abs(t.clientY - sy) > 6)) horiz = dx > Math.abs(t.clientY - sy);
+            if (!horiz) return;
+            e.preventDefault();
+            el.style.transform = `translateX(${dx}px)`;
+        }, { passive: false });
+        el.addEventListener('touchend', () => {
+            if (sx === null) return;
+            el.style.transition = '';
+            if (horiz && dx > Math.min(100, window.innerWidth * 0.28)) onClose();
+            else el.style.transform = 'translateX(0)';
+            sx = null;
         });
     }
 
@@ -5287,7 +5331,7 @@
         if (!items.length) { el.innerHTML = '<div style="color:var(--text-sub);font-size:13px;text-align:center;padding:12px 0;">1년 안에 예상되는 일정이 없습니다.</div>'; return; }
         const dday = d => { const n = Math.round((new Date(d) - new Date(today)) / 86400000); return n === 0 ? 'D-DAY' : 'D-' + n; };
         const divSum = items.filter(i => i.kind === 'div').reduce((s, i) => s + i.krw, 0);
-        el.innerHTML = (divSum > 0 ? `<div style="font-size:13px;margin-bottom:8px;">앞으로 1년 예상 배당 <b>₩${Math.round(divSum).toLocaleString()}</b> <span style="color:var(--text-sub);font-size:11px;">(작년 수령액 × 지금 보유수량)</span></div>` : '') +
+        el.innerHTML = (divSum > 0 ? `<div style="font-size:13px;margin-bottom:8px;">앞으로 1년 예상 배당 <b>₩${Math.round(divSum).toLocaleString()}</b><br><span style="color:var(--text-sub);font-size:11px;">(작년 수령액 × 지금 보유수량)</span></div>` : '') +
             items.slice(0, 12).map(i => `<div class="dividend-history-item"><div class="left"><div class="ticker">${i.kind === 'div' ? '💰' : '📊'} ${i.name}${i.kind === 'earn' ? ' <span style="font-weight:400;color:var(--text-sub);">실적 발표</span>' : ''}</div><div class="meta">${i.date.replace(/-/g, '.')}${i.estimated ? ' (예상)' : ''} · ${i.kind === 'div' ? i.who.join('·') : (i.note || '')}</div></div><div class="right"><div class="krw" style="${i.kind === 'earn' ? 'color:var(--text-main);' : ''}">${i.kind === 'div' ? '₩' + Math.round(i.krw).toLocaleString() : ''}</div><div class="original">${dday(i.date)}</div></div></div>`).join('') +
             `<div style="font-size:11px;color:var(--text-sub);margin-top:8px;line-height:1.5;">배당은 작년 같은 시기 기록으로 추정한 값입니다.${ex.usEarningsEnabled ? ' 미국 실적일: Finnhub.' : ''}${ex.dartEnabled ? ' 국내 실적일: 작년 잠정실적 공시일 기준.' : ''}${!ex.usEarningsEnabled || !ex.dartEnabled ? ' 실적 발표일은 ' + [!ex.usEarningsEnabled ? '미국(FINNHUB_API_KEY)' : '', !ex.dartEnabled ? '국내(DART_API_KEY)' : ''].filter(Boolean).join('·') + ' 키를 넣으면 함께 표시됩니다.' : ''}</div>`;
     }
@@ -5297,6 +5341,7 @@
     function renderDisclosureCard() {
         const card = document.getElementById('disclosureCard'), body = document.getElementById('disclosureBody');
         if (!card || !body) return;
+        if (HOME_HIDDEN_CARDS.disclosure) { card.style.display = 'none'; return; }
         const ex = window._EXTRAS;
         if (!ex) { card.style.display = 'none'; return; }
         const held = new Set((window._lastBalanceList || []).map(b => b.ticker));
@@ -5351,8 +5396,7 @@
         document.getElementById('fxHistoryCount').textContent = `(${sortedFx.length}건)`;
         const histEl = document.getElementById('fxHistoryList');
         if (sortedFx.length === 0) { histEl.innerHTML = '<div style="color:var(--text-sub);font-size:13px;text-align:center;padding:20px 0;">환전 내역이 없습니다</div>'; return; }
-        histEl.innerHTML = sortedFx.slice(0,20).map(row => { const name=String(row[0]).trim(), date=String(row[1]).substring(0,10), type=String(row[4]).trim(), usd=Math.abs(Number(row[6])||0), rate=Number(row[7])||0, krw=Math.round(usd*rate), isBuy=type==='환전매입', typeColor=isBuy?'#34C759':'#FF9500', typeLabel=isBuy?'매입 🟢':'매도 🟠'; return `<div class="fx-history-item"><div><div style="font-weight:700;font-size:14px;color:${typeColor};">${typeLabel}</div><div style="font-size:11px;color:var(--text-sub);margin-top:2px;">${date} · ${name}</div></div><div style="text-align:right;"><div style="font-weight:700;font-size:14px;">$${usd.toLocaleString(undefined,{maximumFractionDigits:0})}</div><div style="font-size:11px;color:var(--text-sub);margin-top:2px;">${Math.round(rate).toLocaleString()}원 · ₩${krw.toLocaleString()}</div></div></div>`; }).join('');
-        if (sortedFx.length > 20) histEl.innerHTML += `<div style="text-align:center;font-size:12px;color:var(--text-sub);padding:10px 0;">최근 20건만 표시 (전체 ${sortedFx.length}건)</div>`;
+        renderPagedList(histEl, 'fx', sortedFx, row => { const name=String(row[0]).trim(), date=String(row[1]).substring(0,10), type=String(row[4]).trim(), usd=Math.abs(Number(row[6])||0), rate=Number(row[7])||0, krw=Math.round(usd*rate), isBuy=type==='환전매입', typeColor=isBuy?'#34C759':'#FF9500', typeLabel=isBuy?'매입 🟢':'매도 🟠'; return `<div class="fx-history-item"><div><div style="font-weight:700;font-size:14px;color:${typeColor};">${typeLabel}</div><div style="font-size:11px;color:var(--text-sub);margin-top:2px;">${date} · ${name}</div></div><div style="text-align:right;"><div style="font-weight:700;font-size:14px;">$${usd.toLocaleString(undefined,{maximumFractionDigits:0})}</div><div style="font-size:11px;color:var(--text-sub);margin-top:2px;">${Math.round(rate).toLocaleString()}원 · ₩${krw.toLocaleString()}</div></div></div>`; });
     }
 
     // 원/달러 환율 추이 차트 + 환전 매입/매도 마커
@@ -6917,18 +6961,11 @@
 
     // ═══════════════════════════════════════
     //  ⑨ AI 문서 가져오기 (2026-09-17)
-    //  증권사 거래내역 PDF·캡처·복사한 글 → Gemini가 거래 목록으로 읽음 → 원장과 대조 → 사용자가 고른 것만 저장
+    //  증권사 거래내역 PDF·캡처 → Gemini가 거래 목록으로 읽음 → 원장과 대조 → 사용자가 고른 것만 저장
     // ═══════════════════════════════════════
     let _aimRows = [];
     const _AIM_TYPES = ['매수', '매도', '입금', '출금', '배당', '환전매입', '환전매도'];
 
-    // 개인정보 가리기(복사한 글에만 적용 — 사진·PDF는 브라우저에서 가릴 수 없음)
-    function _aimMask(text) {
-        return String(text)
-            .replace(/\b\d{6}\s*-\s*[1-4]\d{6}\b/g, '******-*******')                 // 주민번호
-            .replace(/\b(?!(?:19|20)\d{2}-\d{1,2}-\d{1,2}\b)\d{3,6}-\d{2,6}-\d{2,8}(-\d{1,4})?\b/g, '[계좌번호]')   // 계좌번호 형태(날짜 제외)
-            .replace(/\b01[016-9]-?\d{3,4}-?\d{4}\b/g, '[전화번호]');
-    }
     function _aimFileToPart(file) {
         return new Promise((res, rej) => {
             const r = new FileReader();
@@ -6956,11 +6993,9 @@
         const out = document.getElementById('aimResult');
         const key = localStorage.getItem(AI_KEY_ST);
         if (!key) { out.innerHTML = '<div style="color:#FF3B30;font-size:13px;">AI분석 탭에서 Gemini API 키를 먼저 등록해 주세요.</div>'; return; }
-        if (!document.getElementById('aimAgree').checked) { alert('개인정보 안내를 확인하고 체크해 주세요.'); return; }
         const who = document.getElementById('aimUser').value;
         const files = [...document.getElementById('aimFiles').files];
-        const text = document.getElementById('aimText').value.trim();
-        if (!files.length && !text) { alert('파일을 고르거나 거래내역 글을 붙여넣어 주세요.'); return; }
+        if (!files.length) { alert('거래내역 PDF나 캡처 파일을 골라 주세요.'); return; }
         const big = files.find(f => f.size > 15 * 1024 * 1024);
         if (big) { alert(big.name + ' 파일이 너무 큽니다(15MB 이하).'); return; }
         out.innerHTML = '<div style="color:var(--text-sub);font-size:13px;">🤖 문서를 읽는 중... (10~40초)</div>';
@@ -6976,7 +7011,6 @@
         const parts = [{ text: prompt }];
         try {
             for (const f of files) parts.push(await _aimFileToPart(f));
-            if (text) parts.push({ text: '거래내역 글:\n' + _aimMask(text) });
             const raw = await _geminiGenerate(key, parts, 8192, { json: true });
             const m = String(raw).match(/\[[\s\S]*\]/);
             const list = JSON.parse(m ? m[0] : raw);
