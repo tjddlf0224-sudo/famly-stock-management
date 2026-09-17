@@ -6233,32 +6233,31 @@
 
         const CNN_URL = 'https://production.dataviz.cnn.io/index/fearandgreed/graphdata';
 
-        // ② 프록시 순차 시도 목록
-        const proxies = [
-            u => 'https://corsproxy.io/?' + encodeURIComponent(u),
+        // ② 순차 시도 — CNN 직접 조회가 가장 빠름(실측 0.05초). 경유 서버는 예비.
+        //   2026-09-17: 예전엔 프록시 먼저(corsproxy→allorigins→codetabs→직접)라 allorigins·codetabs가 각 20초씩 끌어 40초 걸림
+        //   → 직접 먼저 + 경로별 5초 제한. corsproxy.io는 키 필수로 바뀌어(403) 제외.
+        const routes = [
+            u => u,
             u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
             u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u),
         ];
+        const ROUTE_TIMEOUT_MS = 5000;
 
         function tryProxy(idx) {
-            if (idx >= proxies.length) {
-                // 모든 프록시 실패 → 직접 fetch 시도 (GitHub Pages에선 될 수도)
-                fetch(CNN_URL)
-                    .then(r => { if (!r.ok) throw new Error('direct ' + r.status); return r.json(); })
-                    .then(data => { onSuccess(data); })
-                    .catch(() => onFail());
-                return;
-            }
-            const proxyUrl = proxies[idx](CNN_URL);
-            fetch(proxyUrl)
+            if (idx >= routes.length) { onFail(); return; }
+            const ac = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+            const timer = ac ? setTimeout(() => ac.abort(), ROUTE_TIMEOUT_MS) : null;
+            fetch(routes[idx](CNN_URL), ac ? { signal: ac.signal } : undefined)
                 .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
                 .then(data => {
+                    if (timer) clearTimeout(timer);
                     const parsed = _parseFNG(data);
                     if (parsed) { onSuccess(data); }
-                    else { console.warn('[FNG] 프록시' + idx + ' 파싱 실패, 다음 시도'); tryProxy(idx + 1); }
+                    else { console.warn('[FNG] 경로' + idx + ' 파싱 실패, 다음 시도'); tryProxy(idx + 1); }
                 })
                 .catch(err => {
-                    console.warn('[FNG] 프록시' + idx + ' 실패:', err.message, '→ 다음 시도');
+                    if (timer) clearTimeout(timer);
+                    console.warn('[FNG] 경로' + idx + ' 실패:', err.name === 'AbortError' ? '5초 초과' : err.message, '→ 다음 시도');
                     tryProxy(idx + 1);
                 });
         }
