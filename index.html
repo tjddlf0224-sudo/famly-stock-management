@@ -806,6 +806,19 @@
         <button class="btn-primary" onclick="openBuyWarning()">거래 저장</button>
     </div>
     <div class="card">
+        <h3>📄 문서로 거래 가져오기 <span style="font-size:11px;color:var(--text-sub);font-weight:400;">AI</span></h3>
+        <div style="font-size:12.5px;color:var(--text-sub);line-height:1.55;margin-bottom:10px;">증권사 거래내역 PDF·캡처를 올리거나 글을 붙여넣으면 AI가 읽어서 앱 기록과 대조합니다. 고른 것만 저장됩니다.<br>미래에셋 보안메일은 비밀번호로 연 뒤 <b>인쇄 → PDF로 저장</b>한 파일을 올리세요.</div>
+        <div class="form-group"><label>거래자</label>
+            <select id="aimUser"><option value="윤성일">윤성일</option><option value="윤채현">윤채현</option><option value="윤시환">윤시환</option></select></div>
+        <div class="form-group"><label>파일 (PDF·사진, 여러 개 가능)</label><input type="file" id="aimFiles" accept="application/pdf,image/*" multiple style="width:100%;box-sizing:border-box;"></div>
+        <div class="form-group"><label>또는 글 붙여넣기</label><textarea id="aimText" rows="3" placeholder="거래내역 화면의 글을 복사해 붙여넣기 (계좌번호·주민번호는 자동으로 가립니다)"></textarea></div>
+        <label style="display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--text-sub);line-height:1.5;margin-bottom:10px;">
+            <input type="checkbox" id="aimAgree" style="margin-top:2px;width:18px;height:18px;flex:none;">
+            <span>무료 Gemini 키는 구글이 올린 내용을 서비스 개선에 쓰고 사람이 검토할 수 있습니다. <b>계좌번호·주민번호·주소가 보이는 부분은 잘라내고</b> 올리겠습니다.</span></label>
+        <button class="btn-primary" onclick="runAiImport()">AI로 읽기</button>
+        <div id="aimResult" style="margin-top:12px;"></div>
+    </div>
+    <div class="card">
         <h3>최근 거래 내역</h3>
         <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
             <div style="display: flex; align-items: center; gap: 5px;">
@@ -6903,6 +6916,158 @@
 
 
     // ═══════════════════════════════════════
+    //  ⑨ AI 문서 가져오기 (2026-09-17)
+    //  증권사 거래내역 PDF·캡처·복사한 글 → Gemini가 거래 목록으로 읽음 → 원장과 대조 → 사용자가 고른 것만 저장
+    // ═══════════════════════════════════════
+    let _aimRows = [];
+    const _AIM_TYPES = ['매수', '매도', '입금', '출금', '배당', '환전매입', '환전매도'];
+
+    // 개인정보 가리기(복사한 글에만 적용 — 사진·PDF는 브라우저에서 가릴 수 없음)
+    function _aimMask(text) {
+        return String(text)
+            .replace(/\b\d{6}\s*-\s*[1-4]\d{6}\b/g, '******-*******')                 // 주민번호
+            .replace(/\b(?!(?:19|20)\d{2}-\d{1,2}-\d{1,2}\b)\d{3,6}-\d{2,6}-\d{2,8}(-\d{1,4})?\b/g, '[계좌번호]')   // 계좌번호 형태(날짜 제외)
+            .replace(/\b01[016-9]-?\d{3,4}-?\d{4}\b/g, '[전화번호]');
+    }
+    function _aimFileToPart(file) {
+        return new Promise((res, rej) => {
+            const r = new FileReader();
+            r.onload = () => res({ inline_data: { mime_type: file.type || 'application/pdf', data: String(r.result).split(',')[1] } });
+            r.onerror = () => rej(r.error);
+            r.readAsDataURL(file);
+        });
+    }
+    function _aimResolveTicker(name, ticker) {
+        let t = String(ticker || '').trim().toUpperCase();
+        if (/^\d{1,5}$/.test(t)) t = t.padStart(6, '0');
+        if (t) return t;
+        const n = String(name || '').replace(/\s/g, '').toUpperCase();
+        if (!n) return '';
+        const kr = (STOCK_LIST_KR || []).find(s => s.name.replace(/\s/g, '').toUpperCase() === n);
+        if (kr) return kr.ticker;
+        const us = (STOCK_LIST_US || []).find(s => s.name.replace(/\s/g, '').toUpperCase() === n || s.ticker === n);
+        if (us) return us.ticker;
+        // 앱 원장에서 같은 이름으로 쓴 티커
+        const hit = (RAW_DATA || []).find(r => String(r[3] || '').replace(/\s/g, '').toUpperCase() === n && r[2]);
+        return hit ? String(hit[2]).trim().toUpperCase() : '';
+    }
+
+    async function runAiImport() {
+        const out = document.getElementById('aimResult');
+        const key = localStorage.getItem(AI_KEY_ST);
+        if (!key) { out.innerHTML = '<div style="color:#FF3B30;font-size:13px;">AI분석 탭에서 Gemini API 키를 먼저 등록해 주세요.</div>'; return; }
+        if (!document.getElementById('aimAgree').checked) { alert('개인정보 안내를 확인하고 체크해 주세요.'); return; }
+        const who = document.getElementById('aimUser').value;
+        const files = [...document.getElementById('aimFiles').files];
+        const text = document.getElementById('aimText').value.trim();
+        if (!files.length && !text) { alert('파일을 고르거나 거래내역 글을 붙여넣어 주세요.'); return; }
+        const big = files.find(f => f.size > 15 * 1024 * 1024);
+        if (big) { alert(big.name + ' 파일이 너무 큽니다(15MB 이하).'); return; }
+        out.innerHTML = '<div style="color:var(--text-sub);font-size:13px;">🤖 문서를 읽는 중... (10~40초)</div>';
+        const prompt = `너는 한국 증권사 거래내역을 정리하는 도우미다. 첨부 문서/글에서 실제로 체결된 거래만 뽑아 JSON 배열로만 답하라(설명 금지).
+각 원소: {"date":"YYYY-MM-DD","type":"매수|매도|입금|출금|배당|환전매입|환전매도","name":"종목명","ticker":"국내는 6자리 코드, 미국은 심볼, 모르면 빈 문자열","qty":수량,"price":1주당 체결단가(거래 통화 기준),"currency":"KRW|USD","fxRate":적용환율(원화거래는 1),"amount":거래금액(입금/출금/배당은 금액, 거래 통화 기준)}
+규칙:
+- 매수/매도: qty와 price 필수. 수수료·세금은 price에 넣지 말 것.
+- 입금/출금/배당: qty=0, price=amount(원화면 원, 달러면 달러).
+- 배당은 세후 입금액. 예탁금이용료·이자는 type "배당", name "예탁금이용료", ticker "".
+- 환전: 원→달러는 "환전매입", 달러→원은 "환전매도". qty=달러 금액, price=1, fxRate=환율.
+- 주문·미체결·취소·정정·조회용 합계 행은 제외. 계좌 간 대체도 입금/출금으로.
+- 숫자는 쉼표 없이 숫자형으로.`;
+        const parts = [{ text: prompt }];
+        try {
+            for (const f of files) parts.push(await _aimFileToPart(f));
+            if (text) parts.push({ text: '거래내역 글:\n' + _aimMask(text) });
+            const raw = await _geminiGenerate(key, parts, 8192, { json: true });
+            const m = String(raw).match(/\[[\s\S]*\]/);
+            const list = JSON.parse(m ? m[0] : raw);
+            if (!Array.isArray(list) || !list.length) throw new Error('거래를 찾지 못했습니다.');
+            _aimRows = list.map(x => _aimNormalize(x, who)).filter(Boolean);
+            _aimReconcile(who);
+            renderAiImportRows();
+        } catch (e) {
+            out.innerHTML = (typeof _aiErrorCard === 'function') ? _aiErrorCard(e) : '<div style="color:#FF3B30;">' + e.message + '</div>';
+        }
+    }
+
+    function _aimNormalize(x, who) {
+        const type = String(x.type || '').trim();
+        if (_AIM_TYPES.indexOf(type) === -1) return null;
+        const date = String(x.date || '').slice(0, 10).replace(/\./g, '-');
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+        const num = v => Number(String(v == null ? '' : v).replace(/[,\s$원]/g, '')) || 0;
+        const isFlow = type === '입금' || type === '출금' || type === '배당';
+        let ticker = isFlow && !x.ticker && /예탁금|이자/.test(x.name || '') ? '' : _aimResolveTicker(x.name, x.ticker);
+        const usd = String(x.currency || '').toUpperCase() === 'USD';
+        const row = { who, date, type, ticker, name: String(x.name || '').trim(),
+            qty: isFlow ? 0 : num(x.qty), price: isFlow ? (num(x.amount) || num(x.price)) : num(x.price),
+            fxRate: num(x.fxRate) || (usd ? (type.startsWith('환전') ? 0 : CURRENT_EXCHANGE_RATE) : 1), usd, status: 'new', pick: true, note: '' };
+        if (type.startsWith('환전')) { row.ticker = ''; row.price = row.price || 1; }
+        if (!isFlow && !type.startsWith('환전') && (!row.qty || !row.price)) { row.status = 'check'; row.pick = false; row.note = '수량/단가 확인 필요'; }
+        if (!isFlow && !type.startsWith('환전') && !row.ticker) { row.status = 'check'; row.pick = false; row.note = '티커를 못 찾음'; }
+        return row;
+    }
+
+    // 원장과 대조: 같은 날짜·유형·종목·수량·단가(±1%) → 이미 있음 / 날짜·유형·종목만 같음 → 확인 필요
+    function _aimReconcile(who) {
+        const norm = t => { t = String(t || '').trim().toUpperCase(); return /^\d{1,5}$/.test(t) ? t.padStart(6, '0') : t; };
+        const mine = (RAW_DATA || []).filter(r => String(r[0]).trim() === who).map(r => ({
+            date: String(r[1]).slice(0, 10), type: String(r[4]).trim(), ticker: norm(r[2]), qty: Number(r[5]) || 0, price: Number(r[6]) || 0, used: false }));
+        const close = (a, b) => Math.abs(a - b) <= Math.max(1e-6, Math.abs(b) * 0.01);
+        _aimRows.forEach(x => {
+            const same = mine.find(o => !o.used && o.date === x.date && o.type === x.type && o.ticker === norm(x.ticker) && close(o.qty, x.qty) && close(o.price, x.price));
+            if (same) { same.used = true; x.status = 'dup'; x.pick = false; x.note = '앱에 이미 있음'; return; }
+            const near = mine.find(o => !o.used && o.date === x.date && o.type === x.type && o.ticker === norm(x.ticker));
+            if (near && x.status !== 'check') { x.status = 'check'; x.pick = false; x.note = `앱 기록과 다름(앱: ${near.qty}주 × ${near.price.toLocaleString()})`; }
+        });
+    }
+
+    function renderAiImportRows() {
+        const out = document.getElementById('aimResult');
+        const cnt = s => _aimRows.filter(r => r.status === s).length;
+        const color = { new: '#34C759', check: '#FF9500', dup: '#8E8E93' };
+        const label = { new: '새 거래', check: '확인 필요', dup: '이미 있음' };
+        out.innerHTML = `<div style="font-size:13px;margin:4px 0 8px;">총 ${_aimRows.length}건 · <b style="color:#34C759;">새 거래 ${cnt('new')}</b> · <b style="color:#FF9500;">확인 필요 ${cnt('check')}</b> · 이미 있음 ${cnt('dup')}</div>` +
+            _aimRows.map((r, i) => `<label style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border-color);${r.status === 'dup' ? 'opacity:.55;' : ''}">
+                <input type="checkbox" ${r.pick ? 'checked' : ''} onchange="_aimRows[${i}].pick=this.checked;_aimUpdateBtn()" style="margin-top:3px;width:18px;height:18px;flex:none;">
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:13.5px;font-weight:600;">${r.date.slice(2).replace(/-/g, '.')} ${r.type} ${r.name || r.ticker || ''} <span style="color:var(--text-sub);font-weight:400;">${r.ticker || ''}</span></div>
+                    <div style="font-size:12px;color:var(--text-sub);">${r.qty ? r.qty + '주 × ' : ''}${r.usd ? '$' + r.price.toLocaleString(undefined, { maximumFractionDigits: 4 }) : Math.round(r.price).toLocaleString() + '원'}${r.usd && r.fxRate > 1 ? ' · 환율 ' + r.fxRate : ''}${r.note ? ' · <span style="color:' + color[r.status] + ';">' + r.note + '</span>' : ''}</div>
+                </div>
+                <span style="font-size:11px;color:${color[r.status]};white-space:nowrap;">${label[r.status]}</span></label>`).join('') +
+            `<button id="aimSaveBtn" class="btn-primary" style="margin-top:12px;" onclick="saveAiImport()"></button>
+             <div style="font-size:11px;color:var(--text-sub);margin-top:6px;line-height:1.5;">AI가 잘못 읽을 수 있습니다. 저장 전에 날짜·수량·단가를 꼭 확인하세요. '확인 필요'는 직접 거래 추가 화면에서 고쳐 넣는 게 안전합니다.</div>`;
+        _aimUpdateBtn();
+    }
+    function _aimUpdateBtn() {
+        const b = document.getElementById('aimSaveBtn'); if (!b) return;
+        const n = _aimRows.filter(r => r.pick).length;
+        b.textContent = n ? `선택한 ${n}건 저장` : '저장할 거래를 선택하세요';
+        b.disabled = !n;
+    }
+
+    async function saveAiImport() {
+        const picks = _aimRows.filter(r => r.pick);
+        if (!picks.length) return;
+        if (!currentGroupId) { alert('그룹 로그인이 필요합니다.'); return; }
+        if (!confirm(`${picks[0].who}님 계좌에 ${picks.length}건을 저장할까요?\n\n` + picks.slice(0, 8).map(r => `${r.date} ${r.type} ${r.name || ''} ${r.qty ? r.qty + '주' : ''}`).join('\n') + (picks.length > 8 ? `\n외 ${picks.length - 8}건` : ''))) return;
+        const btn = document.getElementById('aimSaveBtn'); btn.disabled = true; btn.textContent = '저장 중...';
+        const db = window._firestoreDb; const { collection, addDoc } = window._firestoreApi;
+        let ok = 0; const fails = [];
+        for (const r of picks) {
+            try {
+                await addDoc(collection(db, 'investments'), {
+                    groupId: currentGroupId, who: r.who, date: r.date, ticker: r.ticker, name: r.name, type: r.type,
+                    qty: r.qty, price: r.price, fxRate: r.fxRate || 1, memo: 'AI 문서 가져오기', createdAt: new Date()
+                });
+                ok++;
+            } catch (e) { fails.push(r.date + ' ' + r.name + ': ' + e.message); }
+        }
+        alert(`${ok}건 저장${fails.length ? `, ${fails.length}건 실패\n` + fails.join('\n') : ''}`);
+        if (ok) { localStorage.removeItem(CACHE_KEY); localStorage.removeItem(CACHE_TIME_KEY); location.reload(); }
+        else { btn.disabled = false; _aimUpdateBtn(); }
+    }
+
+    // ═══════════════════════════════════════
     //  AI 매매분석  v3
     // ═══════════════════════════════════════
     var AI_KEY_ST    = 'ai_api_key_v1';        // Gemini 키
@@ -7006,7 +7171,7 @@
     // 분석 실행
     // ===== Gemini 호출 공용 헬퍼: 과부하(503/429) 자동 재시도 + 모델 폴백 =====
     // 반환: 응답 텍스트(string). 실패 시 throw.
-    async function _geminiGenerate(key, prompt, maxTokens) {
+    async function _geminiGenerate(key, prompt, maxTokens, opts) {   // prompt: 문자열 또는 parts 배열(사진·PDF 포함)
         // 무료 등급에서 호출 가능한 모델만 둔다. (gemini-2.0-flash 는 이 키 무료한도=0 → 제외)
         var MODELS = ['gemini-2.5-flash-lite', 'gemini-2.0-flash-lite', 'gemini-2.5-flash'];
         var BACKOFF = { 500:1, 502:1, 503:1 };  // 일시 과부하만 백오프 재시도 (429 할당량은 즉시 다음 모델)
@@ -7023,8 +7188,8 @@
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                contents: [{ parts: [{ text: prompt }] }],
-                                generationConfig: { maxOutputTokens: maxTokens || 8192 }
+                                contents: [{ parts: Array.isArray(prompt) ? prompt : [{ text: prompt }] }],
+                                generationConfig: Object.assign({ maxOutputTokens: maxTokens || 8192 }, opts && opts.json ? { responseMimeType: 'application/json' } : {})
                             })
                         }
                     );
