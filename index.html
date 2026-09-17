@@ -221,13 +221,13 @@
             min-width: 0;
         }
         .chart-ticker-name {
-            font-size: 15px; font-weight: 700;
+            font-size: 19px; font-weight: 800;
             color: var(--text-main);
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .chart-avg-tag {
             display: inline-block;
-            font-size: 11px; font-weight: 600;
+            font-size: 13px; font-weight: 600;
             color: var(--primary);
             white-space: nowrap;
             opacity: 0.85;
@@ -242,12 +242,12 @@
             flex-shrink: 0;
         }
         .candle-type-btn {
-            padding: 5px 13px;
+            padding: 6px 14px;
             border-radius: 8px;
             border: none;
             background: transparent;
             color: var(--text-sub);
-            font-size: 12px; font-weight: 700;
+            font-size: 13px; font-weight: 700;
             cursor: pointer;
             transition: all 0.15s ease;
             letter-spacing: 0.2px;
@@ -260,23 +260,27 @@
 
         /* MA 레전드 */
         .ma-legend {
-            display: flex; gap: 10px; flex-wrap: wrap;
-            padding: 8px 16px 4px;
+            display: flex; gap: 12px; flex-wrap: wrap;
+            padding: 10px 16px 2px;
             min-height: 0;
         }
         .ma-legend-item {
             display: flex; align-items: center; gap: 4px;
-            font-size: 10px; font-weight: 600; color: var(--text-sub);
+            font-size: 11.5px; font-weight: 600; color: var(--text-sub);
         }
         .ma-legend-dot {
-            width: 18px; height: 2px; border-radius: 1px;
+            width: 14px; height: 3px; border-radius: 2px;
         }
 
         /* 캔버스 래퍼 */
         .candle-wrap {
             position: relative; width: 100%; height: 440px;
-            touch-action: none; user-select: none;
+            touch-action: pan-y; user-select: none;   /* 세로 스와이프 = 페이지 스크롤, 가로·핀치 = 차트 */
         }
+        .ohlc-line { padding: 2px 16px 4px; font-size: 10.5px; color: var(--text-sub); min-height: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+        .candle-empty { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; justify-content: center; color: var(--text-sub); font-size: 13px; background: var(--card-bg); }
+        .tv-credit { padding: 6px 16px 10px; font-size: 9.5px; color: var(--text-sub); text-align: right; opacity: 0.8; }
+        .tv-credit a { color: var(--text-sub); }
 
         /* 기타 */
         .avg-price-badge { white-space: nowrap; }
@@ -845,7 +849,9 @@
             </div>
         </div>
         <div class="ma-legend" id="maLegend"></div>
-        <div class="candle-wrap"><canvas id="candleChart"></canvas></div>
+        <div class="ohlc-line" id="chartOhlc"></div>
+        <div class="candle-wrap" id="candleWrap"><div class="candle-empty" id="candleEmpty" style="display:none;">차트 데이터가 없습니다.</div></div>
+        <div class="tv-credit">TradingView Lightweight Charts™ · Copyright © TradingView, Inc. · <a href="https://www.tradingview.com/" target="_blank" rel="noopener">tradingview.com</a></div>
     </div>
     <div id="chartLoadingMsg" style="display:none;">
         <div class="spinner" style="margin:0 auto 10px;"></div>
@@ -4549,12 +4555,74 @@
         // ★ isLoadMore는 Firestore에서 이미 전체 데이터를 가져오므로 불필요 — 무시
     }
 
-    function showCandleEmpty() {
-        const canvas = document.getElementById('candleChart'); if (!canvas) return;
-        const dpr = window.devicePixelRatio || 1;
-        canvas.width = canvas.offsetWidth*dpr; canvas.height = canvas.offsetHeight*dpr;
-        const ctx = canvas.getContext('2d'); ctx.scale(dpr,dpr); ctx.fillStyle = '#999'; ctx.font = '13px -apple-system, sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText('차트 데이터가 없습니다.', canvas.offsetWidth/2, canvas.offsetHeight/2);
+    // =====================================================================
+    // 캔들차트 — TradingView Lightweight Charts™ 5.2.1 (Apache-2.0)  [2026-09-17 교체]
+    //   · 이전: 자체 Canvas 구현 약 730줄(그리기·터치·십자선·마커 히트맵)
+    //   · 라이브러리는 차트를 처음 그릴 때 지연 로딩 → 앱 초기 로딩 속도에 영향 없음
+    //   · ⚠️ 저장 규약: chartAllData의 o = 실제 종가, c = 실제 시가 (의도적 반전 — 저장소는 절대 건드리지 말 것)
+    //       → 이 차트에 넣기 직전 _toRealOHLC()에서 '딱 한 번만' 원래대로 되돌린다.
+    //   · 라이선스 고지 의무: 카드 하단 "TradingView Lightweight Charts™ · Copyright © TradingView, Inc." + 링크
+    // =====================================================================
+    const LWC_SRC = 'https://cdn.jsdelivr.net/npm/lightweight-charts@5.2.1/dist/lightweight-charts.standalone.production.js';
+    const CANDLE_UP = '#FF3B30', CANDLE_DOWN = '#007AFF';   // 상승=빨강, 하락=파랑
+    let _lwcPromise = null;
+    let _tv = null;   // { chart, candle, vol, maSeries[], markers, avgLine, lastBar, isKorea, wrap }
+
+    function _loadLWC() {
+        if (window.LightweightCharts) return Promise.resolve(window.LightweightCharts);
+        if (_lwcPromise) return _lwcPromise;
+        _lwcPromise = new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = LWC_SRC; s.async = true;
+            s.onload = () => resolve(window.LightweightCharts);
+            s.onerror = () => { _lwcPromise = null; reject(new Error('차트 라이브러리 로딩 실패')); };
+            document.head.appendChild(s);
+        });
+        return _lwcPromise;
+    }
+
+    function _isChartDark() {
+        // 수동 설정(dark-mode/light-mode 클래스) 우선, 없으면 시스템 설정을 따른다
+        return document.body.classList.contains('dark-mode') ||
+            (!document.body.classList.contains('light-mode') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    }
+
+    function _tvThemeOptions(dark) {
+        return {
+            layout: {
+                background: { type: 'solid', color: dark ? '#1C1C1E' : '#FFFFFF' },
+                textColor: dark ? '#8E8E93' : '#9A9AA0',
+                panes: { separatorColor: dark ? '#2C2C2E' : '#F2F2F7', separatorHoverColor: 'rgba(0,0,0,0)', enableResize: false },
+            },
+            grid: { vertLines: { visible: false }, horzLines: { color: dark ? '#2A2A2C' : '#F4F4F7' } },
+            crosshair: {
+                vertLine: { color: dark ? '#636366' : '#C7C7CC', labelBackgroundColor: dark ? '#48484A' : '#636366' },
+                horzLine: { color: dark ? '#636366' : '#C7C7CC', labelBackgroundColor: dark ? '#48484A' : '#636366' },
+            },
+        };
+    }
+
+    // 저장 규약(o=종가, c=시가) → 실제 OHLC
+    function _toRealOHLC(d) {
+        const close = d.o, open = d.c > 0 ? d.c : d.o;
+        return { time: new Date(d.x).toISOString().slice(0, 10), open, high: d.h, low: d.l, close, volume: d.v || 0 };
+    }
+
+    function _maPeriods(isKorea) {
+        return isKorea
+            ? [{n:20,color:'#FF9500'},{n:60,color:'#AF52DE'},{n:120,color:'#30B0C7'}]
+            : [{n:20,color:'#FF9500'},{n:50,color:'#AF52DE'},{n:100,color:'#30B0C7'},{n:200,color:'#FF2D55'}];
+    }
+
+    function showCandleEmpty(msg) {
+        const el = document.getElementById('candleEmpty');
+        if (el) { el.textContent = msg || '차트 데이터가 없습니다.'; el.style.display = 'flex'; }
+        const ohlc = document.getElementById('chartOhlc'); if (ohlc) ohlc.textContent = '';
+        if (_tv) {
+            _tv.candle.setData([]); _tv.vol.setData([]);
+            _tv.maSeries.forEach(s => s.setData([]));
+            _tv.markers.setMarkers([]);
+        }
     }
 
     // ── 일봉/주봉/월봉 타입
@@ -4562,25 +4630,20 @@
 
     function setCandleType(type) {
         currentCandleType = type;
-        document.querySelectorAll('.candle-type-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.candle-type-btn').forEach(b => {
-            if ((type==='D'&&b.textContent==='일')||(type==='W'&&b.textContent==='주')||(type==='M'&&b.textContent==='월')) b.classList.add('active');
+            b.classList.toggle('active',
+                (type==='D'&&b.textContent==='일')||(type==='W'&&b.textContent==='주')||(type==='M'&&b.textContent==='월'));
         });
         renderMALegend();
         if (!chartAllData || chartAllData.length === 0) return;
-        
-        // 타입 변경 시에는 무조건 화면 뷰 리셋
-        renderCandleChart(false); 
+        renderCandleChart();
     }
 
     function renderMALegend() {
         const el = document.getElementById('maLegend'); if (!el) return;
         const isKr = /^\d{6}$/.test(chartCurrentTicker);
         const typeLabel = {D:'일', W:'주', M:'월'}[currentCandleType] || '일';
-        const periods = isKr
-            ? [{n:20,color:'#FF9500'},{n:60,color:'#AF52DE'},{n:120,color:'#30B0C7'}]
-            : [{n:20,color:'#FF9500'},{n:50,color:'#AF52DE'},{n:100,color:'#30B0C7'},{n:200,color:'#FF2D55'}];
-        el.innerHTML = periods.map(p =>
+        el.innerHTML = _maPeriods(isKr).map(p =>
             '<span class="ma-legend-item">' +
             '<span class="ma-legend-dot" style="background:'+p.color+'"></span>' +
             p.n + typeLabel +
@@ -4588,53 +4651,43 @@
         ).join('');
     }
 
-    // 주봉/월봉 집계
-    function aggregateCandles(data, type) {
-        if (type === 'D') return data;
-        const groups = {};
-        const groupKeys = [];
-        data.forEach(d => {
-            const dt = new Date(d.x);
+    // 주봉/월봉 집계 (실제 OHLC 기준: 시가=첫 봉 시가, 종가=마지막 봉 종가)
+    //   ※ 이전 구현은 저장 규약 탓에 '마지막 날 시가'를 주봉 종가로 쓰고 있었음 → 바로잡음
+    function aggregateCandles(bars, type) {
+        if (type === 'D') return bars;
+        const out = [], byKey = {};
+        for (const b of bars) {
+            const d = new Date(b.time + 'T00:00:00Z');
             let key;
             if (type === 'W') {
-                const day = dt.getUTCDay();
-                const diff = (day === 0) ? -6 : 1 - day;
-                const mon = new Date(dt); mon.setUTCDate(dt.getUTCDate() + diff);
-                key = mon.getUTCFullYear() + '-' + String(mon.getUTCMonth()+1).padStart(2,'0') + '-' + String(mon.getUTCDate()).padStart(2,'0');
+                const back = (d.getUTCDay() + 6) % 7;          // 월요일 기준 주
+                const mon = new Date(d); mon.setUTCDate(d.getUTCDate() - back);
+                key = mon.toISOString().slice(0, 10);
             } else {
-                key = dt.getUTCFullYear() + '-' + String(dt.getUTCMonth()+1).padStart(2,'0');
+                key = b.time.slice(0, 7) + '-01';
             }
-            if (!groups[key]) {
-                groups[key] = { x: d.x, firstC: d.c, h: d.h, l: d.l, c: d.c, v: d.v || 0 };
-                groupKeys.push(key);
+            const g = byKey[key];
+            if (!g) {
+                const nb = { time: key, open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume };
+                byKey[key] = nb; out.push(nb);
             } else {
-                groups[key].h = Math.max(groups[key].h, d.h);
-                groups[key].l = Math.min(groups[key].l, d.l);
-                groups[key].c = d.c;
-                groups[key].v = (groups[key].v || 0) + (d.v || 0);
+                g.high = Math.max(g.high, b.high); g.low = Math.min(g.low, b.low);
+                g.close = b.close; g.volume += b.volume;
             }
-        });
-        // o = 마지막날 종가, c = 첫날 종가
-        // → isUp(o >= c): 마지막종가 >= 첫날종가 = 상승 = 빨강 (일봉 색상과 일치)
-        return groupKeys.map(k => {
-            const g = groups[k];
-            return { x: g.x, o: g.c, h: g.h, l: g.l, c: g.firstC, v: g.v };
-        });
-    }
-
-    // 이동평균 계산 (일봉 원본 데이터 기반, n일)
-    // 차트 캔들용: {c} 객체 배열 → 각 인덱스의 MA값 배열 반환
-    function calcMAArray(rawData, n) {
-        const result = new Array(rawData.length).fill(null);
-        for (let i = n-1; i < rawData.length; i++) {
-            let sum = 0; for (let j = 0; j < n; j++) sum += rawData[i-j].c;
-            result[i] = sum / n;
         }
-        return result;
+        return out;
     }
 
-    let candleViewMin = 0, candleViewMax = 0, candleW_fixed = 0, candleH_fixed = 0;
-    let candleDisplayData = []; // 현재 표시 중인 봉 배열 (집계 후)
+    // 단순이동평균 — 종가 기준 (이전 구현은 저장 규약 탓에 시가 평균이었음)
+    function calcSMA(bars, n) {
+        const out = []; let sum = 0;
+        for (let i = 0; i < bars.length; i++) {
+            sum += bars[i].close;
+            if (i >= n) sum -= bars[i - n].close;
+            if (i >= n - 1) out.push({ time: bars[i].time, value: sum / n });
+        }
+        return out;
+    }
 
     // ★ 라이브 현재가를 차트 마지막(오늘) 캔들에 반영 — 백엔드 sync 없이 실시간에 가깝게.
     //   이 차트 규약: o=최신가(종가), c=시가 (의도적 뒤바뀜 — 절대 건드리지 말 것). MA는 .c(시가) 사용.
@@ -4678,645 +4731,200 @@
         return out;
     }
 
-    // ★ isLoadMore 플래그 추가
-    function renderCandleChart(isLoadMore = false) {
-        try {
-            const canvas = document.getElementById('candleChart'); if (!canvas) return;
-            const wrap = canvas.parentElement;
-            const W = wrap ? wrap.offsetWidth : (window.innerWidth-32), H = 440, dpr = window.devicePixelRatio || 1;
-            canvas.style.width = W+'px'; canvas.style.height = H+'px';
-            canvas.width = W*dpr; canvas.height = H*dpr;
-            candleW_fixed = W; candleH_fixed = H;
-
-            candleDisplayData = aggregateCandles(_applyLivePriceToCandles(chartCurrentTicker, chartAllData), currentCandleType);
-            console.log('[차트] candleDisplayData 길이:', candleDisplayData ? candleDisplayData.length : 'null');
-            if (!candleDisplayData || candleDisplayData.length === 0) { showCandleEmpty(); return; }
-            
-            // ★ 과거 데이터를 이어붙일 때(isLoadMore=true)는 보고 있던 화면(candleViewMin/Max)을 강제 초기화하지 않음!
-            if (!isLoadMore || candleViewMax === 0) {
-                // 기본 뷰: 일봉→최근 60개, 주봉→최근 52개, 월봉→전체
-                const showCount = currentCandleType === 'D' ? 60 : currentCandleType === 'W' ? 52 : candleDisplayData.length;
-                const startIdx = Math.max(0, candleDisplayData.length - showCount);
-                candleViewMin = candleDisplayData[startIdx].x;
-                candleViewMax = candleDisplayData[candleDisplayData.length-1].x;
-            }
-
-            drawCandles(); attachCandleTouchEvents();
-        } catch(e) { console.error('[renderCandleChart 오류]', e); showCandleEmpty(); }
+    function _fmtChartPrice(v, isKorea) {
+        return isKorea ? Math.round(v).toLocaleString('ko-KR') : '$' + Number(v).toFixed(2);
     }
 
-    // 크로스헤어 상태
-    let _crosshair = null; // { xi, visible }
+    // 범례 아래 한 줄: 시/고/저/종 (십자선을 올리면 그 봉, 아니면 마지막 봉)
+    function _showOhlc(b) {
+        const el = document.getElementById('chartOhlc');
+        if (!el || !_tv) return;
+        if (!b) { el.textContent = ''; return; }
+        const kr = _tv.isKorea;
+        const k = v => kr
+            ? (v >= 100000 ? (v / 1e4).toLocaleString('ko-KR', { maximumFractionDigits: 1 }) + '만' : Math.round(v).toLocaleString('ko-KR'))
+            : '$' + Number(v).toFixed(2);
+        const col = b.close >= b.open ? CANDLE_UP : CANDLE_DOWN;
+        el.innerHTML = `시 ${k(b.open)} · 고 ${k(b.high)} · 저 ${k(b.low)} · <b style="color:${col}">종 ${_fmtChartPrice(b.close, kr)}${kr ? '원' : ''}</b>`;
+    }
 
-    function drawCandles() {
-        const canvas = document.getElementById('candleChart');
-        if (!canvas || !candleDisplayData || candleDisplayData.length === 0) return;
-        const dpr = window.devicePixelRatio || 1;
-        const W = candleW_fixed || canvas.offsetWidth, H = candleH_fixed || canvas.offsetHeight;
-        if (W === 0 || H === 0) return;
-        const ctx = canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
-        const isDark = document.body.classList.contains('dark-mode');
-        const upColor='#FF3B30', downColor='#007AFF'; // 상승=빨강, 하락=파랑
-        const gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)';
-        const textColor = isDark ? '#888' : '#999';
-        const bgColor   = isDark ? '#1C1C1E' : '#fff';
-        ctx.fillStyle = bgColor; ctx.fillRect(0,0,W,H);
-
-        const PAD_L=4, PAD_R=62, PAD_T=14, PAD_B=4; // PAD_B 최소화 (날짜가 중간으로 이동)
-        // ── 레이아웃: [캔들 영역] → [날짜 행 20px] → [거래량 패널]
-        const DATE_ROW = 20; // 날짜 레이블 행 높이
-        const VOL_H = Math.round((H - PAD_T - PAD_B - DATE_ROW) * 0.28); // 거래량 패널 높이
-        const VOL_GAP = 4; // 거래량 위 여백
-        const CANDLE_H = H - PAD_T - PAD_B - DATE_ROW - VOL_H - VOL_GAP; // 캔들 실제 높이
-        const chartW = W-PAD_L-PAD_R, chartH = CANDLE_H;
-
-        // visible: 현재 화면에 보이는 봉들만 필터링
-        const visible = candleDisplayData.filter(d => d.x >= candleViewMin && d.x <= candleViewMax);
-        if (visible.length === 0) return;
-
-        const n = visible.length;
-        function toXi(i) { return PAD_L + (i + 0.5) * (chartW / n); }
-
-        // 🚀 최적화 1: 이동평균선(MA) 데이터를 Y축 계산 전에 미리 구합니다.
-        const isKorea = /^\d{6}$/.test(chartCurrentTicker);
-        const maPeriodsByType = {
-            D: isKorea ? [{n:20,color:'#FF9500'},{n:60,color:'#AF52DE'},{n:120,color:'#30B0C7'}]
-                    : [{n:20,color:'#FF9500'},{n:50,color:'#AF52DE'},{n:100,color:'#30B0C7'},{n:200,color:'#FF2D55'}],
-            W: isKorea ? [{n:20,color:'#FF9500'},{n:60,color:'#AF52DE'},{n:120,color:'#30B0C7'}]
-                    : [{n:20,color:'#FF9500'},{n:50,color:'#AF52DE'},{n:100,color:'#30B0C7'},{n:200,color:'#FF2D55'}],
-            M: isKorea ? [{n:20,color:'#FF9500'},{n:60,color:'#AF52DE'},{n:120,color:'#30B0C7'}]
-                    : [{n:20,color:'#FF9500'},{n:50,color:'#AF52DE'},{n:100,color:'#30B0C7'},{n:200,color:'#FF2D55'}],
+    // 매수/매도 화살표 — 실제 체결 가격 위치에 표시 (매수=가격 아래에서 위로, 매도=가격 위에서 아래로)
+    function _buildTradeMarkers(bars) {
+        if (!Array.isArray(chartTradeData) || !chartTradeData.length || !bars.length) return [];
+        const times = bars.map(b => b.time), first = times[0];
+        const bucket = d => {   // d 이하 가장 가까운 봉 (주봉/월봉이면 그 기간의 봉)
+            let lo = 0, hi = times.length - 1, ans = null;
+            while (lo <= hi) { const mid = (lo + hi) >> 1; if (times[mid] <= d) { ans = times[mid]; lo = mid + 1; } else hi = mid - 1; }
+            return ans;
         };
-        const maPeriods = maPeriodsByType[currentCandleType] || maPeriodsByType['D'];
-
-        let startGlobalIdx = 0;
-        if (visible.length > 0) {
-            startGlobalIdx = candleDisplayData.findIndex(r => r.x === visible[0].x);
-        }
-
-        const visibleMAs = [];
-        maPeriods.forEach(({n: maN, color}) => {
-            const maVals = calcMAArray(candleDisplayData, maN);
-            const points = [];
-            visible.forEach((vd, vi) => {
-                const globalIdx = startGlobalIdx + vi; 
-                if (globalIdx >= 0 && globalIdx < maVals.length && maVals[globalIdx] !== null) {
-                    points.push({ xi: vi, v: maVals[globalIdx] });
-                }
-            });
-            visibleMAs.push({ color, points });
+        const out = [];
+        chartTradeData.forEach((t, i) => {
+            const d = String(t.date || '').slice(0, 10);
+            if (!d || d < first) return;
+            const time = bucket(d); if (!time) return;
+            const buy = t.type === '매수';
+            const price = Number(t.price) || 0;
+            const m = { id: 'trade:' + i, time, color: buy ? '#E8002D' : '#0057FF', shape: buy ? 'arrowUp' : 'arrowDown', size: 1 };
+            if (price > 0) { m.position = buy ? 'atPriceTop' : 'atPriceBottom'; m.price = price; }
+            else m.position = buy ? 'belowBar' : 'aboveBar';
+            out.push(m);
         });
-
-        // 🚀 최적화 2: 현재 보이는 캔들의 최고점/최저점만 구합니다. (오토 스케일링의 핵심)
-        let yMin = Math.min(...visible.map(d=>d.l));
-        let yMax = Math.max(...visible.map(d=>d.h));
-
-        // 🚀 최적화 3: 화면에 보이는 이동평균선(MA) 값도 Y축 계산에 포함시킵니다. (선이 위아래로 잘리는 현상 방지)
-        visibleMAs.forEach(ma => {
-            ma.points.forEach(p => {
-                if (p.v < yMin) yMin = p.v;
-                if (p.v > yMax) yMax = p.v;
-            });
-        });
-
-        // 🚨 내 평단가(chartAvgPrice)가 억지로 화면을 늘리던 로직을 과감히 삭제했습니다!
-        // 이제 평단가가 화면 바깥에 있으면 자연스럽게 사라지고, 스와이프해서 가격이 겹칠 때만 딱 나타납니다.
-
-        const yPad = (yMax-yMin)*0.06 || yMin*0.02; yMin -= yPad; yMax += yPad;
-        const yRange = yMax - yMin;
-        function toY(v) { return PAD_T + (1-(v-yMin)/yRange)*chartH; }
-
-        function fmtPrice(v) { return isKorea ? Math.round(v).toLocaleString()+'원' : '$'+Number(v).toFixed(2); }
-
-        // 그리드 & Y축 레이블
-        ctx.lineWidth = 1;
-        for (let i = 0; i <= 5; i++) {
-            const v = yMin+(yRange/5)*i, y = toY(v);
-            ctx.strokeStyle = gridColor; ctx.beginPath(); ctx.moveTo(PAD_L,y); ctx.lineTo(W-PAD_R,y); ctx.stroke();
-            ctx.fillStyle = textColor; ctx.font = '10px -apple-system, sans-serif'; ctx.textAlign = 'left';
-            ctx.fillText(fmtPrice(v), W-PAD_R+4, y+4);
-        }
-
-        // X축 날짜 레이블 — 캔들 영역 바로 아래 (거래량 위)
-        const dateRowY = PAD_T + CANDLE_H + DATE_ROW * 0.72; // 날짜 텍스트 Y 기준
-        ctx.font = '10px -apple-system, sans-serif'; ctx.fillStyle = textColor;
-        const xTicks = Math.min(6, n);
-        for (let i = 0; i < xTicks; i++) {
-            const idx = Math.round(i/(xTicks-1)*(n-1));
-            const d = new Date(visible[idx].x);
-            let label;
-            if (currentCandleType === 'M') {
-                // 월봉: 26'01 형태로 두 자리만 표시
-                label = String(d.getUTCFullYear()).slice(-2) + "'" + String(d.getUTCMonth()+1).padStart(2,'0');
-            } else {
-                if (i === 0) {
-                    // 일봉/주봉 첫 레이블: 26/01/01 형태로 두 자리 연도 적용
-                    label = String(d.getUTCFullYear()).slice(-2) + '/' + String(d.getUTCMonth()+1).padStart(2,'0') + '/' + String(d.getUTCDate()).padStart(2,'0');
-                } else {
-                    label = String(d.getUTCMonth()+1).padStart(2,'0') + '/' + String(d.getUTCDate()).padStart(2,'0');
-                }
-            }
-            
-            let xPos = toXi(idx);
-            ctx.textAlign = 'center';
-            
-            if (i === 0) {
-                ctx.textAlign = 'left';
-                xPos = PAD_L + 2;
-            } else if (i === xTicks - 1) {
-                ctx.textAlign = 'right';
-                xPos = W - PAD_R - 4;
-            }
-            
-            ctx.fillText(label, xPos, dateRowY);
-        }
-
-        // ── 💡 연도 구분선 (세로 점선 및 연도 텍스트) ──
-        if (visible.length > 0) {
-            ctx.lineWidth = 1;
-            ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)';
-            ctx.fillStyle = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
-            ctx.font = 'bold 11px -apple-system, sans-serif';
-            ctx.textAlign = 'center';
-
-            let prevYear = new Date(visible[0].x).getUTCFullYear();
-            for (let i = 1; i < visible.length; i++) {
-                const currentYear = new Date(visible[i].x).getUTCFullYear();
-                
-                if (currentYear !== prevYear) {
-                    const x = toXi(i);
-                    
-                    // 세로 점선: 캔들 영역만 (날짜 행 위까지)
-                    ctx.setLineDash([4, 4]);
-                    ctx.beginPath();
-                    ctx.moveTo(x, PAD_T);
-                    ctx.lineTo(x, PAD_T + CANDLE_H);
-                    ctx.stroke();
-                    ctx.setLineDash([]);
-                    
-                    // 연도 텍스트
-                    ctx.fillText(currentYear + '년', x, PAD_T + 12);
-                    
-                    prevYear = currentYear;
-                }
-            }
-        }
-
-        // ── 이동평균선 그리기
-        visibleMAs.forEach(ma => {
-            if (ma.points.length < 2) return;
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(PAD_L, PAD_T, chartW, chartH);
-            ctx.clip();
-            ctx.strokeStyle = ma.color; ctx.lineWidth = 1.4; ctx.setLineDash([]); ctx.beginPath();
-            ma.points.forEach((p, i) => {
-                const x = toXi(p.xi), y = toY(p.v);
-                if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-            });
-            ctx.stroke();
-            ctx.restore();
-        });
-
-        // ── 캔들 그리기
-        // 설명: 화면 할당 너비(chartW/n)의 75%를 봉으로 꽉 채웁니다. (14px 제한 삭제)
-        const candleW = Math.max(1.5, (chartW / n) * 0.75);
-        visible.forEach((d, i) => {
-            const x = toXi(i);
-            const isUp = d.o >= d.c;
-            const color = isUp ? upColor : downColor;
-            ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 1;
-            ctx.beginPath(); ctx.moveTo(x, toY(d.h)); ctx.lineTo(x, toY(d.l)); ctx.stroke();
-            const bodyTop = toY(Math.max(d.o,d.c)), bodyBot = toY(Math.min(d.o,d.c));
-            const bodyH = Math.max(1.5, bodyBot-bodyTop);
-            ctx.fillRect(x-candleW/2, bodyTop, candleW, bodyH);
-        });
-
-        // ── 평균 매입가 점선 (라벨은 현재가 라벨 다음에 그림)
-        if (chartAvgPrice > 0 && chartAvgPrice >= yMin && chartAvgPrice <= yMax) {
-            const avgY = toY(chartAvgPrice);
-            ctx.strokeStyle = '#FF9500'; ctx.lineWidth = 1.5; ctx.setLineDash([5,4]);
-            ctx.beginPath(); ctx.moveTo(PAD_L,avgY); ctx.lineTo(W-PAD_R,avgY); ctx.stroke();
-            ctx.setLineDash([]);
-        }
-
-        // ── 거래량 패널 그리기
-        {
-            const volTop = PAD_T + CANDLE_H + DATE_ROW + VOL_GAP;
-            const volBot = volTop + VOL_H;
-
-            // 구분선
-            ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
-            ctx.lineWidth = 1; ctx.setLineDash([]);
-            ctx.beginPath(); ctx.moveTo(PAD_L, PAD_T + CANDLE_H + DATE_ROW - 1); ctx.lineTo(W-PAD_R, PAD_T + CANDLE_H + DATE_ROW - 1); ctx.stroke();
-
-            // 거래량 최대값 (현재 visible 기준)
-            const vols = visible.map(d => d.v || 0);
-            const maxVol = Math.max(...vols, 1);
-
-            // 'Vol' 라벨
-            ctx.font = '9px -apple-system, sans-serif';
-            ctx.fillStyle = isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.25)';
-            ctx.textAlign = 'left';
-            ctx.fillText('거래량', PAD_L + 2, volTop + 9);
-
-            // 거래량 Y축 max 레이블 (오른쪽)
-            ctx.textAlign = 'left';
-            const fmtVol = (v) => {
-                if (v >= 1e8) return (v/1e8).toFixed(1)+'억';
-                if (v >= 1e4) return Math.round(v/1e4)+'만';
-                return v.toLocaleString();
-            };
-            ctx.fillStyle = textColor;
-            ctx.font = '9px -apple-system, sans-serif';
-            ctx.fillText(fmtVol(maxVol), W-PAD_R+4, volTop + 9);
-
-            // 거래량 막대
-            const barW = Math.max(1, (chartW / n) * 0.75);
-            visible.forEach((d, i) => {
-                const v = d.v || 0;
-                const barH = Math.max(1, (v / maxVol) * VOL_H);
-                const bx = toXi(i);
-                const by = volBot - barH;
-                const isUp = d.c >= d.o;
-                ctx.fillStyle = isUp
-                    ? (isDark ? 'rgba(0,122,255,0.55)' : 'rgba(0,122,255,0.45)')
-                    : (isDark ? 'rgba(255,59,48,0.55)' : 'rgba(255,59,48,0.45)');
-                ctx.fillRect(bx - barW/2, by, barW, barH);
-            });
-
-            // 크로스헤어 위치의 거래량 막대 강조
-            if (_crosshair && _crosshair.xi >= 0 && _crosshair.xi < visible.length) {
-                const ci = _crosshair.xi;
-                const d = visible[ci];
-                const v = d.v || 0;
-                const barH = Math.max(1, (v / maxVol) * VOL_H);
-                const bx = toXi(ci);
-                const by = volBot - barH;
-                const isUp = d.c >= d.o;
-                ctx.fillStyle = isUp ? 'rgba(0,122,255,0.9)' : 'rgba(255,59,48,0.9)';
-                ctx.fillRect(bx - barW/2, by, barW, barH);
-            }
-        }
-
-        // ── 크로스헤어 (터치/마우스)
-        if (_crosshair && _crosshair.xi >= 0 && _crosshair.xi < visible.length) {
-            const ci = _crosshair.xi;
-            const cx = toXi(ci);
-            const vd = visible[ci];
-            ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.3)';
-            ctx.lineWidth = 1; ctx.setLineDash([4,3]);
-            // 세로선: 캔들 상단 ~ 거래량 패널 하단까지
-            ctx.beginPath(); ctx.moveTo(cx, PAD_T); ctx.lineTo(cx, H-PAD_B); ctx.stroke();
-            ctx.setLineDash([]);
-            const dt = new Date(vd.x);
-            let dateStr;
-            if (currentCandleType === 'M') {
-                dateStr = String(dt.getUTCFullYear()).slice(-2) + '.' + String(dt.getUTCMonth()+1).padStart(2,'0');
-            } else if (currentCandleType === 'W') {
-                dateStr = (dt.getUTCMonth()+1) + '/' + dt.getUTCDate() + '주';
-            } else {
-                dateStr = (dt.getUTCMonth()+1) + '/' + dt.getUTCDate();
-            }
-            ctx.font = 'bold 11px -apple-system, sans-serif';
-            const tw = ctx.measureText(dateStr).width;
-            const bw = tw + 14, bh = 18, br = 6;
-            let bx = cx - bw/2;
-            if (bx < PAD_L) bx = PAD_L;
-            if (bx + bw > W-PAD_R) bx = W-PAD_R-bw;
-            const by = PAD_T + CANDLE_H + 2;
-            ctx.fillStyle = isDark ? '#555' : '#333';
-            ctx.beginPath();
-            ctx.roundRect ? ctx.roundRect(bx, by, bw, bh, br) :
-                ctx.rect(bx, by, bw, bh);
-            ctx.fill();
-            ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText(dateStr, bx + bw/2, by + bh/2);
-            ctx.textBaseline = 'alphabetic';
-
-            // ── OHLC 팝업창
-            const isKorea = chartCurrentTicker && /^\d{6}$/.test(chartCurrentTicker);
-            const fmt = (v) => isKorea ? Math.round(v).toLocaleString() + '원' : '$' + Number(v).toFixed(2);
-            const fmtVolPop = (v) => {
-                if (!v) return '-';
-                if (v >= 1e8) return (v/1e8).toFixed(2)+'억주';
-                if (v >= 1e4) return (v/1e4).toFixed(1)+'만주';
-                return v.toLocaleString()+'주';
-            };
-            // ★ [버그수정] 캔들 몸통 판정(isUp = d.o >= d.c, 4612줄)과 반대로 되어 있어 종가 색상이 상승/하락 뒤바뀌던 문제 수정
-            const isUp = vd.o >= vd.c;
-            const ohlcColor = isUp ? upColor : downColor;
-            const lines = [
-                { label: '종가', value: fmt(vd.c) },
-                { label: '시가', value: fmt(vd.o) },
-                { label: '고가', value: fmt(vd.h) },
-                { label: '저가', value: fmt(vd.l) },
-                { label: '거래량', value: fmtVolPop(vd.v) },
-            ];
-            const popFont = '11px -apple-system, sans-serif';
-            const popFontBold = 'bold 11px -apple-system, sans-serif';
-            ctx.font = popFont;
-            const labelW = 24, valW = Math.max(...lines.map(l => ctx.measureText(l.value).width)) + 4;
-            const popW = labelW + valW + 16, lineH = 17, popH = lineH * lines.length + 10;
-            let popX = cx + 8;
-            if (popX + popW > W - PAD_R) popX = cx - popW - 8;
-            if (popX < PAD_L) popX = PAD_L;
-            const popY = Math.min(Math.max(PAD_T, toY(vd.h) - popH / 2), H - PAD_B - popH);
-            // 배경
-            ctx.fillStyle = isDark ? 'rgba(40,40,45,0.95)' : 'rgba(255,255,255,0.95)';
-            ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)';
-            ctx.lineWidth = 1; ctx.setLineDash([]);
-            ctx.beginPath();
-            ctx.roundRect ? ctx.roundRect(popX, popY, popW, popH, 8) : ctx.rect(popX, popY, popW, popH);
-            ctx.fill(); ctx.stroke();
-            // 내용
-            lines.forEach((line, i) => {
-                const ly = popY + 5 + lineH * i + lineH * 0.7;
-                ctx.font = popFont;
-                ctx.fillStyle = isDark ? '#aaa' : '#888';
-                ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-                ctx.fillText(line.label, popX + 8, ly);
-                ctx.font = popFontBold;
-                // 종가=캔들색, 거래량=텍스트색, 나머지=기본
-                if (i === 0) ctx.fillStyle = ohlcColor;
-                else if (i === lines.length - 1) ctx.fillStyle = isDark ? '#aaa' : '#777';
-                else ctx.fillStyle = isDark ? '#eee' : '#222';
-                ctx.textAlign = 'right';
-                ctx.fillText(line.value, popX + popW - 8, ly);
-            });
-            ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
-        }
-
-        // ── 현재가 Y축 라벨
-        let curPriceLabelY = null; // 겹침 방지용
-        if (visible.length > 0) {
-            const lastCandle = visible[visible.length - 1];
-            // 캔들 데이터가 시가/종가 반대로 저장돼 있어(색상 보정용) 실제 현재가는 o 필드에 있음
-            const curPrice = lastCandle.o;
-            if (curPrice >= yMin && curPrice <= yMax) {
-                const curY = toY(curPrice);
-                const isKorea = chartCurrentTicker && /^\d{6}$/.test(chartCurrentTicker);
-                const priceLabel = isKorea
-                    ? Math.round(curPrice).toLocaleString()
-                    : '$' + Number(curPrice).toFixed(2);
-                // 캔들 본체 색상 로직(o >= c = 상승)과 동일하게 맞춤
-                const isUp = lastCandle.o >= lastCandle.c;
-                const labelColor = isUp ? upColor : downColor;
-                ctx.font = 'bold 10px -apple-system, sans-serif';
-                const lw = ctx.measureText(priceLabel).width;
-                const lh = 16, lpad = 5;
-                const lx = W - PAD_R + 2;
-                const ly = curY - lh / 2;
-                curPriceLabelY = curY;
-                // 배경 사각형
-                ctx.fillStyle = labelColor;
-                ctx.beginPath();
-                ctx.roundRect ? ctx.roundRect(lx, ly, lw + lpad * 2, lh, 3) : ctx.rect(lx, ly, lw + lpad * 2, lh);
-                ctx.fill();
-                // 텍스트
-                ctx.fillStyle = '#fff';
-                ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-                ctx.fillText(priceLabel, lx + lpad, curY);
-                ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
-                // 수평 점선 (현재가 라인)
-                ctx.strokeStyle = labelColor; ctx.lineWidth = 0.8; ctx.setLineDash([3, 3]);
-                ctx.beginPath(); ctx.moveTo(PAD_L, curY); ctx.lineTo(W - PAD_R, curY); ctx.stroke();
-                ctx.setLineDash([]);
-            }
-        }
-
-        // ── 평균매입가 Y축 라벨 (주황색, 현재가와 겹치면 밀어냄)
-        if (chartAvgPrice > 0 && chartAvgPrice >= yMin && chartAvgPrice <= yMax) {
-            const avgY = toY(chartAvgPrice);
-            const avgColor = '#FF9500';
-            const isKoreaAvg = chartCurrentTicker && /^\d{6}$/.test(chartCurrentTicker);
-            const avgLabel = isKoreaAvg
-                ? Math.round(chartAvgPrice).toLocaleString()
-                : '$' + Number(chartAvgPrice).toFixed(2);
-            ctx.font = 'bold 10px -apple-system, sans-serif';
-            const alw = ctx.measureText(avgLabel).width;
-            const alh = 16, alpad = 5;
-            const alx = W - PAD_R + 2;
-            // 현재가 라벨과 겹치면 밀어내기
-            let aly = avgY - alh / 2;
-            if (curPriceLabelY !== null && Math.abs(avgY - curPriceLabelY) < alh + 2) {
-                aly = avgY < curPriceLabelY ? curPriceLabelY - alh - 3 : curPriceLabelY + alh + 3;
-            }
-            ctx.fillStyle = avgColor;
-            ctx.beginPath();
-            ctx.roundRect ? ctx.roundRect(alx, aly, alw + alpad * 2, alh, 3) : ctx.rect(alx, aly, alw + alpad * 2, alh);
-            ctx.fill();
-            ctx.fillStyle = '#fff';
-            ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-            ctx.fillText(avgLabel, alx + alpad, aly + alh / 2);
-            ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
-        }
-
-        // ── 매수/매도 뱃지
-        canvas._tradeHitMap = [];
-        chartTradeData.forEach(trade => {
-            const ts = new Date(trade.date+'T00:00:00Z').getTime();
-            let nearestIdx = -1, nearestDiff = Infinity;
-            visible.forEach((vd, vi) => { const diff = Math.abs(vd.x - ts); if (diff < nearestDiff) { nearestDiff = diff; nearestIdx = vi; } });
-            if (nearestIdx < 0) return;
-            const vd = visible[nearestIdx];
-            if (vd.x < candleViewMin || vd.x > candleViewMax) return;
-
-            const x = toXi(nearestIdx);
-            const isBuy = trade.type === '매수';
-
-            const slotMs = (candleViewMax - candleViewMin) / Math.max(1, visible.length - 1);
-            if (nearestDiff > slotMs * 1.5) return;
-
-            const arrowColor = isBuy ? '#E8002D' : '#0057FF';
-            const tradePrice = Number(trade.price) || 0;
-            const tradePriceY = tradePrice > 0 ? toY(tradePrice) : (isBuy ? toY(vd.l) : toY(vd.h));
-            const gap   = 2;
-            const aTipY = isBuy ? tradePriceY + gap : tradePriceY - gap;
-
-            const hw    = 5; 
-            const headH = 7; 
-            const bodyH = 6; 
-            const bodyW = 2; 
-
-            ctx.save();
-            ctx.setLineDash([]);
-            ctx.beginPath();
-            ctx.rect(PAD_L, PAD_T, chartW, chartH);
-            ctx.clip();
-
-            if (isBuy) {
-                const headBot = aTipY;
-                const headTop = aTipY + headH;
-                const bodyBot = headTop;
-                const bodyTop = bodyBot + bodyH;
-
-                ctx.beginPath();
-                ctx.moveTo(x,         headBot);
-                ctx.lineTo(x + hw,    headTop);
-                ctx.lineTo(x + bodyW, headTop);
-                ctx.lineTo(x + bodyW, bodyTop);
-                ctx.lineTo(x - bodyW, bodyTop);
-                ctx.lineTo(x - bodyW, headTop);
-                ctx.lineTo(x - hw,    headTop);
-                ctx.closePath();
-
-                ctx.fillStyle   = 'rgba(232,0,45,0.85)';
-                ctx.fill();
-                ctx.strokeStyle = arrowColor;
-                ctx.lineWidth   = 1.5;
-                ctx.stroke();
-
-            } else {
-                const headTop = aTipY;
-                const headBot = aTipY - headH;
-                const bodyTop = headBot;
-                const bodyBot = bodyTop - bodyH;
-
-                ctx.beginPath();
-                ctx.moveTo(x,         headTop);
-                ctx.lineTo(x + hw,    headBot);
-                ctx.lineTo(x + bodyW, headBot);
-                ctx.lineTo(x + bodyW, bodyBot);
-                ctx.lineTo(x - bodyW, bodyBot);
-                ctx.lineTo(x - bodyW, headBot);
-                ctx.lineTo(x - hw,    headBot);
-                ctx.closePath();
-
-                ctx.fillStyle   = 'rgba(0,87,255,0.85)';
-                ctx.fill();
-                ctx.strokeStyle = arrowColor;
-                ctx.lineWidth   = 1.5;
-                ctx.stroke();
-            }
-
-            ctx.restore();
-
-            const hitY = isBuy ? aTipY + headH + bodyH * 0.5 : aTipY - headH - bodyH * 0.5;
-            canvas._tradeHitMap.push({ x, y: hitY, r: hw + bodyH * 0.5, trade });
-        });
+        return out.sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
     }
 
-    function attachCandleTouchEvents() {
-        const canvas = document.getElementById('candleChart'); if (!canvas || canvas._touchBound) return;
-        canvas._touchBound = true;
-        let isDragging=false, isPinching=false, lastTouchX=0, pinchStartDist=0, pinchStartMin=0, pinchStartMax=0;
-        let isCrosshairMode = false; // 롱프레스/단순탭 → 크로스헤어
-        let longPressTimer = null;
-
-        function pinchDist(t) { const dx=t[0].clientX-t[1].clientX, dy=t[0].clientY-t[1].clientY; return Math.sqrt(dx*dx+dy*dy); }
-        function clamp(min,max) {
-            const data = candleDisplayData;
-            if (!data || data.length === 0) return {min, max};
-            const dataMin=data[0].x, dataMax=data[data.length-1].x;
-            const minSpan = currentCandleType==='M' ? 3*30*86400000 : currentCandleType==='W' ? 4*7*86400000 : 10*86400000;
-            let span=max-min;
-            if(span<minSpan){const c=(min+max)/2;min=c-minSpan/2;max=c+minSpan/2;}
-            
-            // ★ 개선: 더 불러올 과거 데이터가 있다면, 왼쪽 끝(dataMin)에 도달해도 
-            // 튕겨내지 않고 허공을 스크롤할 수 있게 허용 (부드러운 로딩 구현)
-            let allowedMin = chartHasMoreData ? dataMin - (max - min) : dataMin;
-            
-            if(min<allowedMin){max+=allowedMin-min;min=allowedMin;}
-            if(max>dataMax){min-=max-dataMax;max=dataMax;}
-            return {min:Math.max(min,allowedMin),max:Math.min(max,dataMax)};
-        }
-
-        function applyRange(min,max) { 
-            const r=clamp(min,max); 
-            candleViewMin=r.min; 
-            candleViewMax=r.max; 
-            drawCandles(); 
-
-            // ★ 추가: 스와이프하다가 왼쪽(과거) 끝에 가까워지면 다음 데이터 백그라운드 호출
-            if (chartAllData && chartAllData.length > 0 && chartHasMoreData && !chartIsLoadingMore) {
-                const oldestTime = chartAllData[0].x;
-                const timeSpan = candleViewMax - candleViewMin;
-                
-                // 화면의 왼쪽 끝이 불러온 데이터 끝자락(1.5화면 이내)에 도달하면 즉시 로딩 시작
-                if (candleViewMin - oldestTime < timeSpan * 1.5) {
-                    loadCandleData(chartCurrentTicker, true);
-                }
-            }
-        }
-        
-        // 캔버스 X좌표 → visible 인덱스
-        function xToVisibleIdx(clientX) {
-            const rect = canvas.getBoundingClientRect();
-            const PAD_L=4, PAD_R=62, chartW=(candleW_fixed||canvas.offsetWidth)-PAD_L-PAD_R;
-            const cx = clientX - rect.left - PAD_L;
-            const visible = candleDisplayData.filter(d => d.x >= candleViewMin && d.x <= candleViewMax);
-            if (!visible.length) return -1;
-            const idx = Math.round(cx / chartW * (visible.length-1));
-            return Math.max(0, Math.min(visible.length-1, idx));
-        }
-
-        function setCrosshair(clientX) {
-            const idx = xToVisibleIdx(clientX);
-            _crosshair = { xi: idx };
-            drawCandles();
-        }
-        function clearCrosshair() { _crosshair = null; drawCandles(); }
-
-        canvas.addEventListener('touchstart', e => {
-            if (e.touches.length === 1) {
-                isDragging = false; isPinching = false;
-                lastTouchX = e.touches[0].clientX;
-                isCrosshairMode = false;
-                // 롱프레스 300ms → 크로스헤어 모드
-                longPressTimer = setTimeout(() => {
-                    isCrosshairMode = true;
-                    setCrosshair(e.touches[0].clientX);
-                }, 300);
-            } else if (e.touches.length === 2) {
-                clearTimeout(longPressTimer);
-                isDragging = false; isPinching = true; isCrosshairMode = false;
-                pinchStartDist = pinchDist(e.touches);
-                pinchStartMin = candleViewMin; pinchStartMax = candleViewMax;
-                clearCrosshair();
-            }
-        }, {passive:true});
-
-        canvas.addEventListener('touchmove', e => {
-            e.preventDefault();
-            clearTimeout(longPressTimer);
-            if (isCrosshairMode && e.touches.length === 1) {
-                setCrosshair(e.touches[0].clientX);
-            } else if (e.touches.length === 1 && !isPinching) {
-                if (!isDragging) isDragging = true;
-                const dx = e.touches[0].clientX - lastTouchX;
-                lastTouchX = e.touches[0].clientX;
-                const span = candleViewMax - candleViewMin;
-                const delta = -(dx / canvas.offsetWidth) * span;
-                applyRange(candleViewMin+delta, candleViewMax+delta);
-            } else if (isPinching && e.touches.length === 2) {
-                const ratio = pinchStartDist / pinchDist(e.touches);
-                const center = (pinchStartMin + pinchStartMax) / 2;
-                const half = (pinchStartMax - pinchStartMin) / 2 * ratio;
-                applyRange(center-half, center+half);
-            }
-        }, {passive:false});
-
-        canvas.addEventListener('touchend', e => {
-            clearTimeout(longPressTimer);
-            if (isCrosshairMode) {
-                // 크로스헤어는 잠깐 유지 후 사라짐
-                setTimeout(clearCrosshair, 2000);
-            }
-            isDragging = false; isPinching = false;
+    function _tvCreate(LC, wrap) {
+        const theme = _tvThemeOptions(_isChartDark());
+        const chart = LC.createChart(wrap, {
+            autoSize: true,
+            layout: Object.assign({}, theme.layout, {
+                fontSize: 11,
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                attributionLogo: false,          // 카드 하단 텍스트 고지로 대체(라이선스 요건 충족)
+            }),
+            grid: theme.grid,
+            crosshair: Object.assign({ mode: LC.CrosshairMode.Magnet }, theme.crosshair),
+            rightPriceScale: { borderVisible: false, scaleMargins: { top: 0.08, bottom: 0.06 } },
+            timeScale: {
+                borderVisible: false, rightOffset: 4, barSpacing: 6, minBarSpacing: 0.5,
+                tickMarkFormatter: (time, type) => {
+                    const s = typeof time === 'string' ? time
+                        : `${time.year}-${String(time.month).padStart(2, '0')}-${String(time.day).padStart(2, '0')}`;
+                    const [y, m, d] = s.split('-');
+                    return type === 0 ? `${y}년` : type === 1 ? `${+m}월` : `${+m}/${+d}`;
+                },
+            },
+            localization: {
+                locale: 'ko-KR',
+                timeFormatter: time => {
+                    const s = typeof time === 'string' ? time
+                        : `${time.year}-${String(time.month).padStart(2, '0')}-${String(time.day).padStart(2, '0')}`;
+                    const t = s.replace(/-/g, '.');
+                    return currentCandleType === 'M' ? t.slice(0, 7) : currentCandleType === 'W' ? t + ' 주' : t;
+                },
+            },
+            // 세로로 쓸면 페이지가 스크롤되도록(차트는 가로 이동·핀치 확대만 담당)
+            handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
+            handleScale: { axisPressedMouseMove: { time: true, price: false }, mouseWheel: true, pinch: true },
+            kineticScroll: { touch: true, mouse: false },
         });
 
-        // 마우스 hover (데스크탑)
-        canvas.addEventListener('mousemove', e => {
-            setCrosshair(e.clientX);
+        const candle = chart.addSeries(LC.CandlestickSeries, {
+            upColor: CANDLE_UP, downColor: CANDLE_DOWN, borderVisible: false,
+            wickUpColor: CANDLE_UP, wickDownColor: CANDLE_DOWN,
+            priceLineStyle: LC.LineStyle.Dashed,
         });
-        canvas.addEventListener('mouseleave', () => { clearCrosshair(); });
+        const maSeries = [0, 1, 2, 3].map(() => chart.addSeries(LC.LineSeries, {
+            lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+        }));
+        const vol = chart.addSeries(LC.HistogramSeries, {
+            priceLineVisible: false, lastValueVisible: false,
+            priceFormat: { type: 'custom', minMove: 1,
+                formatter: v => v >= 1e8 ? (v / 1e8).toFixed(1) + '억' : v >= 1e4 ? Math.round(v / 1e4).toLocaleString('ko-KR') + '만' : Math.round(v).toLocaleString('ko-KR') },
+        }, 1);
+        chart.panes()[1].setHeight(96);
+        vol.priceScale().applyOptions({ scaleMargins: { top: 0.15, bottom: 0 } });
+        const markers = LC.createSeriesMarkers(candle, []);
 
-        function checkTradeHit(clientX,clientY) { const rect=canvas.getBoundingClientRect(); const cx=clientX-rect.left, cy=clientY-rect.top; if (!canvas._tradeHitMap) return; for (const hit of canvas._tradeHitMap) { const dx=cx-hit.x, dy=cy-hit.y; if(Math.sqrt(dx*dx+dy*dy)<=hit.r+6){showTradePopup(hit.trade,clientX,clientY);return;} } hideTradePopup(); }
-        canvas.addEventListener('click', e => { checkTradeHit(e.clientX, e.clientY); });
-        let tapStartX=0, tapStartY=0;
-        canvas.addEventListener('touchstart', e => { if(e.touches.length===1){tapStartX=e.touches[0].clientX;tapStartY=e.touches[0].clientY;} }, {passive:true,capture:true});
-        canvas.addEventListener('touchend', e => { if(e.changedTouches.length===1){const dx=e.changedTouches[0].clientX-tapStartX, dy=e.changedTouches[0].clientY-tapStartY; if(Math.sqrt(dx*dx+dy*dy)<8) checkTradeHit(e.changedTouches[0].clientX,e.changedTouches[0].clientY);} }, {passive:true,capture:true});
+        _tv = { LC, chart, candle, vol, maSeries, markers, avgLine: null, lastBar: null, isKorea: true, wrap };
+
+        chart.subscribeCrosshairMove(p => {
+            const b = p && p.seriesData ? p.seriesData.get(candle) : null;
+            _showOhlc(b && b.open !== undefined ? b : _tv.lastBar);
+        });
+
+        // 매매 화살표를 누르면 거래 상세 팝업
+        chart.subscribeClick(p => {
+            let tr = null;
+            const oid = (p && p.hoveredInfo && p.hoveredInfo.objectId) || (p && p.hoveredObjectId);
+            if (typeof oid === 'string' && oid.indexOf('trade:') === 0) tr = chartTradeData[Number(oid.slice(6))];
+            if (!tr && p && p.time && p.point) {
+                // 폴백: 같은 봉의 매매 중 누른 높이에 가장 가까운 것 (18px 이내)
+                let best = null, bestD = 18;
+                (_tv.markerList || []).forEach(m => {
+                    if (m.time !== p.time || !m.price) return;
+                    const y = candle.priceToCoordinate(m.price); if (y === null) return;
+                    const dd = Math.abs(y - p.point.y); if (dd < bestD) { bestD = dd; best = m; }
+                });
+                if (best) tr = chartTradeData[Number(best.id.slice(6))];
+            }
+            if (!tr) { hideTradePopup(); return; }
+            const r = wrap.getBoundingClientRect();
+            const cx = p.sourceEvent && p.sourceEvent.clientX != null ? p.sourceEvent.clientX : r.left + p.point.x;
+            const cy = p.sourceEvent && p.sourceEvent.clientY != null ? p.sourceEvent.clientY : r.top + p.point.y;
+            showTradePopup(tr, cx, cy);
+        });
+
+        // 다크/라이트 전환(수동 설정·시스템 설정 모두) 즉시 반영
+        const applyTheme = () => { if (_tv) _tv.chart.applyOptions(_tvThemeOptions(_isChartDark())); _tvRecolorVolume(); };
+        new MutationObserver(applyTheme).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+        const mq = window.matchMedia('(prefers-color-scheme: dark)');
+        if (mq.addEventListener) mq.addEventListener('change', applyTheme); else if (mq.addListener) mq.addListener(applyTheme);
+    }
+
+    function _tvRecolorVolume() {
+        if (!_tv || !_tv.bars) return;
+        const a = _isChartDark() ? 0.5 : 0.35;
+        _tv.vol.setData(_tv.bars.map(b => ({
+            time: b.time, value: b.volume,
+            color: b.close >= b.open ? `rgba(255,59,48,${a})` : `rgba(0,122,255,${a})`,
+        })));
+    }
+
+    async function renderCandleChart() {
+        const wrap = document.getElementById('candleWrap');
+        if (!wrap) return;
+        let LC;
+        try { LC = await _loadLWC(); }
+        catch (e) { console.error('[차트]', e); showCandleEmpty('차트 라이브러리를 불러오지 못했습니다. 네트워크를 확인해 주세요.'); return; }
+        try {
+            if (!chartAllData || chartAllData.length === 0) { showCandleEmpty(); return; }
+            const empty = document.getElementById('candleEmpty'); if (empty) empty.style.display = 'none';
+            if (!_tv) _tvCreate(LC, wrap);
+
+            const isKorea = /^\d{6}$/.test(chartCurrentTicker);
+            _tv.isKorea = isKorea;
+            const bars = aggregateCandles(
+                _applyLivePriceToCandles(chartCurrentTicker, chartAllData).map(_toRealOHLC),
+                currentCandleType);
+            if (!bars.length) { showCandleEmpty(); return; }
+            _tv.bars = bars;
+            _tv.lastBar = bars[bars.length - 1];
+
+            _tv.candle.applyOptions({
+                priceFormat: isKorea
+                    ? { type: 'custom', minMove: 1, formatter: v => Math.round(v).toLocaleString('ko-KR') }
+                    : { type: 'custom', minMove: 0.01, formatter: v => '$' + Number(v).toFixed(2) },
+            });
+            _tv.candle.setData(bars.map(b => ({ time: b.time, open: b.open, high: b.high, low: b.low, close: b.close })));
+            _tvRecolorVolume();
+
+            const periods = _maPeriods(isKorea);
+            _tv.maSeries.forEach((s, i) => {
+                const p = periods[i];
+                if (!p) { s.setData([]); return; }
+                s.applyOptions({ color: p.color });
+                s.setData(calcSMA(bars, p.n));
+            });
+
+            _tv.markerList = _buildTradeMarkers(bars);
+            _tv.markers.setMarkers(_tv.markerList);
+
+            if (_tv.avgLine) { _tv.candle.removePriceLine(_tv.avgLine); _tv.avgLine = null; }
+            if (chartAvgPrice > 0) {
+                _tv.avgLine = _tv.candle.createPriceLine({
+                    price: chartAvgPrice, color: '#FF9500', lineWidth: 1.5,
+                    lineStyle: _tv.LC.LineStyle.Dashed, axisLabelVisible: true, title: '평단',
+                });
+            }
+
+            // 기본 화면: 일봉 최근 60개 · 주봉 52개 · 월봉 전체
+            const show = currentCandleType === 'D' ? 60 : currentCandleType === 'W' ? 52 : bars.length;
+            _tv.chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, bars.length - show) - 0.5, to: bars.length + 3 });
+            _showOhlc(_tv.lastBar);
+        } catch (e) {
+            console.error('[renderCandleChart 오류]', e);
+            showCandleEmpty('차트를 그리는 중 오류가 발생했습니다.');
+        }
     }
 
     function showTradePopup(trade, clientX, clientY) {
@@ -5875,7 +5483,7 @@
         const ctx = canvas.getContext('2d');
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-        const isDark = document.body.classList.contains('dark-mode');
+        const isDark = document.body.classList.contains('dark-mode') || (!document.body.classList.contains('light-mode') && window.matchMedia('(prefers-color-scheme: dark)').matches);  // 시스템 다크 모드도 반영(흰 박스 버그 수정)
         const bgColor    = isDark ? '#1C1C1E' : '#fff';
         const gridColor  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)';
         const textColor  = isDark ? '#888' : '#999';
