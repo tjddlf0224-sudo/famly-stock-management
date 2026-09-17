@@ -154,11 +154,11 @@
         .more-btn { width: 100%; margin-top: 10px; padding: 10px; background: var(--bg); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; }
         .footnote-link { text-align: right; font-size: 12px; color: var(--text-sub); margin: -6px 4px 14px; }
         .footnote-link span { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
-        .sheet-modal { display: none; position: fixed; inset: 0; z-index: 1500; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; transition: transform .25s ease; padding: 0 16px calc(24px + env(safe-area-inset-bottom, 0px)); box-sizing: border-box; }
-        .sheet-modal.open { display: block; }
-        .sheet-modal .sheet-head { position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between; padding: calc(12px + env(safe-area-inset-top, 0px)) 0 12px; background: var(--bg); z-index: 1; }
-        .sheet-modal .sheet-title { font-size: 18px; font-weight: 800; }
-        .sheet-modal .sheet-close { width: 34px; height: 34px; border-radius: 17px; border: none; background: var(--card-bg); color: var(--text-main); font-size: 18px; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+        .popup-modal { display: none; position: fixed; inset: 0; z-index: 1500; background: rgba(0,0,0,.45); align-items: center; justify-content: center; transition: opacity .2s ease; }
+        .popup-modal.open { display: flex; }
+        .popup-modal .popup-box { position: relative; width: 90%; max-width: 400px; max-height: 80vh; overflow-y: auto; -webkit-overflow-scrolling: touch; background: var(--card-bg); border-radius: 16px; padding: 18px 18px 16px; box-sizing: border-box; border: 1px solid var(--border-color); box-shadow: 0 8px 30px rgba(0,0,0,.3); transition: transform .2s ease; }
+        .popup-modal .popup-title { font-size: 17px; font-weight: 800; margin: 2px 40px 14px 0; }
+        .popup-modal .popup-close { position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; border-radius: 16px; border: none; background: var(--bg); color: var(--text-main); font-size: 16px; cursor: pointer; }
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); }
         .modal-content { background-color: var(--card-bg); margin: 15% auto; padding: 20px; border-radius: 16px; width: 90%; max-width: 400px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
         .modal-header { font-size: 18px; font-weight: 700; margin-bottom: 20px; color: var(--text-main); }
@@ -1735,10 +1735,13 @@
 </div>
 
 <!-- 종목 차트 보기 미니 모달 -->
-<!-- 물가 반영 실질 수익 모달: X 버튼 또는 화면 왼쪽 끝에서 오른쪽으로 밀어서 닫기 -->
-<div id="realReturnModal" class="sheet-modal" role="dialog" aria-modal="true">
-    <div class="sheet-head"><div class="sheet-title">물가 반영 실질 수익</div><button class="sheet-close" onclick="closeRealReturnModal()" aria-label="닫기">✕</button></div>
-    <div class="card"><div id="realReturnBody"><div style="color:var(--text-sub);font-size:13px;">불러오는 중...</div></div></div>
+<!-- 물가 반영 실질 수익 팝업: X 버튼 / 바깥 누르기 / 화면 왼쪽 끝에서 오른쪽으로 밀어서 닫기 -->
+<div id="realReturnModal" class="popup-modal" role="dialog" aria-modal="true" onclick="if(event.target===this)closeRealReturnModal()">
+    <div class="popup-box">
+        <button class="popup-close" onclick="closeRealReturnModal()" aria-label="닫기">✕</button>
+        <div class="popup-title">물가 반영 실질 수익</div>
+        <div id="realReturnBody"><div style="color:var(--text-sub);font-size:13px;">불러오는 중...</div></div>
+    </div>
 </div>
 
 <div id="stockDetailModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.4);" onclick="closeStockDetailModal()">
@@ -5206,30 +5209,30 @@
             </table>`;
     }
 
-    // ⑦ 실질 수익 모달 — X 버튼 / 화면 왼쪽 끝(28px 안)에서 오른쪽으로 밀면 닫힘(아이폰 뒤로가기 제스처처럼)
+    // ⑦ 실질 수익 팝업 — X 버튼 / 바깥 누르기 / 화면 왼쪽 끝(28px 안)에서 오른쪽으로 밀면 닫힘(아이폰 뒤로가기 제스처처럼)
     function openRealReturnModal() {
         const m = document.getElementById('realReturnModal'); if (!m) return;
         renderRealReturnCard();
-        m.style.transform = 'translateX(0)';
+        const box = m.querySelector('.popup-box');
+        box.style.transform = ''; m.style.opacity = '1';
         m.classList.add('open');
-        m.scrollTop = 0;
-        document.body.style.overflow = 'hidden';
-        _bindEdgeSwipeClose(m, closeRealReturnModal);
+        box.scrollTop = 0;
+        _bindEdgeSwipeClose(m, closeRealReturnModal, box);
     }
     function closeRealReturnModal() {
         const m = document.getElementById('realReturnModal'); if (!m) return;
-        m.style.transform = 'translateX(100%)';
-        document.body.style.overflow = '';
-        setTimeout(() => { m.classList.remove('open'); m.style.transform = ''; }, 250);
+        m.style.opacity = '0';
+        setTimeout(() => { m.classList.remove('open'); m.style.opacity = ''; m.querySelector('.popup-box').style.transform = ''; }, 200);
     }
-    function _bindEdgeSwipeClose(el, onClose) {
+    function _bindEdgeSwipeClose(el, onClose, moveEl) {
+        moveEl = moveEl || el;
         if (el._edgeBound) return; el._edgeBound = true;
         let sx = null, sy = 0, dx = 0, horiz = null;
         el.addEventListener('touchstart', e => {
             const t = e.touches[0];
             sx = (e.touches.length === 1 && t.clientX <= 28) ? t.clientX : null;
             sy = t.clientY; dx = 0; horiz = null;
-            if (sx !== null) el.style.transition = 'none';
+            if (sx !== null) moveEl.style.transition = 'none';
         }, { passive: true });
         el.addEventListener('touchmove', e => {
             if (sx === null) return;
@@ -5238,13 +5241,14 @@
             if (horiz === null && (dx > 6 || Math.abs(t.clientY - sy) > 6)) horiz = dx > Math.abs(t.clientY - sy);
             if (!horiz) return;
             e.preventDefault();
-            el.style.transform = `translateX(${dx}px)`;
+            moveEl.style.transform = `translateX(${dx}px)`;
+            el.style.opacity = String(Math.max(0.3, 1 - dx / window.innerWidth));
         }, { passive: false });
         el.addEventListener('touchend', () => {
             if (sx === null) return;
-            el.style.transition = '';
+            moveEl.style.transition = '';
             if (horiz && dx > Math.min(100, window.innerWidth * 0.28)) onClose();
-            else el.style.transform = 'translateX(0)';
+            else { moveEl.style.transform = ''; el.style.opacity = '1'; }
             sx = null;
         });
     }
