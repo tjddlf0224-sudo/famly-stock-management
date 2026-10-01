@@ -6516,7 +6516,7 @@
         if(updEl){const dates=[ss&&ss.updated,sk&&sk.updated].filter(Boolean);updEl.textContent='업데이트: '+fmtDateSlash(dates[0]||'-');}
     }
     function renderADRatio(data){
-        if(!data||(data.up===undefined&&data.down===undefined)){maNoData('maAdValue','maAdUpdated');maSetBadge('maAdBadge','데이터없음','');return;}
+        if(!data||(data.up==null&&data.down==null)){maNoData('maAdValue','maAdUpdated');maSetBadge('maAdBadge','데이터없음','');return;}
         const up=Number(data.up)||0,down=Number(data.down)||0,total=up+down,ratio=total>0?(up/total)*100:50;
         document.getElementById('maAdValue').textContent=ratio.toFixed(1); document.getElementById('maAdUpdated').textContent='업데이트: '+fmtDateSlash(data.updated||'-');
         const upEl=document.getElementById('maAdUp'),downEl=document.getElementById('maAdDown');
