@@ -151,6 +151,7 @@
         .ticker-text { font-size: 12px; color: #888; margin-left: 4px; font-weight: normal; }
         .edit-cash-btn { background: var(--primary); color: white; border: none; padding: 4px 12px; border-radius: 12px; font-size: 12px; cursor: pointer; margin-left: 8px; }
         .edit-cash-btn:active { opacity: 0.8; }
+        img.emo { display: inline-block; width: 1.2em; height: 1.2em; vertical-align: -0.24em; object-fit: contain; pointer-events: none; -webkit-user-select: none; user-select: none; }
         .more-btn { width: 100%; margin-top: 10px; padding: 10px; background: var(--bg); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; }
         .footnote-link { text-align: right; font-size: 12px; color: var(--text-sub); margin: -6px 4px 14px; }
         .footnote-link span { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
@@ -3953,7 +3954,7 @@
         myLineChart = new Chart(context, {
             type: 'line',
             data: { labels, datasets: [
-                { label: userLabel === '가족 전체' ? '🏆 가족 전체' : '🏆 내 수익률', data: dataMy, borderColor: '#FF3B30', backgroundColor: '#FF3B30', borderWidth: 3, pointRadius: 0, spanGaps: true, tension: 0.1, fill: false },
+                { label: userLabel === '가족 전체' ? '가족 전체' : '내 수익률', data: dataMy, borderColor: '#FF3B30', backgroundColor: '#FF3B30', borderWidth: 3, pointRadius: 0, spanGaps: true, tension: 0.1, fill: false },
                 { label: 'S&P500', data: dataS, borderColor: '#36A2EB', backgroundColor: '#36A2EB', borderWidth: 1, pointRadius: 0, fill: false },
                 { label: 'NASDAQ', data: dataN, borderColor: '#9966FF', backgroundColor: '#9966FF', borderWidth: 1, pointRadius: 0, fill: false },
                 { label: 'KOSPI', data: dataK, borderColor: '#FF9F40', backgroundColor: '#FF9F40', borderWidth: 1, pointRadius: 0, fill: false }
@@ -8176,5 +8177,62 @@
   }
 </script>
 
+<script>
+// ★ 이모지 → 제미나이 3D 아이콘(icons/emo/*.webp) 자동 치환 (2026-10-04)
+//   화면 글자(텍스트 노드)에 있는 이모지만 <img>로 바꾼다. JS 데이터·알림창(alert/confirm)·캔버스 차트 글자는 그대로.
+//   새로 그려지는 내용은 MutationObserver가 따라가며 바꾼다. 목록에 없는 이모지는 글자 그대로 둔다.
+(function () {
+    const MAP = {
+        '📊':'chart_bar','📈':'chart_up','📉':'chart_down','💰':'money_bag','📝':'memo','🕯':'candle','💸':'money_wings','💱':'exchange',
+        '🔍':'search','🤖':'robot','⚠':'warning','✅':'check','❌':'cross','🎯':'target','💡':'bulb',
+        '🔴':'dot_red','🟢':'dot_green','🟡':'dot_yellow','🟠':'dot_orange','⚪':'dot_white',
+        '😐':'face_neutral','😱':'face_scream','😰':'face_sweat','😨':'face_fear','😊':'face_smile','👀':'eyes','🚨':'siren','🚫':'prohibited',
+        '⏳':'hourglass','🔄':'refresh','🔑':'key','🔬':'microscope','📋':'clipboard','🗑':'trash','🌓':'theme','👤':'person','🚀':'rocket',
+        '📄':'document','💳':'card','💵':'dollar','👷':'hardhat','🏦':'bank','🛒':'cart','✏':'pencil','🌙':'moon','☀':'sun',
+        '📦':'box','💭':'thought','🕐':'clock','⚙':'gear','🌏':'globe','📐':'ruler','🔐':'lock','🥇':'medal_gold','🥈':'medal_silver','🥉':'medal_bronze',
+        '🇰🇷':'flag_kr','🇺🇸':'flag_us','📅':'calendar','💚':'heart_green','💹':'chart_board','📡':'antenna','✂':'scissors','🏆':'trophy'
+    };
+    const keys = Object.keys(MAP).sort((a, b) => b.length - a.length).map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const RE = new RegExp('(' + keys.join('|') + ')\\uFE0F?', 'g');
+    const SKIP = { SCRIPT:1, STYLE:1, TEXTAREA:1, OPTION:1, SELECT:1, TITLE:1, INPUT:1, CANVAS:1, NOSCRIPT:1 };
+    const VER = '1';
+    function fix(node) {
+        const t = node.nodeValue;
+        if (!t || !RE.test(t)) return;
+        RE.lastIndex = 0;
+        const p = node.parentNode; if (!p || SKIP[p.nodeName]) return;
+        const frag = document.createDocumentFragment();
+        let last = 0, m;
+        while ((m = RE.exec(t))) {
+            if (m.index > last) frag.appendChild(document.createTextNode(t.slice(last, m.index)));
+            const img = document.createElement('img');
+            img.className = 'emo'; img.alt = m[1]; img.draggable = false; img.decoding = 'async';
+            img.src = 'icons/emo/' + MAP[m[1]] + '.webp?v=' + VER;
+            frag.appendChild(img);
+            last = m.index + m[0].length;
+        }
+        if (last < t.length) frag.appendChild(document.createTextNode(t.slice(last)));
+        p.replaceChild(frag, node);
+    }
+    function walk(root) {
+        if (!root) return;
+        if (root.nodeType === 3) { fix(root); return; }
+        if (root.nodeType !== 1 || SKIP[root.nodeName]) return;
+        const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+        const list = []; let n;
+        while ((n = w.nextNode())) if (RE.test(n.nodeValue)) { RE.lastIndex = 0; list.push(n); } else RE.lastIndex = 0;
+        list.forEach(fix);
+    }
+    window.emojify = walk;
+    // 관찰 콜백은 화면 그리기 전에 실행되므로 이모지가 잠깐 보였다 바뀌는 깜빡임이 없다
+    new MutationObserver(muts => {
+        for (const m of muts) {
+            if (m.type === 'characterData') fix(m.target);
+            else m.addedNodes.forEach(walk);
+        }
+    }).observe(document.body, { childList: true, subtree: true, characterData: true });
+    walk(document.body);
+})();
+</script>
 </body>
 </html>
