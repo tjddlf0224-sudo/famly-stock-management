@@ -152,6 +152,10 @@
         .edit-cash-btn { background: var(--primary); color: white; border: none; padding: 4px 12px; border-radius: 12px; font-size: 12px; cursor: pointer; margin-left: 8px; }
         .edit-cash-btn:active { opacity: 0.8; }
         img.emo { display: inline-block; width: 1.2em; height: 1.2em; vertical-align: -0.24em; object-fit: contain; pointer-events: none; -webkit-user-select: none; user-select: none; }
+        .ai-prov { display: flex; gap: 4px; background: var(--bg); border-radius: 12px; padding: 4px; margin-bottom: 12px; }
+        .ai-prov button { flex: 1; border: none; background: none; border-radius: 9px; padding: 8px 4px; font-size: 13px; font-weight: 600; color: var(--text-sub); cursor: pointer; line-height: 1.25; }
+        .ai-prov button span { display: block; font-size: 10.5px; font-weight: 500; opacity: .8; }
+        .ai-prov button.active { background: var(--card-bg); color: var(--text-main); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
         .more-btn { width: 100%; margin-top: 10px; padding: 10px; background: var(--bg); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; }
         .footnote-link { text-align: right; font-size: 12px; color: var(--text-sub); margin: -6px 4px 14px; }
         .footnote-link span { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
@@ -1523,7 +1527,7 @@
           <span style="font-size:30px;">🤖</span>
           <div>
             <div style="font-size:17px;font-weight:700;">AI 매매일지 분석</div>
-            <div style="font-size:12px;color:var(--text-sub);">Gemini AI가 매매 패턴·전략을 진단합니다</div>
+            <div style="font-size:12px;color:var(--text-sub);">AI가 매매 패턴·전략을 진단합니다</div>
           </div>
         </div>
         <div style="margin-bottom:12px;">
@@ -1538,10 +1542,14 @@
           </select>
         </div>
         <div id="aiAnalysisUserInfo" style="font-size:13px;color:var(--text-sub);margin-bottom:14px;min-height:16px;"></div>
+        <div class="ai-prov" data-where="j">
+          <button type="button" data-p="gemini" onclick="setAiProvider('gemini')">Gemini <span>무료</span></button>
+          <button type="button" data-p="claude" onclick="setAiProvider('claude')">Claude Opus 5.5 <span>1회 약 200~400원</span></button>
+        </div>
         <div id="aiKeySavedRow" style="display:none;align-items:center;justify-content:space-between;
              background:var(--bg);border:1px solid var(--border-color);border-radius:10px;
              padding:9px 13px;font-size:12px;color:var(--text-sub);margin-bottom:12px;">
-          <span>🔑 API 키 저장됨</span>
+          <span id="aiKeySavedLabel">🔑 API 키 저장됨</span>
           <button onclick="deleteAiApiKey()"
             style="background:none;border:none;font-size:11px;color:var(--text-sub);
                    cursor:pointer;text-decoration:underline;padding:0;">삭제</button>
@@ -1551,12 +1559,8 @@
         </button>
       </div>
       <div class="card" id="aiApiKeyCard">
-        <div style="font-size:14px;font-weight:600;margin-bottom:8px;">🔑 Gemini API 키 설정</div>
-        <div style="font-size:12px;color:var(--text-sub);margin-bottom:12px;line-height:1.7;">
-          <a href="https://aistudio.google.com/app/apikey" target="_blank"
-             style="color:var(--primary);">aistudio.google.com</a>에서 무료 발급 후 입력하세요.<br>
-          키는 이 기기에만 저장되며 외부로 전송되지 않습니다.
-        </div>
+        <div id="aiKeyTitle" style="font-size:14px;font-weight:600;margin-bottom:8px;">🔑 Gemini API 키 설정</div>
+        <div id="aiKeyHelp" style="font-size:12px;color:var(--text-sub);margin-bottom:12px;line-height:1.7;"></div>
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
           <input type="password" id="aiApiKeyInput" placeholder="AIza..."
             style="flex:1;font-size:14px;padding:10px 12px;">
@@ -1591,10 +1595,14 @@
           </select>
         </div>
         <div id="saHoldingsInfo" style="font-size:13px;color:var(--text-sub);margin-bottom:14px;min-height:16px;"></div>
+        <div class="ai-prov" data-where="h">
+          <button type="button" data-p="gemini" onclick="setAiProvider('gemini')">Gemini <span>무료</span></button>
+          <button type="button" data-p="claude" onclick="setAiProvider('claude')">Claude Opus 5.5 <span>1회 약 200~400원</span></button>
+        </div>
         <div id="saKeySavedRow" style="display:none;align-items:center;justify-content:space-between;
              background:var(--bg);border:1px solid var(--border-color);border-radius:10px;
              padding:9px 13px;font-size:12px;color:var(--text-sub);margin-bottom:12px;">
-          <span>🔑 API 키 저장됨 (매매일지 탭과 공유)</span>
+          <span id="saKeySavedLabel">🔑 API 키 저장됨 (매매일지 탭과 공유)</span>
           <button onclick="deleteAiApiKey()"
             style="background:none;border:none;font-size:11px;color:var(--text-sub);
                    cursor:pointer;text-decoration:underline;padding:0;">삭제</button>
@@ -1604,12 +1612,8 @@
         </button>
       </div>
       <div class="card" id="saApiKeyCard">
-        <div style="font-size:14px;font-weight:600;margin-bottom:8px;">🔑 Gemini API 키 설정</div>
-        <div style="font-size:12px;color:var(--text-sub);margin-bottom:12px;line-height:1.7;">
-          <a href="https://aistudio.google.com/app/apikey" target="_blank"
-             style="color:var(--primary);">aistudio.google.com</a>에서 무료 발급 후 입력하세요.<br>
-          매매일지 탭에서 이미 저장했다면 그대로 사용됩니다.
-        </div>
+        <div id="saKeyTitle" style="font-size:14px;font-weight:600;margin-bottom:8px;">🔑 Gemini API 키 설정</div>
+        <div id="saKeyHelp" style="font-size:12px;color:var(--text-sub);margin-bottom:12px;line-height:1.7;"></div>
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
           <input type="password" id="saApiKeyInput" placeholder="AIza..."
             style="flex:1;font-size:14px;padding:10px 12px;">
@@ -7109,6 +7113,88 @@
     //  AI 매매분석  v3
     // ═══════════════════════════════════════
     var AI_KEY_ST    = 'ai_api_key_v1';        // Gemini 키
+    // ── Claude 추가(2026-10-10): 분석할 때 Gemini/Claude 고르기. 키는 각자 이 기기 localStorage에만 저장 ──
+    var CLAUDE_KEY_ST = 'claude_api_key_v1';
+    var AI_PROV_ST    = 'ai_provider_v1';       // 'gemini' | 'claude'
+    var CLAUDE_MODEL  = 'claude-opus-5-5';
+    var CLAUDE_SDK    = 'https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@0.133.0/+esm';
+    var _aiRunBy = 'Google Gemini AI';          // 결과 하단 표기(분석 시작 시 정해짐)
+    function _aiProv() { try { return localStorage.getItem(AI_PROV_ST) === 'claude' ? 'claude' : 'gemini'; } catch (e) { return 'gemini'; } }
+    function _aiKeyStore() { return _aiProv() === 'claude' ? CLAUDE_KEY_ST : AI_KEY_ST; }
+    function setAiProvider(p) {
+        try { localStorage.setItem(AI_PROV_ST, p === 'claude' ? 'claude' : 'gemini'); } catch (e) {}
+        _aiRefreshKeyCard(); _saRefreshKeyCard();
+    }
+    var _AI_KEY_UI = {
+        gemini: { title: '🔑 Gemini API 키 설정', ph: 'AIza...', prefix: 'AIza', saved: '🔑 Gemini 키 저장됨',
+                  help: '<a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--primary);">aistudio.google.com</a>에서 무료 발급 후 입력하세요.<br>키는 이 기기에만 저장됩니다.' },
+        claude: { title: '🔑 Claude API 키 설정', ph: 'sk-ant-...', prefix: 'sk-ant-', saved: '🔑 Claude 키 저장됨',
+                  help: '<a href="https://platform.claude.com/settings/keys" target="_blank" style="color:var(--primary);">platform.claude.com</a>에서 발급한 키를 입력하세요.<br>키는 이 기기에만 저장되고 Anthropic에만 직접 전송됩니다. 쓴 만큼 요금이 나가니 콘솔에서 월 사용 한도를 걸어 두세요.' }
+    };
+    // 두 탭(매매일지 j / 보유종목 h)의 토글·키 카드를 현재 공급자에 맞춤
+    function _aiApplyKeyUI(pre) {
+        var p = _aiProv(), ui = _AI_KEY_UI[p];
+        document.querySelectorAll('.ai-prov button').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-p') === p); });
+        var t = document.getElementById(pre + 'KeyTitle'), h = document.getElementById(pre + 'KeyHelp');
+        var inp = document.getElementById(pre + 'ApiKeyInput'), lab = document.getElementById(pre + 'KeySavedLabel'), st = document.getElementById(pre + 'ApiKeyStatus');
+        if (t) t.textContent = ui.title;
+        if (h) h.innerHTML = ui.help;
+        if (inp) inp.placeholder = ui.ph;
+        if (lab) lab.textContent = ui.saved + (pre === 'sa' ? ' (두 탭 공유)' : '');
+        if (st) st.textContent = '';
+    }
+    function _aiSaveKeyFrom(inputId, statusId) {
+        var input = document.getElementById(inputId), statusEl = document.getElementById(statusId);
+        var ui = _AI_KEY_UI[_aiProv()], val = input ? input.value.trim() : '';
+        if (!val.startsWith(ui.prefix)) { if (statusEl) statusEl.textContent = '❌ ' + (_aiProv() === 'claude' ? 'Claude' : 'Gemini') + ' 키는 ' + ui.prefix + ' 로 시작해야 합니다'; return false; }
+        localStorage.setItem(_aiKeyStore(), val);
+        if (input) input.value = '';
+        return true;
+    }
+
+    // 공용 생성: 선택된 공급자로 호출. 반환 텍스트, 실패 시 throw
+    async function _aiGenerate(prompt, maxTokens) {
+        var key = localStorage.getItem(_aiKeyStore());
+        if (_aiProv() === 'claude') return _claudeGenerate(key, prompt);
+        return _geminiGenerate(key, prompt, maxTokens || 8192);
+    }
+
+    var _anthropicP = null;
+    async function _claudeGenerate(key, prompt) {
+        if (!_anthropicP) _anthropicP = import(CLAUDE_SDK).catch(function(e) { _anthropicP = null; throw e; });
+        var mod = await _anthropicP;
+        var Anthropic = mod.default || mod.Anthropic;
+        // 키는 이 기기에만 있고 브라우저에서 Anthropic으로 직접 호출 → dangerouslyAllowBrowser 필요
+        var client = new Anthropic({ apiKey: key, dangerouslyAllowBrowser: true, maxRetries: 2, timeout: 240000 });
+        var res;
+        try {
+            res = await client.beta.messages.create({
+                model: CLAUDE_MODEL,
+                max_tokens: 16000,
+                output_config: { effort: 'medium' },
+                // 안전 분류기가 거절하면 서버가 권장 모델로 자동 재시도
+                betas: ['server-side-fallback-2026-07-01'],
+                fallbacks: 'default',
+                messages: [{ role: 'user', content: prompt }]
+            });
+        } catch (e) {
+            var apiMsg = e && e.error && e.error.error && e.error.error.message;   // 서버 원문 JSON 대신 메시지만
+            var err = new Error(apiMsg ? ((e.status ? e.status + ' · ' : '') + apiMsg) : (e && e.message ? e.message : String(e)));
+            err.provider = 'claude';
+            if (e instanceof Anthropic.AuthenticationError || e instanceof Anthropic.PermissionDeniedError) err.kind = 'auth';
+            else if (e instanceof Anthropic.RateLimitError) err.kind = 'rate';
+            else if (e instanceof Anthropic.BadRequestError && /credit balance/i.test(err.message)) err.kind = 'credit';
+            else if (e instanceof Anthropic.APIConnectionError) err.kind = 'network';
+            else if (e instanceof Anthropic.InternalServerError) err.kind = 'server';
+            throw err;
+        }
+        if (res.stop_reason === 'refusal') {
+            var rf = new Error('Claude가 이 요청에 답하지 않았습니다.'); rf.provider = 'claude'; rf.kind = 'refusal'; throw rf;
+        }
+        var text = (res.content || []).filter(function(b) { return b.type === 'text'; }).map(function(b) { return b.text; }).join('');
+        if (!text) { var em = new Error('Claude 응답이 비어 있습니다.'); em.provider = 'claude'; throw em; }
+        return text;
+    }
     var AI_CACHE_ST  = 'ai_result_cache_v1';  // {user, date, html}
 
     function renderAiAnalysisTab() {
@@ -7135,7 +7221,8 @@
     }
 
     function _aiRefreshKeyCard() {
-        var key = localStorage.getItem(AI_KEY_ST);
+        _aiApplyKeyUI('ai');
+        var key = localStorage.getItem(_aiKeyStore());
         var card = document.getElementById('aiApiKeyCard');
         var saved = document.getElementById('aiKeySavedRow');
         if (!card) return;
@@ -7188,22 +7275,13 @@
 
     // API 키 저장
     function saveAiApiKey() {
-        var input = document.getElementById('aiApiKeyInput');
-        var statusEl = document.getElementById('aiApiKeyStatus');
-        var val = input ? input.value.trim() : '';
-        if (!val.startsWith('AIza')) {
-            if (statusEl) statusEl.textContent = '❌ Gemini 키는 AIza 로 시작해야 합니다';
-            return;
-        }
-        localStorage.setItem(AI_KEY_ST, val);
-        if (input) input.value = '';
-        _aiRefreshKeyCard();
+        if (_aiSaveKeyFrom('aiApiKeyInput', 'aiApiKeyStatus')) { _aiRefreshKeyCard(); _saRefreshKeyCard(); }
     }
 
     function deleteAiApiKey() {
-        if (!confirm('저장된 API 키를 삭제할까요?')) return;
-        localStorage.removeItem(AI_KEY_ST);
-        _aiRefreshKeyCard();
+        if (!confirm('저장된 ' + (_aiProv() === 'claude' ? 'Claude' : 'Gemini') + ' API 키를 삭제할까요?')) return;
+        localStorage.removeItem(_aiKeyStore());
+        _aiRefreshKeyCard(); _saRefreshKeyCard();
     }
 
     // 분석 실행
@@ -7270,7 +7348,17 @@
         var quota = err && err.isQuota;
         var title = quota ? '⏳ 무료 사용량 초과' : '❌ 오류 발생';
         var hint;
-        if (quota) {
+        if (err && err.provider === 'claude') {
+            var CH = {
+                auth: ['🔑 Claude 키 확인 필요', '키가 올바르지 않거나 사용 권한이 없습니다. 키를 삭제하고 다시 입력해 주세요.'],
+                credit: ['💳 Claude 크레딧 부족', 'platform.claude.com → 결제(Billing)에서 크레딧을 충전한 뒤 다시 시도해 주세요.'],
+                rate: ['⏳ 요청이 많음', '잠시(1분 정도) 후 다시 시도해 주세요.'],
+                network: ['📡 연결 실패', '인터넷 연결을 확인하고 다시 시도해 주세요.'],
+                server: ['⏳ Claude 서버 혼잡', '잠시 후 다시 시도해 주세요.'],
+                refusal: ['🚫 답변 거절', '이 내용에는 답하지 않았습니다. Gemini로 바꿔 시도해 보세요.']
+            }[err.kind] || ['❌ 오류 발생', '잠시 후 다시 시도하거나 Gemini로 바꿔 시도해 보세요.'];
+            title = CH[0]; hint = CH[1];
+        } else if (quota) {
             var sec = (err && err.retrySec) ? (err.retrySec + '초') : '약 1분';
             hint = 'Gemini 무료 등급의 사용량 한도에 도달했습니다. ' + sec + ' 후 다시 시도해주세요. '
                  + '(짧은 시간에 여러 번 누르면 분당 한도에 걸립니다. 그래도 계속 막히면 일일 한도 소진일 수 있어요.)';
@@ -7285,7 +7373,9 @@
     }
 
     async function runAiAnalysis() {
-        var key = localStorage.getItem(AI_KEY_ST);
+        var key = localStorage.getItem(_aiKeyStore());
+        var isClaude = _aiProv() === 'claude';
+        _aiRunBy = isClaude ? 'Claude Opus 5.5 (Anthropic)' : 'Google Gemini AI';
         if (!key) {
             var card = document.getElementById('aiApiKeyCard');
             if (card) { card.style.display = 'block'; card.scrollIntoView({behavior:'smooth'}); }
@@ -7307,15 +7397,15 @@
         resultEl.style.display = 'block';
         resultEl.innerHTML = '<div class="card" style="text-align:center;padding:36px 20px;">'
             + '<div style="font-size:32px;margin-bottom:14px;">⏳</div>'
-            + '<div style="font-size:14px;font-weight:600;margin-bottom:6px;">Gemini AI가 분석 중입니다</div>'
-            + '<div style="font-size:12px;color:var(--text-sub);">매매 패턴·신호·전략을 진단합니다<br>약 10~20초 소요됩니다</div>'
+            + '<div style="font-size:14px;font-weight:600;margin-bottom:6px;">' + (isClaude ? 'Claude' : 'Gemini AI') + '가 분석 중입니다</div>'
+            + '<div style="font-size:12px;color:var(--text-sub);">매매 패턴·신호·전략을 진단합니다<br>' + (isClaude ? '약 30~90초' : '약 10~20초') + ' 소요됩니다</div>'
             + '</div>';
 
         var summary = _aiBuildSummary(trades, userLogs);
         var prompt  = _aiBuildPrompt(summary, target);
 
         try {
-            var text = await _geminiGenerate(key, prompt, 8192);
+            var text = await _aiGenerate(prompt, 8192);
             _aiRenderResult(text, target);
         } catch(err) {
             resultEl.innerHTML = _aiErrorCard(err);
@@ -7600,7 +7690,7 @@
             + sectionsHtml
             + '</div>'
             + '<div class="card" style="text-align:center;padding:10px;">'
-            + '<div style="font-size:11px;color:var(--text-sub);">Google Gemini AI · 데이터는 서버에 저장되지 않습니다</div>'
+            + '<div style="font-size:11px;color:var(--text-sub);">' + _aiRunBy + ' · 데이터는 서버에 저장되지 않습니다</div>'
             + '</div>';
 
         resultEl.innerHTML = html;
@@ -7631,7 +7721,8 @@
     }
 
     function _saRefreshKeyCard() {
-        var key = localStorage.getItem(AI_KEY_ST);
+        _aiApplyKeyUI('sa');
+        var key = localStorage.getItem(_aiKeyStore());
         var card = document.getElementById('saApiKeyCard');
         var saved = document.getElementById('saKeySavedRow');
         if (!card) return;
@@ -7645,16 +7736,7 @@
     }
 
     function saveSaApiKey() {
-        var input = document.getElementById('saApiKeyInput');
-        var statusEl = document.getElementById('saApiKeyStatus');
-        var val = input ? input.value.trim() : '';
-        if (!val.startsWith('AIza')) {
-            if (statusEl) statusEl.textContent = '❌ Gemini 키는 AIza 로 시작해야 합니다';
-            return;
-        }
-        localStorage.setItem(AI_KEY_ST, val);
-        if (input) input.value = '';
-        _saRefreshKeyCard();
+        if (_aiSaveKeyFrom('saApiKeyInput', 'saApiKeyStatus')) { _aiRefreshKeyCard(); _saRefreshKeyCard(); }
     }
 
     function onSaUserChange() {
@@ -7804,7 +7886,9 @@
 
     // 분석 실행
     async function runStockAnalysis() {
-        var key = localStorage.getItem(AI_KEY_ST);
+        var key = localStorage.getItem(_aiKeyStore());
+        var isClaude = _aiProv() === 'claude';
+        _aiRunBy = isClaude ? 'Claude Opus 5.5 (Anthropic)' : 'Google Gemini AI';
         if (!key) {
             var card = document.getElementById('saApiKeyCard');
             if (card) { card.style.display = 'block'; card.scrollIntoView({behavior:'smooth'}); }
@@ -7824,13 +7908,13 @@
         resultEl.innerHTML = '<div class="card" style="text-align:center;padding:36px 20px;">'
             + '<div style="font-size:32px;margin-bottom:14px;">⏳</div>'
             + '<div style="font-size:14px;font-weight:600;margin-bottom:6px;">보유 종목 분석 중입니다</div>'
-            + '<div style="font-size:12px;color:var(--text-sub);">각 종목의 현황을 분석하고 행동 추천을 생성합니다<br>약 15~30초 소요됩니다</div>'
+            + '<div style="font-size:12px;color:var(--text-sub);">' + (isClaude ? 'Claude가 ' : '') + '각 종목의 현황을 분석하고 행동 추천을 생성합니다<br>' + (isClaude ? '약 30~90초' : '약 15~30초') + ' 소요됩니다</div>'
             + '</div>';
 
         var prompt = _saBuildPrompt(holdings, target);
 
         try {
-            var text = await _geminiGenerate(key, prompt, 8192);
+            var text = await _aiGenerate(prompt, 8192);
             _saRenderResult(text, target, holdings);
         } catch(err) {
             resultEl.innerHTML = _aiErrorCard(err);
@@ -8058,7 +8142,7 @@
             + sectionsHtml
             + '</div>'
             + '<div class="card" style="text-align:center;padding:10px;">'
-            + '<div style="font-size:11px;color:var(--text-sub);">Google Gemini AI · 투자 판단은 본인 책임입니다</div>'
+            + '<div style="font-size:11px;color:var(--text-sub);">' + _aiRunBy + ' · 투자 판단은 본인 책임입니다</div>'
             + '</div>';
 
         resultEl.innerHTML = html;
