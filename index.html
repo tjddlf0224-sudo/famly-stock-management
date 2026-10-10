@@ -7573,8 +7573,77 @@
             usd: fx
         };
         var prev = _aiHistLoad().filter(function(x) { return x.kind === 'holdings' && x.user === target; })[0] || null;
-        return { rows: rows, cashKRW: cashKRW, stockKRW: stockKRW, total: total, market: market, prev: prev };
+        return { rows: rows, cashKRW: cashKRW, stockKRW: stockKRW, total: total, market: market, prev: prev, split: _aiSplit(target, holdings) };
     }
+
+
+    // ═══ '드러켄밀러였다면?' (2026-10-10) — 그의 공개 발언·원칙(DRUCK_PRINCIPLES, 출처는 SESSION_LOG·드러켄밀러_분석.md)만 근거로 ═══
+    var DRUCK_PRINCIPLES = '[배경] 1981년 듀케인 캐피털 설립, 1988년경~2000년 소로스 퀀텀 펀드 운용, 2010년 펀드 정리 후 가족 자산만 운용. 연평균 약 30%·손실 연도 없음은 블룸버그 등 언론 보도(감사된 수치 아님). 1992년 파운드화 공매도로 10억 달러 이상 수익(소로스가 규모를 더 키우라고 함).\n[유동성 우선] 시장 전체를 움직이는 것은 기업 실적보다 중앙은행(연준)과 유동성이다. 금리·유동성의 방향을 먼저 본다(탑다운).\n[18개월 앞] 지금이 아니라 약 18개월 뒤의 모습에 투자한다. 현재 뉴스에 투자하지 말 것.\n[집중과 확신의 크기] 정말 좋은 기회는 1년에 한두 번이다. 그때는 크게 싣는다. 경영대학원식 분산은 잘못된 개념이라고 봄(과도한 분산 경계).\n[맞고 틀림보다 크기] 맞았는지 틀렸는지보다, 맞았을 때 얼마나 벌고 틀렸을 때 얼마나 잃는지가 중요하다(소로스에게 배운 교훈).\n[자본 보존 + 홈런] 장기 수익은 원금을 지키는 것과 가끔의 큰 승리에서 나온다.\n[빠른 전환] 크게 걸었더라도 상황이 바뀌면 생각을 바꾼다. 틀렸다고 판단하면 즉시 방향을 바꾼다.\n[가격을 움직이는 것에 집중] 모든 지표가 아니라 실제로 가격과 가장 관련된 요인에 집중한다. 타이밍은 유동성과 가격 흐름(차트)으로, 가치평가는 움직임의 크기를 가늠하는 데 쓴다.\n[과열 막바지 추격 금지] 2000년, 기술주가 비싸다는 걸 알면서도 3월에 약 60억 달러를 샀다가 6주 만에 약 30억 달러를 잃음. 본인은 \'알면서도 감정적으로 했다\'고 인정.\n[너무 이른 것도 실수] 방향이 맞아도 너무 일찍 들어가면 손해(2006년 주택시장 하락 베팅이 \'조금 일렀다\').\n[레버리지 경계] 레버리지는 실수를 키운다.\n[큰 승자를 너무 일찍 팔지 말 것] 2024년, 엔비디아를 너무 일찍 팔았다고 스스로 인정.\n[주의] 물타기(손실 종목 추가 매수)에 대한 그의 공개 발언은 확인되지 않음 — 그의 의견처럼 쓰지 말 것. \'시장 50·산업 30·종목 20\'은 그의 말이 아니라 스콧 베선트(소로스 펀드 출신)의 발언으로 보도된 경험칙이며, 여기서는 사용자가 스스로 정한 원칙으로 다룬다.';
+    // 성일님 원칙: 시장 50 · 산업 30 · 종목 20 — 드러켄밀러가 아니라 스콧 베선트(소로스 펀드 출신) 발언으로 보도된 경험칙(10/10 조사)
+    var USER_SPLIT = { market: 0.5, industry: 0.3, stock: 0.2 };
+    var _SECTOR_ETF_RE = /반도체|2차전지|이차전지|배터리|바이오|헬스|의료|제약|은행|금융|증권|보험|에너지|원유|조선|방산|우주|AI|인공지능|로봇|인터넷|소프트웨어|게임|미디어|자동차|화학|철강|건설|리츠|부동산|금속|구리|금현물|골드|원자력|전력|유틸|소비재|필수소비|경기소비|테크|빅테크/i;
+    var _US_SECTOR_ETF = { SOXX:1, SMH:1, SOXL:1, SOXS:1, XLK:1, VGT:1, XLE:1, XLF:1, XLV:1, XBI:1, TECL:1, FNGU:1, ARKK:1, KRE:1, XLU:1, XLI:1, ITA:1, URA:1, GLD:1, SLV:1, NVDL:1, TSLL:1, CONL:1, USD:1 };
+    var _US_INDEX_ETF = { SPY:1, VOO:1, IVV:1, QQQ:1, QQQM:1, TQQQ:1, SQQQ:1, UPRO:1, SPXL:1, VTI:1, VT:1, DIA:1, IWM:1, URTY:1, SCHD:1, JEPI:1, JEPQ:1, TLT:1, TMF:1, QLD:1, SSO:1 };
+    function _aiBucket(h) {
+        var t = h.ticker, nm = String(h.name || '');
+        if (h.isKorea) {
+            if (!_KR_ETF_RE.test(nm)) return 'stock';
+            return _SECTOR_ETF_RE.test(nm.replace(/^(KODEX|TIGER|ACE|SOL|RISE|KBSTAR|HANARO|ARIRANG|PLUS|KOSEF|TIMEFOLIO|WON|BNK|HK|UNICORN|KIWOOM|1Q)\s*/i, '')) ? 'industry' : 'market';
+        }
+        if (_US_SECTOR_ETF[t]) return 'industry';
+        if (_US_INDEX_ETF[t]) return 'market';
+        return 'stock';
+    }
+    function _aiCashKRW(target) {
+        var cashKRW = 0, ci = (LAST_FETCHED_DATA && LAST_FETCHED_DATA.cashInfo) || {}, fx = (typeof CURRENT_EXCHANGE_RATE !== 'undefined' ? CURRENT_EXCHANGE_RATE : 1);
+        Object.keys(ci).forEach(function(k) {
+            var nm = k.replace(/\s/g, '');
+            if (nm === '가족전체' || nm === '그룹전체') return;
+            if (target === '가족 전체' || nm === target.replace(/\s/g, '')) cashKRW += (Number(ci[k].cashKRW) || 0) + (Number(ci[k].cashUSD) || 0) * fx;
+        });
+        return cashKRW;
+    }
+    // 시장(지수 ETF)·산업(업종 ETF)·종목(개별주) 비중 — 주식 평가액 기준 + 예수금은 따로
+    function _aiSplit(target, holdings) {
+        holdings = holdings || _saGetHoldings(target);
+        var sum = { market: 0, industry: 0, stock: 0 }, names = { market: [], industry: [], stock: [] };
+        Object.keys(holdings).forEach(function(t) { var h = holdings[t], b = _aiBucket(h); sum[b] += h.evalAmt || 0; names[b].push(h.isKorea ? h.name : h.ticker); });
+        var stockTotal = sum.market + sum.industry + sum.stock, cash = _aiCashKRW(target);
+        var w = function(x) { return stockTotal > 0 ? x / stockTotal : 0; };
+        return { market: w(sum.market), industry: w(sum.industry), stock: w(sum.stock), cashRatio: (stockTotal + cash) > 0 ? cash / (stockTotal + cash) : 0, names: names };
+    }
+    function _aiSplitText(sp) {
+        var r = function(x) { return Math.round(x * 100) + '%'; };
+        return '성일님이 정한 목표 비중(주식 안에서): 시장 50% · 산업 30% · 종목 20% (스콧 베선트 발언으로 보도된 경험칙에서 착안)\n'
+            + '현재: 시장 ' + r(sp.market) + (sp.names.market.length ? '(' + sp.names.market.join(', ') + ')' : '')
+            + ' · 산업 ' + r(sp.industry) + (sp.names.industry.length ? '(' + sp.names.industry.join(', ') + ')' : '')
+            + ' · 종목 ' + r(sp.stock) + (sp.names.stock.length ? '(' + sp.names.stock.join(', ') + ')' : '')
+            + ' · 별도로 예수금 비율 ' + r(sp.cashRatio);
+    }
+    function _druckSplitHtml(sp) {
+        var row = function(label, cur, tgt, color) {
+            var gap = Math.round((cur - tgt) * 100);
+            return '<div style="margin:8px 0;"><div style="display:flex;justify-content:space-between;font-size:12.5px;"><span><b>' + label + '</b> <span style="color:var(--text-sub);">목표 ' + Math.round(tgt * 100) + '%</span></span>'
+                + '<b style="color:' + (Math.abs(gap) <= 10 ? '#34C759' : '#FF9500') + ';">' + Math.round(cur * 100) + '% (' + (gap > 0 ? '+' : '') + gap + '%p)</b></div>'
+                + '<div style="position:relative;height:8px;background:var(--card-bg);border-radius:4px;margin-top:4px;overflow:hidden;">'
+                + '<div style="width:' + Math.min(100, cur * 100) + '%;height:100%;background:' + color + ';border-radius:4px;"></div>'
+                + '<div style="position:absolute;top:-2px;left:calc(' + (tgt * 100) + '% - 1px);width:2px;height:12px;background:var(--text-main);opacity:.6;"></div></div></div>';
+        };
+        return '<div style="background:var(--bg);border-radius:12px;padding:10px 12px;margin:4px 0 12px;">'
+            + '<div style="font-size:12px;color:var(--text-sub);margin-bottom:2px;">성일님 원칙 대비 지금 비중 (주식 안에서, 세로줄 = 목표)</div>'
+            + row('시장', sp.market, USER_SPLIT.market, '#007AFF') + row('산업', sp.industry, USER_SPLIT.industry, '#AF52DE') + row('종목', sp.stock, USER_SPLIT.stock, '#FF9500')
+            + '<div style="font-size:11px;color:var(--text-sub);margin-top:4px;">시장=지수 ETF, 산업=업종 ETF, 종목=개별주로 앱이 분류 · 50/30/20은 스콧 베선트 발언으로 보도된 경험칙 · 예수금 ' + Math.round(sp.cashRatio * 100) + '%는 별도</div></div>';
+    }
+    function _druckCardWrap(inner, sp) {
+        return '<div class="card" style="padding:18px 16px;border:1.5px solid rgba(0,122,255,0.35);">'
+            + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span style="font-size:26px;">🧭</span><div>'
+            + '<div style="font-size:16.5px;font-weight:800;">드러켄밀러였다면?</div>'
+            + '<div style="font-size:11.5px;color:var(--text-sub);">스탠리 드러켄밀러의 공개 발언·원칙을 적용한 해석 (본인 의견 아님)</div></div></div>'
+            + (sp ? _druckSplitHtml(sp) : '') + inner + '</div>';
+    }
+    var DRUCK_SCHEMA = { type: 'object', additionalProperties: false, required: ['stance', 'liquidity', 'sizing', 'actions', 'avoid', 'horizon'], properties: {
+        stance: { type: 'string' }, liquidity: { type: 'string' }, sizing: { type: 'string' },
+        actions: { type: 'array', items: { type: 'string' } }, avoid: { type: 'array', items: { type: 'string' } }, horizon: { type: 'string' } } };
 
     function _saFmtPrice(h, v) { return v == null || !isFinite(v) ? '-' : (h.isKorea ? Math.round(v).toLocaleString() + '원' : '$' + Number(v).toFixed(2)); }
     function _saUsName(t) { if (typeof STOCK_LIST_US === 'undefined') return ''; var hit = STOCK_LIST_US.find(function(s) { return String(s.ticker).toUpperCase() === t; }); return hit ? hit.name : ''; }
@@ -7603,11 +7672,14 @@
             L.push('=== 지난 분석 (' + d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate() + ', ' + _aiModelLabel(ex.prev.model) + ') ===');
             ex.prev.picks.forEach(function(p) { L.push('- ' + p.name + ': ' + p.action + ' (당시 가격 ' + p.price + ')'); });
         }
+        L.push('=== 투자 원칙 비중 (앱 계산) ===');
+        L.push(_aiSplitText(ex.split || _aiSplit(user, holdings)));
         L.push(news ? '=== 최근 뉴스 요약 (웹 검색, ' + _aiTodayStr() + ') ===\n' + news : '=== 최근 뉴스: 미반영 (웹 검색 안 함) ===');
         return L.join('\n');
     }
 
-    var SA_SCHEMA = { type: 'object', additionalProperties: false, required: ['stocks', 'portfolio'], properties: {
+    var SA_SCHEMA = { type: 'object', additionalProperties: false, required: ['stocks', 'portfolio', 'druckenmiller'], properties: {
+        druckenmiller: DRUCK_SCHEMA,
         stocks: { type: 'array', items: { type: 'object', additionalProperties: false,
             required: ['ticker', 'name', 'summary', 'positives', 'risks', 'action', 'confidence', 'reason', 'watch_levels', 'change_mind', 'vs_last'],
             properties: {
@@ -7634,6 +7706,8 @@
             '6. change_mind: 어떤 수치가 어떻게 바뀌면 판단을 바꿀지 구체적으로. vs_last: 지난 분석이 있으면 무엇이 달라졌는지, 없으면 "첫 분석".',
             '7. portfolio: 비중 쏠림·예수금 비율·시장 국면을 고려한 리밸런싱 제언. 문장은 짧고 쉽게.',
             '8. stocks에는 위 보유 종목을 모두, 같은 순서로 넣으세요.',
+            '9. druckenmiller: 아래 "드러켄밀러 원칙"만 근거로, 그가 이 계좌를 맡았다면 어떻게 했을지 쓰세요. stance=한 줄 총평, liquidity=유동성·시장 국면 판단(위 시장 점수 인용), sizing=확신·비중 판단(목표 비중 시장50·산업30·종목20 대비 현재 비중 인용), actions=구체적 행동 3~4개, avoid=그가 경고했을 실수 2~3개, horizon=18~24개월 앞을 본 관점. 원칙에 없는 말을 그의 말처럼 지어내지 마세요.',
+            '', '=== 드러켄밀러 원칙(공개 발언 정리) ===', DRUCK_PRINCIPLES,
             forGemini ? '\n아래 JSON 스키마에 맞는 JSON만 출력하세요(설명·코드블록 없이):\n' + JSON.stringify(SA_SCHEMA) : ''
         ].join('\n');
     }
@@ -7702,7 +7776,18 @@
             + '<span style="background:var(--bg);border-radius:20px;padding:3px 11px;font-size:11px;color:var(--text-sub);">' + (meta.newsUsed ? '📰 최신 뉴스 반영' : '뉴스 미반영') + '</span></div>'
             + (ex.market.kr || ex.market.us ? '<div style="font-size:11.5px;color:var(--text-sub);margin-top:8px;">시장 국면 · 국내 ' + _aiEsc(ex.market.kr || '-') + ' · 미국 ' + _aiEsc(ex.market.us || '-') + '</div>' : '') + '</div>';
         var foot = '<div class="card" style="text-align:center;padding:10px;"><div style="font-size:11px;color:var(--text-sub);">' + _aiEsc(_aiModelLabel(meta.model)) + ' · 앱 데이터 기준 분석이며 투자 판단은 본인 책임입니다</div></div>';
-        var html = AI_COPY_BTN + head + cards + pfCard + src + foot;
+        var dk = data.druckenmiller, dkCard = '';
+        if (dk) {
+            var li = function(arr, mark) { return (arr || []).map(function(x) { return '<div style="display:flex;gap:7px;margin:5px 0;font-size:14px;line-height:1.65;"><span>' + mark + '</span><div style="flex:1;">' + _aiEsc(x) + '</div></div>'; }).join(''); };
+            dkCard = _druckCardWrap(
+                '<div style="font-size:15px;font-weight:700;line-height:1.6;margin:4px 0 10px;">' + _aiEsc(dk.stance) + '</div>'
+                + '<div style="font-size:13.5px;line-height:1.7;margin:6px 0;"><b>💧 유동성·시장</b> ' + _aiEsc(dk.liquidity) + '</div>'
+                + '<div style="font-size:13.5px;line-height:1.7;margin:6px 0;"><b>🎯 비중·확신</b> ' + _aiEsc(dk.sizing) + '</div>'
+                + ((dk.actions || []).length ? '<div style="font-weight:700;font-size:13px;margin-top:10px;">그였다면 할 행동</div>' + li(dk.actions, '👉') : '')
+                + ((dk.avoid || []).length ? '<div style="font-weight:700;font-size:13px;margin-top:8px;">그가 경고했을 실수</div>' + li(dk.avoid, '🚫') : '')
+                + '<div style="font-size:13px;line-height:1.65;margin-top:10px;color:var(--text-sub);"><b>🔭 18~24개월 관점</b> ' + _aiEsc(dk.horizon) + '</div>', ex.split);
+        }
+        var html = AI_COPY_BTN + head + cards + pfCard + dkCard + src + foot;
         resultEl.innerHTML = html + _aiFollowBox('holdings');
         _aiQA.holdings = [];
         var ctx = meta.dataText + '\n\n=== 분석 결과(JSON) ===\n' + JSON.stringify(data);
@@ -8118,7 +8203,16 @@
             '위 통계(승률·손익비·이긴/진 매매 보유일·손실 후 재매수·매매 빈도)를 근거로 반복되는 습관을 진단. 손실 종목을 더 오래 들고 있는지, 손실 직후 서둘러 다시 사는지 등을 숫자로 짚어 주세요.',
             '',
             '## 🎯 개선 방향',
-            '위 분석에 근거한 실질적 개선책 3가지. 일반론 말고 이 사람의 실제 매매 패턴에 맞춘 조언으로.'
+            '위 분석에 근거한 실질적 개선책 3가지. 일반론 말고 이 사람의 실제 매매 패턴에 맞춘 조언으로.',
+            '',
+            '## 🧭 드러켄밀러였다면?',
+            '아래 "드러켄밀러 원칙"만 근거로, 스탠리 드러켄밀러가 이 매매 기록을 봤다면 무엇을 칭찬하고 무엇을 고치라 했을지 씁니다. 반드시 위 통계·일지 인용과 연결하세요. 형식: 첫 줄에 한 줄 총평(굵게), 이어서 "- " 목록 4~6개(각 항목 앞에 해당 원칙 이름을 [ ]로), 마지막 줄에 "앞으로 18~24개월을 본다면: …" 한 문장. 아래 목표 비중과 현재 비중도 짚어 주세요. 원칙에 없는 말을 그의 말처럼 지어내지 마세요.',
+            '',
+            '=== 투자 원칙 비중 (앱 계산) ===',
+            _aiSplitText(_aiSplit(user)),
+            '',
+            '=== 드러켄밀러 원칙(공개 발언 정리) ===',
+            DRUCK_PRINCIPLES
         ].join('\n');
     }
 
@@ -8243,6 +8337,11 @@
         // 인트로 텍스트(첫 ## 이전: 큰 제목·인용·안내문) — 같은 렌더러로
         var introHtml = introLines.some(function(l) { return l.trim(); }) ? renderLines(introLines) : '';
 
+        // '드러켄밀러였다면?' 섹션은 본문에서 빼서 따로 카드로
+        var dkSecs = sections.filter(function(sec) { return /드러켄밀러/.test(sec.title); });
+        sections = sections.filter(function(sec) { return !/드러켄밀러/.test(sec.title); });
+        var dkHtml = dkSecs.length ? _druckCardWrap('<div style="padding:0 2px;">' + dkSecs.map(function(sec) { return renderLines(sec.lines); }).join('') + '</div>', opts.partial ? null : _aiSplit(user)) : '';
+
         // 섹션 카드 조립
         var sectionsHtml = sections.map(function(sec) {
             var s = sec.style;
@@ -8282,6 +8381,7 @@
             + (introHtml ? '<div style="margin-bottom:16px;">' + introHtml + '</div>' : '')
             + sectionsHtml
             + '</div>'
+            + dkHtml
             + '<div class="card" style="text-align:center;padding:10px;">'
             + '<div style="font-size:11px;color:var(--text-sub);">' + _aiRunBy + ' · 데이터는 서버에 저장되지 않습니다</div>'
             + '</div>';
