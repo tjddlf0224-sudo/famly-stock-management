@@ -155,6 +155,7 @@
         .ai-prov { display: flex; gap: 4px; background: var(--bg); border-radius: 12px; padding: 4px; margin-bottom: 12px; }
         .ai-prov button { flex: 1; border: none; background: none; border-radius: 9px; padding: 8px 4px; font-size: 13px; font-weight: 600; color: var(--text-sub); cursor: pointer; line-height: 1.25; }
         .ai-prov button span { display: block; font-size: 10.5px; font-weight: 500; opacity: .8; }
+        .ai-model-sel { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border-color); font-size: 14px; background: var(--card-bg); color: var(--text-main); margin: -4px 0 12px; }
         .ai-prov button.active { background: var(--card-bg); color: var(--text-main); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
         .ai-hist-btn { display: block; width: 100%; margin-top: 8px; background: none; border: none; color: var(--primary); font-size: 13px; font-weight: 600; padding: 6px; cursor: pointer; }
         .sa-news { display: flex; gap: 9px; align-items: flex-start; background: var(--bg); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
@@ -1557,9 +1558,11 @@
         </div>
         <div id="aiAnalysisUserInfo" style="font-size:13px;color:var(--text-sub);margin-bottom:14px;min-height:16px;"></div>
         <div class="ai-prov" data-where="j">
-          <button type="button" data-p="gemini" onclick="setAiProvider('gemini')">Gemini <span>무료</span></button>
-          <button type="button" data-p="claude" onclick="setAiProvider('claude')">Claude Opus 5.5 <span>Max 요금제 포함</span></button>
+          <button type="button" data-p="gemini-fast" onclick="setAiPreset('gemini-fast')">Gemini 빠름 <span>무료 · 10~30초</span></button>
+          <button type="button" data-p="gemini-hq" onclick="setAiPreset('gemini-hq')">Gemini 고품질 <span>무료 · 1~3분</span></button>
+          <button type="button" data-p="claude" onclick="setAiPreset('claude')">Claude <span>Max 요금제</span></button>
         </div>
+        <select class="ai-model-sel" onchange="setAiModel(this.value)"></select>
         <div id="aiKeySavedRow" style="display:none;align-items:center;justify-content:space-between;
              background:var(--bg);border:1px solid var(--border-color);border-radius:10px;
              padding:9px 13px;font-size:12px;color:var(--text-sub);margin-bottom:12px;">
@@ -1611,9 +1614,11 @@
         </div>
         <div id="saHoldingsInfo" style="font-size:13px;color:var(--text-sub);margin-bottom:14px;min-height:16px;"></div>
         <div class="ai-prov" data-where="h">
-          <button type="button" data-p="gemini" onclick="setAiProvider('gemini')">Gemini <span>무료</span></button>
-          <button type="button" data-p="claude" onclick="setAiProvider('claude')">Claude Opus 5.5 <span>Max 요금제 포함</span></button>
+          <button type="button" data-p="gemini-fast" onclick="setAiPreset('gemini-fast')">Gemini 빠름 <span>무료 · 10~30초</span></button>
+          <button type="button" data-p="gemini-hq" onclick="setAiPreset('gemini-hq')">Gemini 고품질 <span>무료 · 1~3분</span></button>
+          <button type="button" data-p="claude" onclick="setAiPreset('claude')">Claude <span>Max 요금제</span></button>
         </div>
+        <select class="ai-model-sel" onchange="setAiModel(this.value)"></select>
         <div id="saKeySavedRow" style="display:none;align-items:center;justify-content:space-between;
              background:var(--bg);border:1px solid var(--border-color);border-radius:10px;
              padding:9px 13px;font-size:12px;color:var(--text-sub);margin-bottom:12px;">
@@ -7073,7 +7078,73 @@
     var CLAUDE_MODEL  = 'claude-opus-5-5';
     var CLAUDE_SDK    = 'https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@0.133.0/+esm';
     var _aiRunBy = 'Google Gemini AI';          // 결과 하단 표기(분석 시작 시 정해짐)
-    function _aiProv() { try { return localStorage.getItem(AI_PROV_ST) === 'claude' ? 'claude' : 'gemini'; } catch (e) { return 'gemini'; } }
+    // ── 모델 목록(2026-10-10): 제미나이 = 이 키(AI Studio familystock 프로젝트)에서 무료 한도가 있는 텍스트 모델 / Claude = Max 포함 크레딧
+    //   time = 예상 소요(매매일지 기준), note = 하루 무료 한도 또는 크레딧 소모 정도. 실제 걸린 시간은 ai_model_times_v1에 기록해 함께 표시
+    var AI_MODELS = [
+        { id: 'gemini-3.5-flash-lite', g: 'gemini', tier: 'fast', name: 'Gemini 3.5 Flash-Lite', time: '10~30초', note: '하루 500회' },
+        { id: 'gemini-3.1-flash-lite', g: 'gemini', tier: 'fast', name: 'Gemini 3.1 Flash-Lite', time: '10~30초', note: '하루 500회' },
+        { id: 'gemini-2.5-flash-lite', g: 'gemini', tier: 'fast', name: 'Gemini 2.5 Flash-Lite', time: '10~30초', note: '하루 20회' },
+        { id: 'gemini-2.5-flash',      g: 'gemini', tier: 'hq',   name: 'Gemini 2.5 Flash',      time: '30초~1분', note: '하루 20회' },
+        { id: 'gemini-3-flash-preview', g: 'gemini', tier: 'hq',  name: 'Gemini 3 Flash (미리보기)', time: '1~2분', note: '하루 20회' },
+        { id: 'gemini-3.5-flash',      g: 'gemini', tier: 'hq',   name: 'Gemini 3.5 Flash',      time: '1~2분',  note: '하루 20회' },
+        { id: 'gemini-3.6-flash',      g: 'gemini', tier: 'hq',   name: 'Gemini 3.6 Flash',      time: '1~3분',  note: '하루 20회' },
+        { id: 'gemini-3.7-flash',      g: 'gemini', tier: 'hq',   name: 'Gemini 3.7 Flash',      time: '1~3분',  note: '하루 20회' },
+        { id: 'gemini-3.8-flash',      g: 'gemini', tier: 'hq',   name: 'Gemini 3.8 Flash (최신)', time: '1~3분', note: '하루 20회' },
+        { id: 'claude-haiku-5-5',  g: 'claude', name: 'Claude Haiku 5.5',  time: '15~40초', note: '크레딧 아주 적게' },
+        { id: 'claude-sonnet-5-5', g: 'claude', name: 'Claude Sonnet 5.5', time: '30초~1분30초', note: '크레딧 보통' },
+        { id: 'claude-opus-5-5',   g: 'claude', name: 'Claude Opus 5.5',   time: '1~2분', note: '크레딧 많이' },
+        { id: 'claude-fable-5-1',  g: 'claude', name: 'Claude Fable 5.1 (최고 성능)', time: '2~5분', note: '크레딧 가장 많이' }
+    ];
+    var AI_MODEL_ST = 'ai_model_v1', AI_TIMES_ST = 'ai_model_times_v1';
+    var AI_PRESET_MODEL = { 'gemini-fast': 'gemini-3.5-flash-lite', 'gemini-hq': 'gemini-3.8-flash', 'claude': 'claude-opus-5-5' };
+    function _aiModelInfo(id) { return AI_MODELS.filter(function(m) { return m.id === id; })[0] || null; }
+    function _aiModel() {
+        var m = null; try { m = localStorage.getItem(AI_MODEL_ST); } catch (e) {}
+        if (m && _aiModelInfo(m)) return m;
+        var old = null; try { old = localStorage.getItem(AI_PROV_ST); } catch (e) {}   // 예전 토글 값 이어받기
+        return old === 'claude' ? 'claude-opus-5-5' : 'gemini-3.5-flash-lite';
+    }
+    function _aiProv() { return /^claude/.test(_aiModel()) ? 'claude' : 'gemini'; }
+    function setAiModel(id) {
+        if (!_aiModelInfo(id)) return;
+        try { localStorage.setItem(AI_MODEL_ST, id); localStorage.setItem(AI_PROV_ST, /^claude/.test(id) ? 'claude' : 'gemini'); } catch (e) {}
+        if (/^claude/.test(id)) { try { localStorage.setItem('ai_last_claude_v1', id); } catch (e) {} }
+        _aiRefreshKeyCard(); _saRefreshKeyCard();
+    }
+    function setAiPreset(p) {
+        var id = AI_PRESET_MODEL[p];
+        if (p === 'claude') { try { id = localStorage.getItem('ai_last_claude_v1') || id; } catch (e) {} }
+        setAiModel(id);
+    }
+    function setAiProvider(p) { setAiPreset(p === 'claude' ? 'claude' : 'gemini-fast'); }   // 예전 이름 호환
+    function _aiTimes() { try { return JSON.parse(localStorage.getItem(AI_TIMES_ST) || '{}'); } catch (e) { return {}; } }
+    function _aiSaveTime(id, sec) { var t = _aiTimes(); t[id] = Math.round(sec); try { localStorage.setItem(AI_TIMES_ST, JSON.stringify(t)); } catch (e) {} }
+    function _aiFmtSec(sec) { return sec >= 90 ? Math.floor(sec / 60) + '분 ' + (sec % 60) + '초' : sec + '초'; }
+    // 이 제미나이 키로 실제 조회되는 모델(하루 캐시) — 공식 문서에 없는 3.5/3.7 Flash 등을 키 기준으로 거름
+    var _geminiAvail = null;
+    function _geminiAvailLoad() {
+        try { var c = JSON.parse(localStorage.getItem('gemini_avail_v1') || 'null'); if (c && Date.now() - c.ts < 86400000) { _geminiAvail = c.list; return; } } catch (e) {}
+        var key = null; try { key = localStorage.getItem(AI_KEY_ST); } catch (e) {}
+        if (!key || _geminiAvailLoad._busy) return;
+        _geminiAvailLoad._busy = true;
+        fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=300&key=' + key).then(function(r) { return r.ok ? r.json() : null; }).then(function(j) {
+            if (!j || !j.models) return;
+            _geminiAvail = j.models.map(function(m) { return String(m.name || '').replace(/^models\//, ''); });
+            try { localStorage.setItem('gemini_avail_v1', JSON.stringify({ ts: Date.now(), list: _geminiAvail })); } catch (e) {}
+            _aiRefreshKeyCard(); _saRefreshKeyCard();
+        }).catch(function() {}).finally(function() { _geminiAvailLoad._busy = false; });
+    }
+    function _aiFillModelSelects() {
+        var cur = _aiModel(), times = _aiTimes();
+        var opt = function(m) {
+            if (m.g === 'gemini' && _geminiAvail && _geminiAvail.indexOf(m.id) === -1 && m.id !== cur) return '';
+            var last = times[m.id] ? ' · 지난번 ' + _aiFmtSec(times[m.id]) : '';
+            return '<option value="' + m.id + '"' + (m.id === cur ? ' selected' : '') + '>' + m.name + ' — 약 ' + m.time + ' · ' + m.note + last + '</option>';
+        };
+        var html = '<optgroup label="Gemini (무료)">' + AI_MODELS.filter(function(m) { return m.g === 'gemini'; }).map(opt).join('') + '</optgroup>'
+                 + '<optgroup label="Claude (Max 요금제 포함 크레딧)">' + AI_MODELS.filter(function(m) { return m.g === 'claude'; }).map(opt).join('') + '</optgroup>';
+        document.querySelectorAll('.ai-model-sel').forEach(function(sel) { sel.innerHTML = html; sel.value = cur; });
+    }
     function _aiKeyStore() { return _aiProv() === 'claude' ? CLAUDE_KEY_ST : AI_KEY_ST; }
     function setAiProvider(p) {
         try { localStorage.setItem(AI_PROV_ST, p === 'claude' ? 'claude' : 'gemini'); } catch (e) {}
@@ -7097,7 +7168,10 @@
         }
         var ps = document.getElementById('aiPeriodSelect');
         if (ps && !ps._init) { ps._init = true; try { var pv = localStorage.getItem('ai_period_v1'); if (pv) ps.value = pv; } catch (e) {} }
-        document.querySelectorAll('.ai-prov button').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-p') === p); });
+        var mi = _aiModelInfo(_aiModel()), preset = mi && mi.g === 'claude' ? 'claude' : (mi && mi.tier === 'hq' ? 'gemini-hq' : 'gemini-fast');
+        document.querySelectorAll('.ai-prov button').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-p') === preset); });
+        _aiFillModelSelects();
+        if (p === 'gemini' && !_geminiAvail) _geminiAvailLoad();
         var t = document.getElementById(pre + 'KeyTitle'), h = document.getElementById(pre + 'KeyHelp');
         var inp = document.getElementById(pre + 'ApiKeyInput'), lab = document.getElementById(pre + 'KeySavedLabel'), st = document.getElementById(pre + 'ApiKeyStatus');
         if (t) t.textContent = ui.title;
@@ -7128,8 +7202,9 @@
         opts = opts || {};
         var key = localStorage.getItem(_aiKeyStore());
         _aiLastSources = [];
-        if (_aiProv() === 'claude') return _claudeGenerate(key, prompt, opts);
-        return _geminiGenerate(key, prompt, opts.maxTokens || 8192, { json: !!opts.schema, onStatus: opts.onStatus });
+        var model = opts.model || _aiModel();
+        if (/^claude/.test(model)) return _claudeGenerate(key, prompt, Object.assign({}, opts, { model: model }));
+        return _geminiGenerate(key, prompt, opts.maxTokens || 8192, { json: !!opts.schema, onStatus: opts.onStatus, model: model });
     }
 
     var _anthropicP = null;
@@ -7140,17 +7215,17 @@
         var Anthropic = mod.default || mod.Anthropic;
         // 키는 이 기기에만 있고 브라우저에서 Anthropic으로 직접 호출 → dangerouslyAllowBrowser 필요
         // 공식 문서: API 키는 'Authorization: Bearer'가 기본(x-api-key는 예전 방식). 개인 키(sk-ant-usr-…)가 x-api-key로 401 나던 문제 대응(2026-10-10)
-        var client = new Anthropic({ apiKey: null, authToken: key, dangerouslyAllowBrowser: true, maxRetries: 2, timeout: 300000 });
+        var model = opts.model || CLAUDE_MODEL;
+        var client = new Anthropic({ apiKey: null, authToken: key, dangerouslyAllowBrowser: true, maxRetries: 2, timeout: /fable/.test(model) ? 900000 : 420000 });
         var params = {
-            model: CLAUDE_MODEL,
+            model: model,
             max_tokens: opts.maxTokens || 16000,
             output_config: { effort: opts.effort || 'medium' },
-            // 안전 분류기가 거절하면 서버가 권장 모델로 자동 재시도
-            betas: ['server-side-fallback-2026-07-01'],
-            fallbacks: 'default',
             messages: [{ role: 'user', content: prompt }]
         };
-        if (opts.schema) params.output_config.format = { type: 'json_schema', schema: opts.schema };
+        // 안전 분류기가 거절하면 서버가 권장 모델로 자동 재시도(Haiku 5.5는 서버 측 대체 없음 → 넣지 않음)
+        if (!/haiku/.test(model)) { params.betas = ['server-side-fallback-2026-07-01']; params.fallbacks = 'default'; }
+        if (opts.schema) params.output_config = Object.assign({}, params.output_config, { format: { type: 'json_schema', schema: opts.schema } });
         if (opts.webSearch) params.tools = [{ type: 'web_search_20260209', name: 'web_search', max_uses: opts.maxSearches || 6 }];
         var text = '', live = '', sources = [], msg = null;
         try {
@@ -7181,7 +7256,7 @@
             var rf = new Error('Claude가 이 요청에 답하지 않았습니다.'); rf.provider = 'claude'; rf.kind = 'refusal'; throw rf;
         }
         if (!text) { var em = new Error('Claude 응답이 비어 있습니다.'); em.provider = 'claude'; throw em; }
-        _aiLastModel = (msg && msg.model) || CLAUDE_MODEL;
+        _aiLastModel = (msg && msg.model) || model;
         var seen = {};
         _aiLastSources = sources.filter(function(x) { if (seen[x.url]) return false; seen[x.url] = 1; return true; }).slice(0, 12);
         return text;
@@ -7543,7 +7618,8 @@
         var p = '오늘은 ' + _aiTodayStr() + '입니다. 아래 종목들의 최근 2주 주요 뉴스·공시·실적 발표를 웹에서 찾아, 종목별로 3줄 이내 한국어로 요약하세요.\n'
             + '각 줄 앞에 날짜(MM/DD)를 붙이고, 투자 의견은 쓰지 마세요. 찾지 못하면 "최근 주요 뉴스 없음"이라고 쓰세요. 형식: "### 종목명" 아래 "- MM/DD 내용".\n\n' + list;
         prog.set('뉴스 검색 중');
-        var text = await _claudeGenerate(localStorage.getItem(CLAUDE_KEY_ST), p, { webSearch: true, effort: 'low', maxTokens: 6000, maxSearches: Math.min(8, Object.keys(holdings).length * 2 + 1), onText: function(t) { prog.set('뉴스 정리 중', t.length); } });
+        var newsModel = _aiModel() === 'claude-sonnet-5-5' ? 'claude-sonnet-5-5' : 'claude-opus-5-5';   // web_search_20260209 지원 모델
+        var text = await _claudeGenerate(localStorage.getItem(CLAUDE_KEY_ST), p, { model: newsModel, webSearch: true, effort: 'low', maxTokens: 6000, maxSearches: Math.min(8, Object.keys(holdings).length * 2 + 1), onText: function(t) { prog.set('뉴스 정리 중', t.length); } });
         return { text: text, sources: _aiLastSources.slice() };
     }
 
@@ -7703,7 +7779,8 @@
     // ★ 제미나이 모델은 6/24 아이폰 실측으로 확정한 순서 그대로(SESSION_LOG 06-24). 이 키에서 무료로 되는 것만.
     //   gemini-2.0-flash 는 이 키 무료한도 0회 → 절대 넣지 말 것. 9/18 구글의 2.5 제한은 '새 사용자'만 해당(이 키는 기존 사용자).
     //   (10/10 '최신 모델 자동 탐색'으로 바꿨다가 무거운 모델이 먼저 쓰여 180초+ 대기 → 사용자 지적으로 원복)
-    var GEMINI_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.0-flash-lite', 'gemini-2.5-flash'];
+    //   10/10 AI Studio 한도 확인(familystock): 3.5·3.1 Flash-Lite 하루 500회, 2.5 Flash-Lite·2.5 Flash 20회, 2.0 계열 0회 → 순서 갱신(사용자 승인)
+    var GEMINI_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-2.5-flash-lite', 'gemini-2.5-flash'];
     var _aiLastModel = '';
     // 모델 ID → 표시 이름 (claude-opus-5-5 → Claude Opus 5.5, gemini-3.8-flash-lite → Gemini 3.8 Flash Lite)
     function _aiModelLabel(id) {
@@ -7718,18 +7795,21 @@
     }
 
     async function _geminiGenerate(key, prompt, maxTokens, opts) {   // prompt: 문자열 또는 parts 배열(사진·PDF 포함)
-        var MODELS = GEMINI_MODELS;   // 검증된 고정 순서(위 주석)
+        // 고른 모델 먼저, 실패하면 기본 순서(빠른 모델)로 대체
+        var MODELS = (opts && opts.model) ? [opts.model].concat(GEMINI_MODELS.filter(function(m) { return m !== opts.model; })) : GEMINI_MODELS;
         var BACKOFF = { 500:1, 502:1, 503:1 };  // 일시 과부하만 백오프 재시도 (429 할당량은 즉시 다음 모델)
         var sleep = function(ms){ return new Promise(function(r){ setTimeout(r, ms); }); };
         var lastErr = null;
-        var PER_REQ_MS = 60000, DEADLINE = Date.now() + 150000;   // 한 번 60초, 전체 2분 30초(예전엔 제한 없어 하염없이 기다림)
+        // 가벼운 모델은 한 번 60초, 무거운(생각하는) 모델은 4분까지 기다림. 전체 상한도 그에 맞춤(예전엔 제한 없어 하염없이 기다림)
+        var heavy = function(m) { return !/lite/.test(m); };
+        var DEADLINE = Date.now() + (heavy(MODELS[0]) ? 330000 : 150000);
 
         for (var mi = 0; mi < MODELS.length; mi++) {
             for (var attempt = 0; attempt < 3; attempt++) {
                 if (Date.now() > DEADLINE) { var to = new Error('제미나이 응답이 너무 오래 걸려 중단했습니다.'); to.isTimeout = true; throw to; }
                 if (opts && opts.onStatus) { try { opts.onStatus(_aiModelLabel(MODELS[mi]) + ' 응답 기다리는 중'); } catch (e) {} }
                 var resp = null, netErr = null, ac = new AbortController();
-                var tmr = setTimeout(function() { ac.abort(); }, Math.min(PER_REQ_MS, Math.max(5000, DEADLINE - Date.now())));
+                var tmr = setTimeout(function() { ac.abort(); }, Math.min(heavy(MODELS[mi]) ? 240000 : 60000, Math.max(5000, DEADLINE - Date.now())));
                 try {
                     resp = await fetch(
                         'https://generativelanguage.googleapis.com/v1beta/models/' + MODELS[mi] + ':generateContent?key=' + key,
@@ -7815,8 +7895,8 @@
 
     async function runAiAnalysis() {
         var key = localStorage.getItem(_aiKeyStore());
-        var isClaude = _aiProv() === 'claude';
-        _aiRunBy = isClaude ? 'Claude Opus 5.5 (Anthropic)' : 'Google Gemini AI';
+        var isClaude = _aiProv() === 'claude', selModel = _aiModel(), selInfo = _aiModelInfo(selModel) || {}, t0run = Date.now();
+        _aiRunBy = (selInfo.name || _aiModelLabel(selModel)) + (isClaude ? ' (Anthropic)' : '');
         if (!key) {
             var card = document.getElementById('aiApiKeyCard');
             if (card) { card.style.display = 'block'; card.scrollIntoView({behavior:'smooth'}); }
@@ -7837,7 +7917,7 @@
         var resultEl = document.getElementById('aiAnalysisResult');
         btn.disabled = true;
         btn.textContent = '⏳ 분석 중...';
-        var prog = _aiProgressStart(resultEl, (isClaude ? 'Claude' : 'Gemini AI') + '가 분석 중입니다', '매매 습관·감정·패턴을 진단합니다<br>' + (isClaude ? '약 30~90초' : '약 10~30초') + ' 걸립니다');
+        var prog = _aiProgressStart(resultEl, (selInfo.name || 'AI') + '가 분석 중입니다', '매매 습관·감정·패턴을 진단합니다<br>예상 ' + (selInfo.time || '1분 안팎') + (_aiTimes()[selModel] ? ' (지난번 ' + _aiFmtSec(_aiTimes()[selModel]) + ')' : ''));
 
         var stats = _aiJournalStats(userLogs, startStr);
         var summary = _aiBuildSummary(trades, userLogs, startStr);
@@ -7848,9 +7928,10 @@
             var text = await _aiGenerate(prompt, { maxTokens: isClaude ? 16000 : 8192, onStatus: function(st) { prog.set(st); }, onText: function(t) {
                 if (Date.now() - lastPaint < 700) return; lastPaint = Date.now();
                 prog.stop();
-                _aiRenderResult(t, target, { partial: true, statsHtml: stats.html, periodLabel: periodLabel, model: CLAUDE_MODEL });
+                _aiRenderResult(t, target, { partial: true, statsHtml: stats.html, periodLabel: periodLabel, model: selModel });
             } });
             prog.stop();
+            _aiSaveTime(_aiLastModel || selModel, (Date.now() - t0run) / 1000);
             _aiRenderResult(text, target, { statsHtml: stats.html, periodLabel: periodLabel, ctx: prompt });
         } catch(err) {
             prog.stop();
@@ -8347,8 +8428,8 @@
     // 분석 실행
     async function runStockAnalysis() {
         var key = localStorage.getItem(_aiKeyStore());
-        var isClaude = _aiProv() === 'claude';
-        _aiRunBy = isClaude ? 'Claude Opus 5.5 (Anthropic)' : 'Google Gemini AI';
+        var isClaude = _aiProv() === 'claude', selModel = _aiModel(), selInfo = _aiModelInfo(selModel) || {}, t0run = Date.now();
+        _aiRunBy = (selInfo.name || _aiModelLabel(selModel)) + (isClaude ? ' (Anthropic)' : '');
         if (!key) {
             var card = document.getElementById('saApiKeyCard');
             if (card) { card.style.display = 'block'; card.scrollIntoView({behavior:'smooth'}); }
@@ -8365,7 +8446,7 @@
         var resultEl = document.getElementById('saAnalysisResult');
         btn.disabled = true;
         btn.textContent = '⏳ 분석 중...';
-        var prog = _aiProgressStart(resultEl, '보유 종목 분석 중입니다', (useNews ? '최신 뉴스를 찾은 뒤 ' : '') + '종목별 근거 데이터로 행동 추천을 만듭니다<br>' + (isClaude ? (useNews ? '약 1~3분' : '약 30~90초') : '약 15~40초') + ' 걸립니다');
+        var prog = _aiProgressStart(resultEl, '보유 종목 분석 중입니다', (useNews ? '최신 뉴스를 찾은 뒤 ' : '') + '종목별 근거 데이터로 행동 추천을 만듭니다<br>예상 ' + (selInfo.time || '1분 안팎') + (useNews ? ' + 뉴스 검색 약 1분' : ''));
         try {
             prog.set('근거 데이터 준비 중');
             var ex = await _saEnrich(target, holdings);
@@ -8379,6 +8460,7 @@
             prog.set(isClaude ? '분석 중(생각 중)' : '분석 중');
             var text = await _aiGenerate(prompt, { schema: SA_SCHEMA, maxTokens: isClaude ? 16000 : 8192, onStatus: function(st) { prog.set(st); }, onText: function(t) { prog.set('결과 작성 중', t.length); } });
             prog.stop();
+            if (!useNews) _aiSaveTime(_aiLastModel || selModel, (Date.now() - t0run) / 1000);
             var data = _saParseJSON(text);
             if (data && Array.isArray(data.stocks)) _saRenderCards(data, target, holdings, ex, { dateStr: _aiNowLabel(), model: _aiLastModel, sources: sources, newsUsed: !!news, dataText: dataText });
             else _saRenderResult(text, target, holdings);     // 형식이 어긋나면 예전 방식으로 표시
