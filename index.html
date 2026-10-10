@@ -8053,7 +8053,10 @@
                 var d = r[1] ? String(r[1]).slice(0,10) : '';
                 var code = norm(r[2] || r[3]);
                 var lab = labelOf[code] || code || String(r[3] || '');
-                return '[' + d + '][' + lab + '][' + r[4] + '] ' + String(r[8]).trim();
+                // ★ 체결가·수량도 함께(손절 후 재매수가 더 싸게 됐는지 등 왕복 매매 득실을 AI가 볼 수 있게 — 10/10)
+                var q = Number(r[5]) || 0, pr = Number(r[6]) || 0;
+                var px = isKR(code) ? Math.round(pr).toLocaleString() + '원' : '$' + pr.toFixed(2);
+                return '[' + d + '][' + lab + '][' + r[4] + (q ? ' ' + q + '주 @' + px : '') + '] ' + String(r[8]).trim();
             });
         var pnl = Object.values(byTicker)
             .filter(function(t) { return t.sc > 0; })
@@ -8066,8 +8069,10 @@
         var line = function(t) {
             return '  - ' + t.label + ' : 실현손익 ' + fmt(t.pnl) + ' (매수 ' + t.bc + '회 / 매도 ' + t.sc + '회)';
         };
-        var top = s.pnl.slice(0, 6).map(line).join('\n');
-        var bot = s.pnl.slice(-5).map(line).join('\n');
+        // ★ 상위·하위가 겹치지 않게(종목 수가 적으면 같은 종목이 양쪽에 나오던 문제 — 10/10 Opus 지적)
+        var topArr = s.pnl.slice(0, 6), botArr = s.pnl.slice(6).slice(-5);
+        var top = topArr.map(line).join('\n');
+        var bot = botArr.length ? botArr.map(line).join('\n') : '  (상위 목록 외 다른 매도 종목 없음)';
 
         return [
             '당신은 신중하고 정직한 한국어 투자 코치입니다. 아래는 ' + user + '의 실제 주식 매매 기록입니다.',
@@ -8097,6 +8102,7 @@
             '3. 종목은 위 괄호 안 코드/회사명으로만 식별하세요. 코드가 가리키는 회사를 잘 모르면 사업내용을 추측하지 말고 "회사 식별 불확실"이라고 명시하세요.',
             '4. 확신이 없으면 단정하지 말고 "추정"이라고 밝히세요. 모르면 모른다고 솔직히 쓰세요 — 그럴듯한 거짓말보다 정직한 "불확실"이 훨씬 낫습니다.',
             '5. 매매일지 메모는 인용해도 되지만, 적혀 있지 않은 감정·동기를 상상해서 덧붙이지 마세요.',
+            '6. 매매일지 각 줄에는 체결 수량과 단가(@)가 있습니다. 손절 후 재매수, 매도 후 재매수처럼 같은 종목을 오간 경우 가격을 비교해 그 왕복이 이득이었는지 짚어 주세요(가격만 비교, 수수료·세금은 제외).',
             '',
             '## 작성 형식 (한국어 마크다운, 각 항목에 실제 종목·수치 인용)',
             '## ✅ 잘한 점',
@@ -8158,17 +8164,25 @@
         });
         if (currentSection) sections.push(currentSection);
 
-        // 인트로 텍스트
-        var introHtml = introLines
-            .filter(function(l) { return l.trim(); })
-            .map(function(l) {
-                return '<p style="margin:0 0 6px;font-size:13px;color:var(--text-sub);line-height:1.6;">' + l + '</p>';
-            }).join('');
-
-        // 라인 렌더러 (번호목록·불릿·일반)
+        // 라인 렌더러 (번호목록·불릿·제목·인용·표·구분선) — 10/10 Claude 결과의 #·>·표·--- 가 기호 그대로 보이던 문제
         function renderLines(lines) {
             var out = [];
             var itemBuffer = [];
+            var tableBuf = [];
+            function flushTable() {
+                if (!tableBuf.length) return;
+                var rows = tableBuf.filter(function(r) { return !/^\|?\s*:?-{2,}/.test(r.replace(/\s/g, '').replace(/^\|/, '')); })
+                    .map(function(r) { return r.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|').map(function(c) { return c.trim(); }); });
+                tableBuf = [];
+                if (!rows.length) return;
+                out.push('<div style="overflow-x:auto;margin:8px 0;"><table style="width:100%;border-collapse:collapse;font-size:13px;line-height:1.5;">'
+                    + rows.map(function(cells, i) {
+                        return '<tr>' + cells.map(function(c) {
+                            return (i === 0 ? '<th style="text-align:left;padding:7px 6px;border-bottom:2px solid var(--border-color);color:var(--text-sub);font-weight:600;white-space:nowrap;">'
+                                           : '<td style="padding:7px 6px;border-bottom:1px solid var(--border-color);vertical-align:top;">') + c + (i === 0 ? '</th>' : '</td>');
+                        }).join('') + '</tr>';
+                    }).join('') + '</table></div>');
+            }
 
             function flushItems() {
                 if (!itemBuffer.length) return;
@@ -8188,8 +8202,19 @@
             }
 
             lines.forEach(function(l) {
+                if (/^\s*\|.*\|\s*$/.test(l)) { flushItems(); tableBuf.push(l.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')); return; }
+                flushTable();
                 if (!l.trim()) { flushItems(); return; }
-                l = l.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+                if (/^\s*([-*_])\1{2,}\s*$/.test(l)) { flushItems(); out.push('<div style="height:1px;background:var(--border-color);margin:12px 0;"></div>'); return; }
+                l = l.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g, '$1<em>$2</em>');
+
+                var hMatch = l.match(/^#{1,4}\s+(.*)/);
+                if (hMatch) { flushItems(); out.push('<div style="font-size:16px;font-weight:800;margin:10px 0 6px;line-height:1.5;">' + hMatch[1] + '</div>'); return; }
+                if (/^&gt;\s?/.test(l)) {
+                    flushItems();
+                    out.push('<div style="border-left:3px solid var(--primary);background:var(--bg);border-radius:6px;padding:8px 12px;margin:8px 0;font-size:14px;line-height:1.7;">' + l.replace(/^&gt;\s?/, '') + '</div>');
+                    return;
+                }
 
                 var numMatch = l.match(/^(\d+)\.\s+(.*)/);
                 if (numMatch) {
@@ -8198,12 +8223,12 @@
                 }
                 flushItems();
 
-                if (/^[-•]\s/.test(l)) {
+                if (/^\s*[-•*]\s/.test(l)) {
                     out.push(
                         '<div style="display:flex;gap:8px;align-items:flex-start;margin:8px 0;">'
                         + '<span style="flex-shrink:0;margin-top:6px;width:7px;height:7px;border-radius:50%;'
                         + 'background:var(--primary);display:inline-block;"></span>'
-                        + '<div style="flex:1;font-size:15px;line-height:1.85;">' + l.replace(/^[-•]\s/, '') + '</div>'
+                        + '<div style="flex:1;font-size:15px;line-height:1.85;">' + l.replace(/^\s*[-•*]\s/, '') + '</div>'
                         + '</div>'
                     );
                 } else {
@@ -8211,8 +8236,12 @@
                 }
             });
             flushItems();
+            flushTable();
             return out.join('');
         }
+
+        // 인트로 텍스트(첫 ## 이전: 큰 제목·인용·안내문) — 같은 렌더러로
+        var introHtml = introLines.some(function(l) { return l.trim(); }) ? renderLines(introLines) : '';
 
         // 섹션 카드 조립
         var sectionsHtml = sections.map(function(sec) {
