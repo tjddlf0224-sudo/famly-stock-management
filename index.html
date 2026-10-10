@@ -7700,32 +7700,11 @@
     // 분석 실행
     // ===== Gemini 호출 공용 헬퍼: 과부하(503/429) 자동 재시도 + 모델 폴백 =====
     // 반환: 응답 텍스트(string). 실패 시 throw.
-    var GEMINI_FALLBACK = ['gemini-3.5-flash-lite', 'gemini-2.5-flash-lite', 'gemini-3.8-flash', 'gemini-2.5-flash'];
+    // ★ 제미나이 모델은 6/24 아이폰 실측으로 확정한 순서 그대로(SESSION_LOG 06-24). 이 키에서 무료로 되는 것만.
+    //   gemini-2.0-flash 는 이 키 무료한도 0회 → 절대 넣지 말 것. 9/18 구글의 2.5 제한은 '새 사용자'만 해당(이 키는 기존 사용자).
+    //   (10/10 '최신 모델 자동 탐색'으로 바꿨다가 무거운 모델이 먼저 쓰여 180초+ 대기 → 사용자 지적으로 원복)
+    var GEMINI_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.0-flash-lite', 'gemini-2.5-flash'];
     var _aiLastModel = '';
-    async function _geminiModels(key) {
-        try {
-            var c = JSON.parse(localStorage.getItem('gemini_models_v2') || 'null');
-            if (c && c.list && c.list.length && Date.now() - c.ts < 86400000) return c.list;
-        } catch (e) {}
-        try {
-            var r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=' + key);
-            if (!r.ok) return GEMINI_FALLBACK;
-            var j = await r.json();
-            var ver = function(n) { var m = n.match(/gemini-(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
-            var list = (j.models || [])
-                .filter(function(m) { return (m.supportedGenerationMethods || []).indexOf('generateContent') !== -1; })
-                .map(function(m) { return String(m.name || '').replace(/^models\//, ''); })
-                .filter(function(n) { return /^gemini-\d/.test(n) && /flash/.test(n) && !/(image|tts|live|audio|embed|exp|computer|robotics|native|thinking)/.test(n); })
-                // ★ Flash-Lite 먼저(빠르고 무료 한도 넉넉) → 그다음 Flash. 같은 종류 안에서는 최신·정식판 먼저.
-                //   (10/10 최신 Flash를 먼저 썼더니 무거워 180초 넘게 걸림 — 사용자 지적)
-                .sort(function(a, b) {
-                    return ((/lite/.test(b) ? 1 : 0) - (/lite/.test(a) ? 1 : 0)) || (ver(b) - ver(a)) || ((/preview/.test(a) ? 1 : 0) - (/preview/.test(b) ? 1 : 0)) || (a.length - b.length);
-                }).slice(0, 4);
-            if (!list.length) return GEMINI_FALLBACK;
-            try { localStorage.setItem('gemini_models_v2', JSON.stringify({ ts: Date.now(), list: list })); } catch (e) {}
-            return list;
-        } catch (e) { return GEMINI_FALLBACK; }
-    }
     // 모델 ID → 표시 이름 (claude-opus-5-5 → Claude Opus 5.5, gemini-3.8-flash-lite → Gemini 3.8 Flash Lite)
     function _aiModelLabel(id) {
         if (!id) return '';
@@ -7739,8 +7718,7 @@
     }
 
     async function _geminiGenerate(key, prompt, maxTokens, opts) {   // prompt: 문자열 또는 parts 배열(사진·PDF 포함)
-        // 이 키로 쓸 수 있는 Flash 계열을 자동으로 찾아 최신순으로 시도(2026-10-10). 2.0은 종료, 2.5는 9/18부터 신규 제한.
-        var MODELS = await _geminiModels(key);
+        var MODELS = GEMINI_MODELS;   // 검증된 고정 순서(위 주석)
         var BACKOFF = { 500:1, 502:1, 503:1 };  // 일시 과부하만 백오프 재시도 (429 할당량은 즉시 다음 모델)
         var sleep = function(ms){ return new Promise(function(r){ setTimeout(r, ms); }); };
         var lastErr = null;
