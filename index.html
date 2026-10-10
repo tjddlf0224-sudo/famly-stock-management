@@ -7129,7 +7129,7 @@
         var key = localStorage.getItem(_aiKeyStore());
         _aiLastSources = [];
         if (_aiProv() === 'claude') return _claudeGenerate(key, prompt, opts);
-        return _geminiGenerate(key, prompt, opts.maxTokens || 8192, opts.schema ? { json: true } : undefined);
+        return _geminiGenerate(key, prompt, opts.maxTokens || 8192, { json: !!opts.schema, onStatus: opts.onStatus });
     }
 
     var _anthropicP = null;
@@ -7700,11 +7700,11 @@
     // 분석 실행
     // ===== Gemini 호출 공용 헬퍼: 과부하(503/429) 자동 재시도 + 모델 폴백 =====
     // 반환: 응답 텍스트(string). 실패 시 throw.
-    var GEMINI_FALLBACK = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+    var GEMINI_FALLBACK = ['gemini-3.5-flash-lite', 'gemini-2.5-flash-lite', 'gemini-3.8-flash', 'gemini-2.5-flash'];
     var _aiLastModel = '';
     async function _geminiModels(key) {
         try {
-            var c = JSON.parse(localStorage.getItem('gemini_models_v1') || 'null');
+            var c = JSON.parse(localStorage.getItem('gemini_models_v2') || 'null');
             if (c && c.list && c.list.length && Date.now() - c.ts < 86400000) return c.list;
         } catch (e) {}
         try {
@@ -7716,11 +7716,13 @@
                 .filter(function(m) { return (m.supportedGenerationMethods || []).indexOf('generateContent') !== -1; })
                 .map(function(m) { return String(m.name || '').replace(/^models\//, ''); })
                 .filter(function(n) { return /^gemini-\d/.test(n) && /flash/.test(n) && !/(image|tts|live|audio|embed|exp|computer|robotics|native|thinking)/.test(n); })
+                // ★ Flash-Lite 먼저(빠르고 무료 한도 넉넉) → 그다음 Flash. 같은 종류 안에서는 최신·정식판 먼저.
+                //   (10/10 최신 Flash를 먼저 썼더니 무거워 180초 넘게 걸림 — 사용자 지적)
                 .sort(function(a, b) {
-                    return (ver(b) - ver(a)) || ((/preview/.test(a) ? 1 : 0) - (/preview/.test(b) ? 1 : 0)) || ((/lite/.test(a) ? 1 : 0) - (/lite/.test(b) ? 1 : 0)) || (a.length - b.length);
+                    return ((/lite/.test(b) ? 1 : 0) - (/lite/.test(a) ? 1 : 0)) || (ver(b) - ver(a)) || ((/preview/.test(a) ? 1 : 0) - (/preview/.test(b) ? 1 : 0)) || (a.length - b.length);
                 }).slice(0, 4);
             if (!list.length) return GEMINI_FALLBACK;
-            try { localStorage.setItem('gemini_models_v1', JSON.stringify({ ts: Date.now(), list: list })); } catch (e) {}
+            try { localStorage.setItem('gemini_models_v2', JSON.stringify({ ts: Date.now(), list: list })); } catch (e) {}
             return list;
         } catch (e) { return GEMINI_FALLBACK; }
     }
@@ -7742,15 +7744,20 @@
         var BACKOFF = { 500:1, 502:1, 503:1 };  // 일시 과부하만 백오프 재시도 (429 할당량은 즉시 다음 모델)
         var sleep = function(ms){ return new Promise(function(r){ setTimeout(r, ms); }); };
         var lastErr = null;
+        var PER_REQ_MS = 60000, DEADLINE = Date.now() + 150000;   // 한 번 60초, 전체 2분 30초(예전엔 제한 없어 하염없이 기다림)
 
         for (var mi = 0; mi < MODELS.length; mi++) {
             for (var attempt = 0; attempt < 3; attempt++) {
-                var resp = null, netErr = null;
+                if (Date.now() > DEADLINE) { var to = new Error('제미나이 응답이 너무 오래 걸려 중단했습니다.'); to.isTimeout = true; throw to; }
+                if (opts && opts.onStatus) { try { opts.onStatus(_aiModelLabel(MODELS[mi]) + ' 응답 기다리는 중'); } catch (e) {} }
+                var resp = null, netErr = null, ac = new AbortController();
+                var tmr = setTimeout(function() { ac.abort(); }, Math.min(PER_REQ_MS, Math.max(5000, DEADLINE - Date.now())));
                 try {
                     resp = await fetch(
                         'https://generativelanguage.googleapis.com/v1beta/models/' + MODELS[mi] + ':generateContent?key=' + key,
                         {
                             method: 'POST',
+                            signal: ac.signal,
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 contents: [{ parts: Array.isArray(prompt) ? prompt : [{ text: prompt }] }],
@@ -7759,7 +7766,12 @@
                         }
                     );
                 } catch (e) { netErr = e; }
+                clearTimeout(tmr);
 
+                if (netErr && netErr.name === 'AbortError') {   // 60초 넘김 → 같은 모델 재시도 말고 다음 모델
+                    lastErr = new Error(_aiModelLabel(MODELS[mi]) + ' 응답 시간 초과'); lastErr.isTimeout = true;
+                    break;
+                }
                 if (netErr) {                                   // 네트워크 예외 → 재시도
                     lastErr = netErr;
                     if (attempt < 2) { await sleep(700 * Math.pow(2, attempt)); continue; }
@@ -7768,10 +7780,8 @@
                 if (resp.ok) {
                     var data = await resp.json();
                     _aiLastModel = MODELS[mi];
-                    return (data.candidates && data.candidates[0] &&
-                            data.candidates[0].content && data.candidates[0].content.parts &&
-                            data.candidates[0].content.parts[0] &&
-                            data.candidates[0].content.parts[0].text) || '';
+                    var parts = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || [];
+                    return parts.filter(function(p) { return p && p.text && !p.thought; }).map(function(p) { return p.text; }).join('');
                 }
                 var errBody = await resp.json().catch(function() { return {}; });
                 var rawMsg = (errBody.error && errBody.error.message) || ('HTTP ' + resp.status);
@@ -7809,6 +7819,8 @@
                 workspace: ['🗂 워크스페이스 지정 필요', '이 키는 여러 워크스페이스용으로 만들어졌습니다. 콘솔에서 키를 새로 만들 때 워크스페이스를 하나(Default)로 골라 주세요.']
             }[err.kind] || ['❌ 오류 발생', '잠시 후 다시 시도하거나 Gemini로 바꿔 시도해 보세요.'];
             title = CH[0]; hint = CH[1];
+        } else if (err && err.isTimeout) {
+            title = '⏳ 응답 지연'; hint = '제미나이 서버가 느립니다. 잠시 후 다시 시도하거나 Claude로 바꿔 보세요.';
         } else if (quota) {
             var sec = (err && err.retrySec) ? (err.retrySec + '초') : '약 1분';
             hint = 'Gemini 무료 등급의 사용량 한도에 도달했습니다. ' + sec + ' 후 다시 시도해주세요. '
@@ -7855,7 +7867,7 @@
         prog.set(isClaude ? '생각 중' : '분석 중');
         var lastPaint = 0;
         try {
-            var text = await _aiGenerate(prompt, { maxTokens: isClaude ? 16000 : 8192, onText: function(t) {
+            var text = await _aiGenerate(prompt, { maxTokens: isClaude ? 16000 : 8192, onStatus: function(st) { prog.set(st); }, onText: function(t) {
                 if (Date.now() - lastPaint < 700) return; lastPaint = Date.now();
                 prog.stop();
                 _aiRenderResult(t, target, { partial: true, statsHtml: stats.html, periodLabel: periodLabel, model: CLAUDE_MODEL });
@@ -8387,7 +8399,7 @@
             var dataText = _saDataText(holdings, target, ex, news);
             var prompt = _saPromptV4(dataText, target, !isClaude);
             prog.set(isClaude ? '분석 중(생각 중)' : '분석 중');
-            var text = await _aiGenerate(prompt, { schema: SA_SCHEMA, maxTokens: isClaude ? 16000 : 8192, onText: function(t) { prog.set('결과 작성 중', t.length); } });
+            var text = await _aiGenerate(prompt, { schema: SA_SCHEMA, maxTokens: isClaude ? 16000 : 8192, onStatus: function(st) { prog.set(st); }, onText: function(t) { prog.set('결과 작성 중', t.length); } });
             prog.stop();
             var data = _saParseJSON(text);
             if (data && Array.isArray(data.stocks)) _saRenderCards(data, target, holdings, ex, { dateStr: _aiNowLabel(), model: _aiLastModel, sources: sources, newsUsed: !!news, dataText: dataText });
