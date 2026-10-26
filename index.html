@@ -458,6 +458,7 @@
         .fng-chart-title { font-size: 13px; font-weight: 700; color: var(--text-main); white-space: nowrap; }
         .fng-range { display: flex; padding: 2px; border-radius: 10px; background: rgba(120,120,128,0.12); }
         .fng-range button { width: 46px; height: 26px; border: 0; border-radius: 8px; font-size: 12px; font-weight: 600; background: transparent; color: var(--text-sub); cursor: pointer; font-family: inherit; }
+        .fng-range button.wide { width: 58px; }
         .fng-range button.on { background: var(--card-bg); color: var(--text-main); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
         .fng-chart-wrap { position: relative; height: 230px; touch-action: pan-y; }
         .fng-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 11px; color: var(--text-sub); margin-top: 6px; }
@@ -1317,7 +1318,10 @@
             </div>
             <div class="fng-chart-box" id="fngChartBox">
                 <div class="fng-chart-head">
-                    <div class="fng-chart-title">공포탐욕 × S&amp;P500</div>
+                    <div class="fng-range" id="fngIdxBtns">
+                        <button type="button" data-i="sp" class="on wide" onclick="setFngIndex('sp')">S&amp;P500</button>
+                        <button type="button" data-i="nq" class="wide" onclick="setFngIndex('nq')">나스닥</button>
+                    </div>
                     <div class="fng-range" id="fngRangeBtns">
                         <button type="button" data-m="3" onclick="setFngRange(3)">3개월</button>
                         <button type="button" data-m="6" onclick="setFngRange(6)">6개월</button>
@@ -1326,7 +1330,7 @@
                 </div>
                 <div class="fng-chart-wrap" id="fngChartWrap"><canvas id="fngChart"></canvas></div>
                 <div class="fng-legend">
-                    <span><i style="background:#FF3B30"></i>극단적 공포</span><span><i style="background:#FF9500"></i>공포</span><span><i style="background:#34C759"></i>중립</span><span><i style="background:#007AFF"></i>탐욕</span><span><i style="background:#5856D6"></i>극단적 탐욕</span><span><i class="fng-sp-key"></i>S&amp;P500(오른쪽 눈금)</span>
+                    <span><i style="background:#FF3B30"></i>극단적 공포</span><span><i style="background:#FF9500"></i>공포</span><span><i style="background:#34C759"></i>중립</span><span><i style="background:#007AFF"></i>탐욕</span><span><i style="background:#5856D6"></i>극단적 탐욕</span><span><i class="fng-sp-key"></i><b id="fngIdxName" style="font-weight:400">S&amp;P500</b>(오른쪽 눈금)</span>
                 </div>
                 <div class="fng-corr" id="fngCorr"></div>
                 <div class="fng-corr-note" id="fngCorrNote"></div>
@@ -6318,7 +6322,8 @@
     // ====== 공포탐욕 × S&P500 그래프 (2026-10-26) ======
     // 공포탐욕: Firestore cache/fng(시트 '공포탐욕'을 GAS가 올림, 미국 날짜) + CNN이 준 최근 1년치로 빈 날 보충
     // S&P500: MarketData 행 날짜(UTC 직렬화 → KST로 바꾸면 그날 미국 종가)와 같은 날짜끼리 맞춤
-    let myFngChart = null, _fngHist = null, _fngHistLoading = false, _fngRangeM = 12;
+    let myFngChart = null, _fngHist = null, _fngHistLoading = false, _fngRangeM = 12, _fngIdx = 'sp';
+    const FNG_IDX = { sp: { col: 1, name: 'S&P500' }, nq: { col: 2, name: '나스닥' } };   // MarketData 열
     const FNG_ZONES = [
         { max: 25, color: '#FF3B30', name: '극단적 공포' },
         { max: 45, color: '#FF9500', name: '공포' },
@@ -6335,6 +6340,13 @@
     function setFngRange(m) {
         _fngRangeM = m;
         document.querySelectorAll('#fngRangeBtns button').forEach(b => b.classList.toggle('on', Number(b.dataset.m) === m));
+        renderFngChart();
+    }
+    function setFngIndex(k) {
+        if (!FNG_IDX[k]) return;
+        _fngIdx = k;
+        document.querySelectorAll('#fngIdxBtns button').forEach(b => b.classList.toggle('on', b.dataset.i === k));
+        const n = document.getElementById('fngIdxName'); if (n) n.textContent = FNG_IDX[k].name;
         renderFngChart();
     }
     function _fngMergedSeries() {
@@ -6383,10 +6395,11 @@
             if (corrEl) corrEl.innerHTML = '';
             return;
         }
-        // S&P500 날짜 맵 (KST 날짜 = 그날 미국 종가)
+        // 고른 지수(S&P500·나스닥) 날짜 맵 (KST 날짜 = 그날 미국 종가)
+        const IDX = FNG_IDX[_fngIdx] || FNG_IDX.sp;
         const market = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.market) ? LAST_FETCHED_DATA.market : [];
         const spMap = {};
-        market.forEach(r => { const sp = Number(r[1]); if (sp > 0) { const d = _kstDateStr(r[0]); if (d) spMap[d] = sp; } });
+        market.forEach(r => { const sp = Number(r[IDX.col]); if (sp > 0) { const d = _kstDateStr(r[0]); if (d) spMap[d] = sp; } });
         // 기간 자르기
         const last = new Date(all[all.length - 1].d + 'T00:00:00Z');
         const cut = new Date(last); cut.setUTCMonth(cut.getUTCMonth() - _fngRangeM);
@@ -6441,7 +6454,7 @@
                   borderColor: '#FF9500',
                   pointHoverBackgroundColor: c => _fngZone(Number(c.raw)).color,
                   segment: { borderColor: c => _fngZone((c.p0.parsed.y + c.p1.parsed.y) / 2).color } },
-                { label: 'S&P500', data: sp, yAxisID: 'y1', borderColor: spColor, borderWidth: 1.4, pointRadius: 0, pointHoverRadius: 3, tension: 0.15, spanGaps: true, order: 2 },
+                { label: IDX.name, data: sp, yAxisID: 'y1', borderColor: spColor, borderWidth: 1.4, pointRadius: 0, pointHoverRadius: 3, tension: 0.15, spanGaps: true, order: 2 },
             ]},
             options: {
                 responsive: true, maintainAspectRatio: false, animation: false,
@@ -6463,7 +6476,7 @@
                         label: c => {
                             if (c.parsed.y == null) return null;
                             if (c.dataset.yAxisID === 'y') return '공포탐욕 ' + c.parsed.y + ' (' + _fngZone(c.parsed.y).name + ')';
-                            return 'S&P500 ' + c.parsed.y.toLocaleString(undefined, { maximumFractionDigits: 2 });
+                            return IDX.name + ' ' + c.parsed.y.toLocaleString(undefined, { maximumFractionDigits: 2 });
                         } } }
                 }
             },
