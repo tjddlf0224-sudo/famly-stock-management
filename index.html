@@ -6231,12 +6231,18 @@
             _fngCache = { ...parsed, ts: Date.now() };
             renderFearGreedCard(_fngCache);
             renderSignalBannerUS();
-            // 2026-10-26: 구글 서버는 CNN이 막아서, 앱이 받은 값을 GAS에 넘겨 모닝 브리핑이 씀(접속당 1번, 실패해도 무시)
+            // 2026-10-26: 구글 서버는 CNN이 막아서, 앱이 받은 현재값 + 최근 30일 이력을 GAS에 넘김
+            //   → 모닝 브리핑이 쓰고, 시트 '공포탐욕'에 하루 한 줄씩 쌓임(앱을 며칠 안 열어도 다음에 열 때 빈 날을 메움). 접속당 1번, 실패해도 무시
             try {
-                const cnnTs = String((data.fear_and_greed || {}).timestamp || '');
+                const fg = data.fear_and_greed || {}, cnnTs = String(fg.timestamp || '');
                 if (!window._fngSaved && /^\d{4}-\d{2}-\d{2}T/.test(cnnTs)) {
                     window._fngSaved = true;
-                    fetch(CHART_GAS_URL + '?authKey=' + CHART_GAS_AUTH + '&action=saveFng&value=' + parsed.value + '&rating=' + encodeURIComponent(parsed.rating || '') + '&dateStr=' + cnnTs.slice(0, 10) + '&ts=' + encodeURIComponent(cnnTs), { mode: 'no-cors' }).catch(function() {});
+                    const rmap = { 'extreme fear': '극단적 공포', 'fear': '공포', 'neutral': '중립', 'greed': '탐욕', 'extreme greed': '극단적 탐욕' };
+                    const hist = (((data.fear_and_greed_historical || {}).data) || []).slice(-30).map(function(p) {
+                        return { d: new Date(p.x).toISOString().slice(0, 10), v: Math.round(Number(p.y)), r: rmap[String(p.rating || '').toLowerCase()] || String(p.rating || ''), ts: new Date(p.x).toISOString() };
+                    });
+                    fetch(CHART_GAS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ authKey: CHART_GAS_AUTH, type: 'saveFng', cur: { value: parsed.value, rating: parsed.rating || '', ts: cnnTs }, hist: hist }) }).catch(function() {});
                 }
             } catch (e) {}
         }
