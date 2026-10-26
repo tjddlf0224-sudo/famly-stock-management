@@ -6231,6 +6231,14 @@
             _fngCache = { ...parsed, ts: Date.now() };
             renderFearGreedCard(_fngCache);
             renderSignalBannerUS();
+            // 2026-10-26: 구글 서버는 CNN이 막아서, 앱이 받은 값을 GAS에 넘겨 모닝 브리핑이 씀(접속당 1번, 실패해도 무시)
+            try {
+                const cnnTs = String((data.fear_and_greed || {}).timestamp || '');
+                if (!window._fngSaved && /^\d{4}-\d{2}-\d{2}T/.test(cnnTs)) {
+                    window._fngSaved = true;
+                    fetch(CHART_GAS_URL + '?authKey=' + CHART_GAS_AUTH + '&action=saveFng&value=' + parsed.value + '&rating=' + encodeURIComponent(parsed.rating || '') + '&dateStr=' + cnnTs.slice(0, 10) + '&ts=' + encodeURIComponent(cnnTs), { mode: 'no-cors' }).catch(function() {});
+                }
+            } catch (e) {}
         }
 
         function onFail() {
