@@ -453,6 +453,22 @@
         .ma-signal-score-ring svg { width: 100%; height: 100%; }
         .ma-score-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 900; }
         .ma-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 6px; }
+        .fng-chart-box { margin: 14px 0 2px; padding-top: 12px; border-top: 1px solid var(--border-color); }
+        .fng-chart-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+        .fng-chart-title { font-size: 13px; font-weight: 700; color: var(--text-main); white-space: nowrap; }
+        .fng-range { display: flex; padding: 2px; border-radius: 10px; background: rgba(120,120,128,0.12); }
+        .fng-range button { width: 46px; height: 26px; border: 0; border-radius: 8px; font-size: 12px; font-weight: 600; background: transparent; color: var(--text-sub); cursor: pointer; font-family: inherit; }
+        .fng-range button.on { background: var(--card-bg); color: var(--text-main); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+        .fng-chart-wrap { position: relative; height: 230px; touch-action: pan-y; }
+        .fng-legend { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 11px; color: var(--text-sub); margin-top: 6px; }
+        .fng-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: 0; }
+        .fng-legend i.fng-sp-key { width: 12px; height: 2px; border-radius: 1px; background: var(--text-sub); vertical-align: 3px; }
+        .fng-corr { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+        .fng-corr-item { border-radius: 10px; padding: 8px 10px; background: rgba(120,120,128,0.08); min-width: 0; }
+        .fng-corr-item .k { font-size: 11px; color: var(--text-sub); }
+        .fng-corr-item .v { font-size: 17px; font-weight: 800; color: var(--text-main); margin-top: 2px; }
+        .fng-corr-item .d { font-size: 11px; font-weight: 600; margin-top: 1px; }
+        .fng-corr-note { font-size: 11px; color: var(--text-sub); line-height: 1.5; margin-top: 6px; }
         .ma-card { background: var(--card-bg); border-radius: 16px; padding: 16px 18px; border: 1.5px solid var(--border-color); position: relative; overflow: hidden; transition: border-color 0.2s; }
         .ma-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--ma-accent, var(--border-color)); border-radius: 0; }
         .ma-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
@@ -1298,6 +1314,22 @@
             <div class="rsi-detail-row">
                 <span>분류</span><span class="rsi-detail-val" id="maFNGRating">-</span>
                 <span>업데이트</span><span class="rsi-detail-val" id="maFNGDate">-</span>
+            </div>
+            <div class="fng-chart-box" id="fngChartBox">
+                <div class="fng-chart-head">
+                    <div class="fng-chart-title">공포탐욕 × S&amp;P500</div>
+                    <div class="fng-range" id="fngRangeBtns">
+                        <button type="button" data-m="3" onclick="setFngRange(3)">3개월</button>
+                        <button type="button" data-m="6" onclick="setFngRange(6)">6개월</button>
+                        <button type="button" data-m="12" class="on" onclick="setFngRange(12)">1년</button>
+                    </div>
+                </div>
+                <div class="fng-chart-wrap" id="fngChartWrap"><canvas id="fngChart"></canvas></div>
+                <div class="fng-legend">
+                    <span><i style="background:#FF3B30"></i>극단적 공포</span><span><i style="background:#FF9500"></i>공포</span><span><i style="background:#34C759"></i>중립</span><span><i style="background:#007AFF"></i>탐욕</span><span><i style="background:#5856D6"></i>극단적 탐욕</span><span><i class="fng-sp-key"></i>S&amp;P500(오른쪽 눈금)</span>
+                </div>
+                <div class="fng-corr" id="fngCorr"></div>
+                <div class="fng-corr-note" id="fngCorrNote"></div>
             </div>
             <table class="ma-range-table" style="margin-top:12px;" id="maFNGTable">
                 <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>0~24</td><td>극단적 공포</td><td>🎯 역발상 매수 기회</td></tr>
@@ -6143,8 +6175,9 @@
                 nasCloses,[20,50,100,125,200],nasCur,nasPrev,'나스닥',lastDateNAS,market);
         }
 
-        // ③ CNN 공포탐욕지수
+        // ③ CNN 공포탐욕지수 (+ 1년 그래프: 시트 '공포탐욕' → cache/fng, S&P500과 겹쳐 그림)
         fetchFearGreed();
+        try { renderFngChart(); } catch (e) { console.warn('[FNG 그래프]', e); }
 
         // ④ FRED 경제지표 (EconData 시트)
         renderEconCards();
@@ -6231,6 +6264,7 @@
             _fngCache = { ...parsed, ts: Date.now() };
             renderFearGreedCard(_fngCache);
             renderSignalBannerUS();
+            try { window._fngCnnHist = ((data.fear_and_greed_historical || {}).data) || []; renderFngChart(); } catch (e) {}
             // 2026-10-26: 구글 서버는 CNN이 막아서, 앱이 받은 현재값 + 최근 30일 이력을 GAS에 넘김
             //   → 모닝 브리핑이 쓰고, 시트 '공포탐욕'에 하루 한 줄씩 쌓임(앱을 며칠 안 열어도 다음에 열 때 빈 날을 메움). 접속당 1번, 실패해도 무시
             try {
@@ -6279,6 +6313,163 @@
         maSetCard('maFNGCard', colorClass);
         maSetBadge('maFNGBadge', label, colorClass);
         maHighlightRange('maFNGTable', activeIdx);
+    }
+
+    // ====== 공포탐욕 × S&P500 그래프 (2026-10-26) ======
+    // 공포탐욕: Firestore cache/fng(시트 '공포탐욕'을 GAS가 올림, 미국 날짜) + CNN이 준 최근 1년치로 빈 날 보충
+    // S&P500: MarketData 행 날짜(UTC 직렬화 → KST로 바꾸면 그날 미국 종가)와 같은 날짜끼리 맞춤
+    let myFngChart = null, _fngHist = null, _fngHistLoading = false, _fngRangeM = 12;
+    const FNG_ZONES = [
+        { max: 25, color: '#FF3B30', name: '극단적 공포' },
+        { max: 45, color: '#FF9500', name: '공포' },
+        { max: 56, color: '#34C759', name: '중립' },
+        { max: 75, color: '#007AFF', name: '탐욕' },
+        { max: 101, color: '#5856D6', name: '극단적 탐욕' },
+    ];
+    function _fngZone(v) { for (const z of FNG_ZONES) if (v < z.max) return z; return FNG_ZONES[4]; }
+    function _kstDateStr(v) {
+        const d = (v instanceof Date) ? v : new Date(v);
+        if (isNaN(d.getTime())) return '';
+        return new Date(d.getTime() + 9 * 3600000).toISOString().slice(0, 10);
+    }
+    function setFngRange(m) {
+        _fngRangeM = m;
+        document.querySelectorAll('#fngRangeBtns button').forEach(b => b.classList.toggle('on', Number(b.dataset.m) === m));
+        renderFngChart();
+    }
+    function _fngMergedSeries() {
+        const map = {};
+        (_fngHist || []).forEach(r => { if (r && /^\d{4}-\d{2}-\d{2}$/.test(r[0])) map[r[0]] = Number(r[1]); });
+        (window._fngCnnHist || []).forEach(p => {
+            const d = new Date(p.x).toISOString().slice(0, 10), v = Math.round(Number(p.y));
+            if (map[d] === undefined && v >= 0 && v <= 100) map[d] = v;
+        });
+        return Object.keys(map).sort().map(d => ({ d, v: map[d] }));
+    }
+    function _pearson(a, b) {
+        const n = a.length; if (n < 10) return null;
+        let sa = 0, sb = 0; for (let i = 0; i < n; i++) { sa += a[i]; sb += b[i]; }
+        const ma = sa / n, mb = sb / n; let num = 0, da = 0, db = 0;
+        for (let i = 0; i < n; i++) { const x = a[i] - ma, y = b[i] - mb; num += x * y; da += x * x; db += y * y; }
+        return (da > 0 && db > 0) ? num / Math.sqrt(da * db) : null;
+    }
+    function _corrLabel(r) {
+        if (r === null) return { t: '데이터 부족', c: 'var(--text-sub)' };
+        const a = Math.abs(r), dir = r >= 0 ? '같은 방향' : '반대 방향';
+        if (a >= 0.7) return { t: dir + ' · 강함', c: r >= 0 ? '#34C759' : '#FF3B30' };
+        if (a >= 0.4) return { t: dir + ' · 보통', c: r >= 0 ? '#30B0C7' : '#FF9500' };
+        if (a >= 0.2) return { t: dir + ' · 약함', c: 'var(--text-sub)' };
+        return { t: '거의 관계없음', c: 'var(--text-sub)' };
+    }
+    function renderFngChart() {
+        const canvas = document.getElementById('fngChart');
+        if (!canvas || typeof Chart === 'undefined') return;
+        // 이력 1회 로드 (실패해도 CNN 1년치로 그림)
+        if (_fngHist === null && !_fngHistLoading && window._firestoreDb && window._firestoreApi) {
+            _fngHistLoading = true;
+            try {
+                const { doc, getDoc } = window._firestoreApi;
+                getDoc(doc(window._firestoreDb, 'cache', 'fng')).then(snap => {
+                    let rows = [];
+                    try { if (snap && snap.exists()) rows = (JSON.parse(snap.data().json || '{}').rows) || []; } catch (e) {}
+                    _fngHist = rows; _fngHistLoading = false; renderFngChart();
+                }).catch(e => { console.warn('[FNG 그래프] cache/fng 실패:', e && e.message); _fngHist = []; _fngHistLoading = false; renderFngChart(); });
+            } catch (e) { _fngHist = []; _fngHistLoading = false; }
+        }
+        const all = _fngMergedSeries();
+        const corrEl = document.getElementById('fngCorr'), noteEl = document.getElementById('fngCorrNote');
+        if (all.length < 2) {
+            if (noteEl) noteEl.textContent = _fngHistLoading ? '그래프 데이터 불러오는 중...' : '공포탐욕 기록이 아직 없습니다.';
+            if (corrEl) corrEl.innerHTML = '';
+            return;
+        }
+        // S&P500 날짜 맵 (KST 날짜 = 그날 미국 종가)
+        const market = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.market) ? LAST_FETCHED_DATA.market : [];
+        const spMap = {};
+        market.forEach(r => { const sp = Number(r[1]); if (sp > 0) { const d = _kstDateStr(r[0]); if (d) spMap[d] = sp; } });
+        // 기간 자르기
+        const last = new Date(all[all.length - 1].d + 'T00:00:00Z');
+        const cut = new Date(last); cut.setUTCMonth(cut.getUTCMonth() - _fngRangeM);
+        const cutStr = cut.toISOString().slice(0, 10);
+        const ser = all.filter(p => p.d > cutStr);
+        const labels = ser.map(p => p.d);
+        const fng = ser.map(p => p.v);
+        const sp = ser.map(p => (spMap[p.d] !== undefined ? spMap[p.d] : null));
+
+        // 상관계수: 같은 날 둘 다 있는 날만 / 하루 변화는 연속한 짝끼리
+        const lv = [], ls = [], dv = [], ds = [];
+        let prev = null;
+        for (let i = 0; i < ser.length; i++) {
+            if (sp[i] === null) { prev = null; continue; }
+            lv.push(fng[i]); ls.push(sp[i]);
+            if (prev) { dv.push(fng[i] - prev.v); ds.push((sp[i] / prev.s - 1) * 100); }
+            prev = { v: fng[i], s: sp[i] };
+        }
+        const rLevel = _pearson(lv, ls), rDaily = _pearson(dv, ds);
+        const L1 = _corrLabel(rLevel), L2 = _corrLabel(rDaily);
+        const fmtR = r => r === null ? '-' : (r >= 0 ? '+' : '') + r.toFixed(2);
+        if (corrEl) corrEl.innerHTML =
+            `<div class="fng-corr-item"><div class="k">높낮이 상관</div><div class="v">${fmtR(rLevel)}</div><div class="d" style="color:${L1.c}">${L1.t}</div></div>` +
+            `<div class="fng-corr-item"><div class="k">하루 등락 상관</div><div class="v">${fmtR(rDaily)}</div><div class="d" style="color:${L2.c}">${L2.t}</div></div>`;
+        if (noteEl) noteEl.textContent = `높낮이 상관은 두 선의 높이가 함께 가는지, 하루 등락 상관은 같은 날 같은 방향으로 움직였는지를 봅니다(+1 똑같이 · 0 무관 · −1 정반대). 기간 ${labels[0].slice(2).replace(/-/g, '.')}~${labels[labels.length - 1].slice(2).replace(/-/g, '.')} · 맞춘 날 ${lv.length}일`;
+
+        const isDark = document.body.classList.contains('dark-mode') || (!document.body.classList.contains('light-mode') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        const tickColor = isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.45)';
+        const spColor = isDark ? 'rgba(235,235,245,0.75)' : 'rgba(60,60,67,0.75)';
+        // 배경: 구간별 색 띠
+        const zoneBands = {
+            id: 'fngZoneBands',
+            beforeDatasetsDraw(chart) {
+                const { ctx, chartArea: a, scales: { y } } = chart; if (!a) return;
+                ctx.save();
+                let lo = 0;
+                FNG_ZONES.forEach(z => {
+                    const hi = Math.min(100, z.max === 101 ? 100 : z.max);
+                    const yTop = y.getPixelForValue(hi), yBot = y.getPixelForValue(lo);
+                    ctx.fillStyle = z.color; ctx.globalAlpha = isDark ? 0.16 : 0.09;
+                    ctx.fillRect(a.left, yTop, a.right - a.left, yBot - yTop);
+                    lo = hi;
+                });
+                ctx.restore();
+            }
+        };
+        if (myFngChart) myFngChart.destroy();
+        myFngChart = new Chart(canvas.getContext('2d'), {
+            type: 'line',
+            data: { labels, datasets: [
+                { label: '공포탐욕', data: fng, yAxisID: 'y', borderWidth: 2.2, pointRadius: 0, pointHoverRadius: 4, tension: 0.2, order: 1,
+                  borderColor: '#FF9500',
+                  pointHoverBackgroundColor: c => _fngZone(Number(c.raw)).color,
+                  segment: { borderColor: c => _fngZone((c.p0.parsed.y + c.p1.parsed.y) / 2).color } },
+                { label: 'S&P500', data: sp, yAxisID: 'y1', borderColor: spColor, borderWidth: 1.4, pointRadius: 0, pointHoverRadius: 3, tension: 0.15, spanGaps: true, order: 2 },
+            ]},
+            options: {
+                responsive: true, maintainAspectRatio: false, animation: false,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: { type: 'category', grid: { display: false },
+                         ticks: { autoSkip: true, maxTicksLimit: 5, maxRotation: 0, minRotation: 0, color: tickColor, font: { size: 10 },
+                                  callback: function(v) { const l = this.getLabelForValue(v); return (typeof l === 'string' && l.length >= 10) ? l.slice(5).replace('-', '/') : l; } } },
+                    y: { min: 0, max: 100, position: 'left', grid: { color: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' },
+                         ticks: { stepSize: 25, color: tickColor, font: { size: 10 } } },
+                    y1: { position: 'right', grid: { display: false },
+                          ticks: { color: tickColor, font: { size: 10 }, maxTicksLimit: 5, callback: v => Math.round(v).toLocaleString() } },
+                },
+                plugins: {
+                    legend: { display: false },
+                    datalabels: { display: false },
+                    tooltip: { callbacks: {
+                        title: items => items.length ? items[0].label : '',
+                        label: c => {
+                            if (c.parsed.y == null) return null;
+                            if (c.dataset.yAxisID === 'y') return '공포탐욕 ' + c.parsed.y + ' (' + _fngZone(c.parsed.y).name + ')';
+                            return 'S&P500 ' + c.parsed.y.toLocaleString(undefined, { maximumFractionDigits: 2 });
+                        } } }
+                }
+            },
+            plugins: [zoneBands]
+        });
+        attachChartPinchZoom(document.getElementById('fngChartWrap'), () => myFngChart);
     }
 
     // ====== FRED 경제지표 렌더링 (EconData 시트 연동) ======
