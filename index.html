@@ -539,27 +539,13 @@
 </head>
 <body>
 
-<!-- ★ 그룹 로그인 모달 -->
-<div id="loginModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;justify-content:center;align-items:center;backdrop-filter:blur(8px);">
+<!-- ★ 로그인 모달 (2026-10-27: 그룹 비밀번호 → 구글 로그인, 허용된 가족 계정만) -->
+<div id="loginModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:none;justify-content:center;align-items:center;backdrop-filter:blur(8px);">
     <div style="background:var(--card-bg,#fff);padding:32px 28px;border-radius:20px;text-align:center;width:85%;max-width:340px;box-shadow:0 8px 40px rgba(0,0,0,0.4);">
-        <p style="font-size:13px;color:var(--text-sub,#666);margin:0 0 24px;line-height:1.6;">그룹 ID와 비밀번호로 입장하세요.<br>없으면 입력 후 확인 → 자동 생성됩니다.</p>
-        <div style="margin-bottom:12px;text-align:left;">
-            <label style="font-size:12px;color:var(--text-sub,#888);margin-bottom:5px;display:block;">그룹 ID</label>
-            <input type="text" id="group-id-input" placeholder="예: family_yoon, club_A팀"
-                style="width:100%;padding:13px;border:1.5px solid #ddd;border-radius:10px;font-size:15px;box-sizing:border-box;background:var(--bg,#f8f8f8);color:var(--text-main,#333);outline:none;">
-        </div>
-        <div style="margin-bottom:20px;text-align:left;">
-            <label style="font-size:12px;color:var(--text-sub,#888);margin-bottom:5px;display:block;">비밀번호</label>
-            <input type="password" id="group-pw-input" placeholder="그룹 비밀번호"
-                style="width:100%;padding:13px;border:1.5px solid #ddd;border-radius:10px;font-size:15px;box-sizing:border-box;background:var(--bg,#f8f8f8);color:var(--text-main,#333);outline:none;">
-        </div>
-        <button id="loginBtn" onclick="window.loginGroup()"
-            style="width:100%;padding:14px;background:#007AFF;color:white;border:none;border-radius:12px;font-weight:700;font-size:16px;cursor:pointer;margin-bottom:10px;">
-            입장 / 그룹 만들기
-        </button>
-        <button onclick="localStorage.removeItem('myGroupId');location.reload();"
-            style="width:100%;padding:8px;background:none;border:none;color:#aaa;font-size:12px;cursor:pointer;">
-            ↺ 로그아웃 / 그룹 변경
+        <p style="font-size:13px;color:var(--text-sub,#666);margin:0 0 24px;line-height:1.6;">가족 구글 계정으로 로그인하세요.</p>
+        <button id="loginBtn" type="button" onclick="window.famLogin()"
+            style="width:100%;height:50px;display:flex;align-items:center;justify-content:center;gap:12px;padding:0 16px;background:#fff;color:#1f1f1f;border:1px solid #747775;border-radius:25px;font-family:'Google Sans','Apple SD Gothic Neo','Noto Sans KR',sans-serif;font-weight:500;font-size:16px;cursor:pointer;margin-bottom:10px;">
+            <img src="brand/google-g.png" width="20" height="20" alt="" style="flex:none;">Google로 계속하기
         </button>
         <div id="login-error-msg" style="color:#FF3B30;font-size:13px;margin-top:10px;min-height:18px;"></div>
     </div>
@@ -601,7 +587,7 @@
             <span>포트폴리오 내보내기</span>
         </button>
         <div style="height:1px; background:var(--border-color); margin:4px 0;"></div>
-        <button onclick="_closeSettings(); if(confirm('로그아웃하시겠습니까?')){localStorage.removeItem('myGroupId'); location.reload();}" style="width:100%; background:none; border:none; padding:12px 16px; text-align:left; font-size:15px; color:#FF3B30; cursor:pointer; display:flex; align-items:center; gap:10px;">
+        <button onclick="_closeSettings(); if(confirm('로그아웃하시겠습니까?')){window.famLogout();}" style="width:100%; background:none; border:none; padding:12px 16px; text-align:left; font-size:15px; color:#FF3B30; cursor:pointer; display:flex; align-items:center; gap:10px;">
             <span style="width:20px; text-align:center;">↩</span>
             <span>로그아웃</span>
         </button>
@@ -1857,7 +1843,9 @@
     // ★ GAS URL 제거 — 거래 CRUD는 Firestore로 대체
     // 차트 데이터만 GAS에서 계속 읽음 (Firestore에 시계열 저장 불적합)
     const CHART_GAS_URL = "https://script.google.com/macros/s/AKfycbwwJAx9Xa3uHMb-aEAUkO0cPRPl88bRnSApjRwbgtyRQs0cIbNXCOXdj0w5js5KwpYNTA/exec";
-    const CHART_GAS_AUTH = "REMOVED"; // 차트 조회 전용 GAS 비밀번호
+    // ★ 2026-10-27: GAS 비밀번호 상수 삭제(공개 노출). GAS 호출은 구글 로그인 ID 토큰으로 인증.
+    let GAS_ID_TOKEN = ''; // firebase module 이 로그인·토큰 갱신 때 채움
+    function gasAuthQ() { return 'idToken=' + encodeURIComponent(GAS_ID_TOKEN); }
     const STORAGE_KEY = "family_app_auth_key"; // 하위 호환용 키 (미사용)
     let currentAuthKey = null; // GAS 인증키 → Firestore 그룹 인증으로 대체
     let LAST_FETCHED_DATA = null;
@@ -1885,21 +1873,11 @@
         const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(str)));
         return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
     }
-    window.sha256Hex = sha256Hex; // module 스크립트(loginGroup)에서도 사용
+    window.sha256Hex = sha256Hex;
 
-    // ★ tryLogin 제거 — 그룹 로그인은 Firebase module 스크립트의 window.loginGroup()으로 처리
+    // ★ 로그인은 Firebase module 스크립트의 구글 로그인(window.famLogin)으로 처리
 
     document.addEventListener('DOMContentLoaded', function() {
-        // Enter 키 지원
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                const pwInput = document.getElementById('group-pw-input');
-                if (pwInput && document.activeElement === pwInput) {
-                    if (typeof window.loginGroup === 'function') window.loginGroup();
-                }
-            }
-        });
-
         // ★ nav-item 클릭을 onclick 대신 addEventListener로 바인딩 (event.currentTarget null 방지)
         document.querySelectorAll('.nav-item[data-tab]').forEach(function(item) {
             item.addEventListener('click', function() {
@@ -1913,26 +1891,7 @@
         document.getElementById('inputDate').valueAsDate = new Date();
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme) { document.body.className = savedTheme; updateThemeIcon(); }
-        const loginModal = document.getElementById('loginModal');
-        currentGroupId = localStorage.getItem("myGroupId") || null;
-
-        if (currentGroupId) {
-            if (loginModal) loginModal.style.display = "none";
-            // Firebase module 초기화 완료를 기다린 뒤 fetchData 호출
-            // (window.onload 시점에 <script type="module">이 아직 실행 중일 수 있음)
-            (function waitForFirestore(retries) {
-                if (window._firestoreDb && window._firestoreApi) {
-                    fetchData();
-                } else if (retries > 0) {
-                    setTimeout(function() { waitForFirestore(retries - 1); }, 100);
-                } else {
-                    console.error('Firestore 초기화 타임아웃');
-                    fetchData(); // 그래도 한 번 시도
-                }
-            })(30); // 최대 3초(100ms x 30) 대기
-        } else {
-            if (loginModal) loginModal.style.display = "flex";
-        }
+        // ★ 로그인 확인·첫 데이터 불러오기는 firebase module 의 onAuthStateChanged 가 함(2026-10-27)
     };
 
     function toggleTheme() {
@@ -2310,7 +2269,7 @@
 
             if (needGas) {
                 try {
-                    const gasUrl = `${CHART_GAS_URL}?authKey=${CHART_GAS_AUTH}&who=${encodeURIComponent(currentUser)}`;
+                    const gasUrl = `${CHART_GAS_URL}?${gasAuthQ()}&who=${encodeURIComponent(currentUser)}`;
                     const gasRes = await fetch(gasUrl);
                     const gasText = await gasRes.text();
                     if (!gasText.trim().startsWith("<")) {
@@ -2339,7 +2298,7 @@
             //   GAS는 CNN 접근이 막혀 사실상 항상 null → 프론트 fetchFearGreed()가 브라우저 직접조회 폴백을 이미 가짐)
             (function () {
                 try {
-                    fetch(`${CHART_GAS_URL}?authKey=${CHART_GAS_AUTH}&action=fearGreed`)
+                    fetch(`${CHART_GAS_URL}?${gasAuthQ()}&action=fearGreed`)
                         .then(r => r.text())
                         .then(t => {
                             if (t.trim().startsWith("<")) return;
@@ -2369,7 +2328,7 @@
                 });
                 const missing = Object.keys(heldQty).filter(t => heldQty[t] > 0.000001 && !pricesObj[t]);
                 if (missing.length > 0) {
-                    const qUrl = `${CHART_GAS_URL}?authKey=${CHART_GAS_AUTH}&action=quotes&tickers=${encodeURIComponent(missing.join(','))}`;
+                    const qUrl = `${CHART_GAS_URL}?${gasAuthQ()}&action=quotes&tickers=${encodeURIComponent(missing.join(','))}`;
                     const qRes = await fetch(qUrl);
                     const qText = await qRes.text();
                     if (!qText.trim().startsWith("<")) {
@@ -2769,7 +2728,7 @@
             fetch(CHART_GAS_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },   // 단순 요청 → CORS preflight 없음
-                body: JSON.stringify({ authKey: CHART_GAS_AUTH, type: 'saveSnapshot', scope: payload })
+                body: JSON.stringify({ idToken: GAS_ID_TOKEN, type: 'saveSnapshot', scope: payload })
             }).then(r => r.json())
               .then(j => { if (j && j.status === 'success') _lastSnapshotJson = scopeJson; })
               .catch(e => console.log('포트폴리오 스냅샷 저장 실패(무시):', e && e.message));
@@ -6280,7 +6239,7 @@
                         return { d: new Date(p.x).toISOString().slice(0, 10), v: Math.round(Number(p.y)), r: rmap[String(p.rating || '').toLowerCase()] || String(p.rating || ''), ts: new Date(p.x).toISOString() };
                     });
                     fetch(CHART_GAS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify({ authKey: CHART_GAS_AUTH, type: 'saveFng', cur: { value: parsed.value, rating: parsed.rating || '', ts: cnnTs }, hist: hist }) }).catch(function() {});
+                        body: JSON.stringify({ idToken: GAS_ID_TOKEN, type: 'saveFng', cur: { value: parsed.value, rating: parsed.rating || '', ts: cnnTs }, hist: hist }) }).catch(function() {});
                 }
             } catch (e) {}
         }
@@ -9097,6 +9056,10 @@
   import { initializeApp }   from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
   import { getAnalytics }    from "https://www.gstatic.com/firebasejs/12.12.0/firebase-analytics.js";
   import {
+    getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
+    onAuthStateChanged, onIdTokenChanged, signOut
+  } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
+  import {
     getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc,
     collection, addDoc, query, where, getDocs, serverTimestamp, deleteField
   } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
@@ -9122,66 +9085,66 @@
     doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, deleteField
   };
 
-  window.loginGroup = async function() {
-    const idEl  = document.getElementById('group-id-input');
-    const pwEl  = document.getElementById('group-pw-input');
-    const errEl = document.getElementById('login-error-msg');
-    const btn   = document.getElementById('loginBtn');
-
-    const id = (idEl ? idEl.value.trim() : '');
-    const pw = (pwEl ? pwEl.value.trim() : '');
-
-    function showErr(msg) {
-      if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
-      if (btn)   { btn.disabled = false; btn.innerText = "입장 / 그룹 만들기"; }
-    }
-
-    if (!id || !pw) { showErr("그룹 ID와 비밀번호를 모두 입력하세요."); return; }
-    if (btn) { btn.disabled = true; btn.innerText = "확인 중..."; }
-    if (errEl) errEl.style.display = 'none';
-
-    try {
-      const groupRef = doc(db, "groups", id);
-      const snap     = await getDoc(groupRef);
-      // ★ 비밀번호는 SHA-256 해시로 저장·대조 (평문 저장 완화)
-      const pwHash   = await window.sha256Hex(pw);
-
-      if (snap.exists()) {
-        const g = snap.data();
-        let ok = false;
-        if (g.passwordHash) {
-          ok = (g.passwordHash === pwHash);
-        } else if (g.password === pw) {
-          ok = true;
-          // 기존 평문 문서 → 로그인 성공 시 해시로 자동 마이그레이션 (평문 제거)
-          try { await updateDoc(groupRef, { passwordHash: pwHash, password: deleteField() }); }
-          catch (e) { console.warn("그룹 비밀번호 해시 마이그레이션 실패:", e); }
-        }
-        if (ok) {
-          enterGroup(id);
-        } else {
-          showErr("❌ 비밀번호가 틀렸습니다.");
-        }
-      } else {
-        if (confirm(`"${id}" 그룹이 없습니다.\n이 비밀번호로 새 그룹을 만드시겠습니까?`)) {
-          await setDoc(groupRef, { passwordHash: pwHash, createdAt: serverTimestamp() });
-          enterGroup(id);
-        } else {
-          if (btn) { btn.disabled = false; btn.innerText = "입장 / 그룹 만들기"; }
-        }
-      }
-    } catch (err) {
-      showErr("오류: " + err.message);
-    }
+  // ★ 구글 로그인 (2026-10-27) — 허용 여부는 서버(Firestore 규칙·GAS 허용 목록)가 판단.
+  //   허용 안 된 계정은 Firestore 읽기가 permission-denied → 로그아웃 + 안내.
+  const auth = getAuth(app);
+  const FAMILY_GROUP_ID = "가족";
+  const _loginErr = (msg) => {
+    const e = document.getElementById('login-error-msg'); if (e) e.textContent = msg || '';
+    const b = document.getElementById('loginBtn'); if (b) b.disabled = false;
+  };
+  const _showLogin = (msg) => {
+    if (typeof hideLoading === 'function') hideLoading();
+    const m = document.getElementById('loginModal'); if (m) m.style.display = 'flex';
+    _loginErr(msg);
   };
 
-  function enterGroup(id) {
-    localStorage.setItem("myGroupId", id);
-    const modal = document.getElementById('loginModal');
-    if (modal) modal.style.display = 'none';
-    if (typeof window.currentGroupId !== 'undefined') window.currentGroupId = id;
-    if (typeof fetchData === 'function') fetchData();
-  }
+  window.famLogin = async function() {
+    const b = document.getElementById('loginBtn'); if (b) b.disabled = true;
+    _loginErr('');
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (e) {
+      if (e && (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment')) {
+        try { await signInWithRedirect(auth, provider); return; } catch (e2) { e = e2; }
+      }
+      if (e && (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request')) { _loginErr(''); return; }
+      _loginErr('로그인 실패: ' + (e && e.code ? e.code : e));
+    }
+  };
+  window.famLogout = async function() {
+    try { await signOut(auth); } catch (e) {}
+    localStorage.removeItem('myGroupId');
+    location.reload();
+  };
+
+  getRedirectResult(auth).catch(e => _loginErr('로그인 실패: ' + (e && e.code ? e.code : e)));
+  onIdTokenChanged(auth, async (user) => {
+    GAS_ID_TOKEN = user ? await user.getIdToken() : '';
+  });
+
+  let _started = false;
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) { _showLogin(''); return; }
+    try {
+      await getDoc(doc(db, "cache", "prices")); // 허용 계정인지 확인(규칙)
+    } catch (e) {
+      const denied = e && (e.code === 'permission-denied' || /permission/i.test(e.message || ''));
+      if (denied) { try { await signOut(auth); } catch (_) {} }
+      _showLogin(denied ? '이 계정(' + (user.email || '') + ')은 허용되지 않았습니다.' : '확인 실패: ' + (e.message || e));
+      return;
+    }
+    GAS_ID_TOKEN = await user.getIdToken();
+    localStorage.setItem("myGroupId", FAMILY_GROUP_ID);
+    currentGroupId = FAMILY_GROUP_ID;
+    const m = document.getElementById('loginModal'); if (m) m.style.display = 'none';
+    if (_started) return;
+    _started = true;
+    const go = () => { if (typeof fetchData === 'function') fetchData(); };
+    if (document.readyState === 'complete') go(); else window.addEventListener('load', go);
+  });
 </script>
 
 <script>
