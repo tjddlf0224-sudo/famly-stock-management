@@ -1771,10 +1771,6 @@
         </div>
         <div class="input-group"><label>환율</label><input type="number" id="editFx" placeholder="예: 1400"></div>
         <div class="input-group"><label>메모</label><textarea id="editMemo" rows="2" style="width:100%;padding:12px;border:1px solid var(--border-color);border-radius:8px;font-size:14px;box-sizing:border-box;background:var(--card-bg);color:var(--text-main);resize:none;"></textarea></div>
-        <div class="input-group" style="margin-top:8px;">
-            <label style="color:#FF3B30;font-weight:700;">🔐 관리자 비밀번호</label>
-            <input type="password" id="editAdminPw" placeholder="관리자만 수정 가능">
-        </div>
         <div style="display:flex;gap:10px;margin-top:16px;">
             <button onclick="closeEditModal()" style="flex:1;padding:12px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;background:var(--border-color);color:var(--text-main);">취소</button>
             <button id="editSaveBtn" onclick="saveEditTransaction()" style="flex:1;padding:12px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;background:var(--primary);color:white;">수정 저장</button>
@@ -4041,7 +4037,6 @@
         document.getElementById('editPrice').value  = row[6] || '';
         document.getElementById('editFx').value     = row[7] || '';
         document.getElementById('editMemo').value   = row[8] || '';
-        document.getElementById('editAdminPw').value = '';
         document.getElementById('editModal').style.display = 'flex';
     }
 
@@ -4050,46 +4045,14 @@
         _editDocId = null;
     }
 
-    // ★ 관리자 비밀번호 검증 — SHA-256 해시 대조.
-    //    기존 평문(password) 문서는 일치 시 해시(passwordHash)로 자동 마이그레이션 후 평문 제거.
-    async function verifyAdminPassword(adminPw) {
-        const db = window._firestoreDb;
-        const { doc, getDoc, updateDoc, deleteField } = window._firestoreApi;
-        const adminSnap = await getDoc(doc(db, "admins", "config"));
-        if (!adminSnap.exists()) return false;
-        const data = adminSnap.data();
-        const hash = await sha256Hex(adminPw);
-        if (data.passwordHash) return data.passwordHash === hash;
-        if (data.password === adminPw) {
-            try { await updateDoc(doc(db, "admins", "config"), { passwordHash: hash, password: deleteField() }); }
-            catch (e) { console.warn("관리자 비밀번호 해시 마이그레이션 실패:", e); }
-            return true;
-        }
-        return false;
-    }
+    // ★ 2026-10-27: 관리자 비밀번호 삭제 — 구글 로그인(허용된 가족 계정)만 앱을 쓸 수 있어 중복.
 
     async function deleteTransaction() {
         if (!_editDocId) { alert("삭제할 거래를 찾을 수 없습니다."); return; }
-        const adminPw = document.getElementById('editAdminPw').value.trim();
-        if (!adminPw) { alert("관리자 비밀번호를 입력하세요."); return; }
         if (!confirm("이 거래를 정말 삭제할까요?\n되돌릴 수 없습니다.")) return;
 
         const btnDel = document.getElementById('editDeleteBtn');
-        btnDel.disabled = true; btnDel.innerText = "확인 중...";
-
-        // 관리자 비밀번호 검증 (수정과 동일)
-        try {
-            if (!(await verifyAdminPassword(adminPw))) {
-                alert("❌ 관리자 비밀번호가 틀렸습니다.");
-                btnDel.disabled = false; btnDel.innerText = "🗑 이 거래 삭제";
-                return;
-            }
-        } catch(e) {
-            alert("비밀번호 확인 실패: " + e.message);
-            btnDel.disabled = false; btnDel.innerText = "🗑 이 거래 삭제";
-            return;
-        }
-
+        btnDel.disabled = true;
         btnDel.innerText = "삭제 중...";
         try {
             const db = window._firestoreDb;
@@ -4107,25 +4070,8 @@
     }
 
     async function saveEditTransaction() {
-        const adminPw = document.getElementById('editAdminPw').value.trim();
-        if (!adminPw) { alert("관리자 비밀번호를 입력하세요."); return; }
-
         const btnSave = document.getElementById('editSaveBtn');
-        btnSave.disabled = true; btnSave.innerText = "확인 중...";
-
-        // Firestore에서 관리자 비밀번호 검증
-        try {
-            if (!(await verifyAdminPassword(adminPw))) {
-                alert("❌ 관리자 비밀번호가 틀렸습니다.");
-                btnSave.disabled = false; btnSave.innerText = "수정 저장";
-                return;
-            }
-        } catch(e) {
-            alert("비밀번호 확인 실패: " + e.message);
-            btnSave.disabled = false; btnSave.innerText = "수정 저장";
-            return;
-        }
-
+        btnSave.disabled = true;
         btnSave.innerText = "저장 중...";
 
         let tickerRaw = document.getElementById('editTicker').value.trim().toUpperCase();
