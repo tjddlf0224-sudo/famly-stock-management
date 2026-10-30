@@ -2257,7 +2257,7 @@
             }
 
             // 현재가를 GAS prices 배열 형식으로 변환
-            const pricesArray = Object.entries(pricesObj).map(([ticker, v]) => [ticker, v.price, v.changePct, v.prevClose, v.ext || []]);
+            const pricesArray = Object.entries(pricesObj).map(([ticker, v]) => [ticker, v.price, v.changePct, v.prevClose, v.ext || [], v.day || null]);
 
             // Firestore에 없는 데이터만 GAS에서 보충 (현재가/성과분석 없을 때만)
             const needGas = pricesArray.length === 0
@@ -2339,7 +2339,7 @@
                 console.warn("신규 종목 실시간 시세 보강 실패:", e.message);
             }
 
-            const pricesFinal = Object.entries(pricesObj).map(([ticker, v]) => [ticker, v.price, v.changePct, v.prevClose, v.ext || []]);
+            const pricesFinal = Object.entries(pricesObj).map(([ticker, v]) => [ticker, v.price, v.changePct, v.prevClose, v.ext || [], v.day || null]);
 
             const data = {
                 status: "success",
@@ -2599,6 +2599,8 @@
             let yesterdayPrice = fetchedPriceRow && !isNaN(fetchedPriceRow[3]) ? Number(fetchedPriceRow[3]) : rawCurrentPrice;
             // 시간외 가격(국내): [{ s:'after'|'pre', price, diff, pct }] — 정규장 가격과 다를 때만 GAS 가 넣음(2026-10-30)
             let extQuotes = fetchedPriceRow && Array.isArray(fetchedPriceRow[4]) ? fetchedPriceRow[4] : [];
+            // 미국: 마지막 정규장 시세 { price, diff, pct }(네이버) — 홈 시세 표시용, 손익 계산엔 안 씀
+            let quoteDay = fetchedPriceRow && fetchedPriceRow[5] ? fetchedPriceRow[5] : null;
             let avgPrice = item.qty > 0 ? (item.totalAmtOrigin / item.qty) : 0;
             // ★ t는 processData 진입 시 이미 패딩됨 — 6자리 숫자 or 끝이 영문인 한국 티커(04020K 등)
             let isKorea = /^\d{6}$/.test(t) || /^\d+[A-Z]$/.test(t);
@@ -2612,7 +2614,7 @@
             let rate = item.totalCost === 0 ? 0 : (pnl / item.totalCost) * 100;
             let todayProfitAmt = item.qty * Math.round(finalPrice - finalYesterdayPrice);
             totalTodayProfitKRW += todayProfitAmt;
-            balanceList.push({ name: displayName, ticker: t, qty: item.qty, avgPrice, curPrice: rawCurrentPrice, evalAmt: evalAmount, profit: pnl, rate, isKorea, changePct, todayProfitAmt, extQuotes });
+            balanceList.push({ name: displayName, ticker: t, qty: item.qty, avgPrice, curPrice: rawCurrentPrice, prevPrice: yesterdayPrice, evalAmt: evalAmount, profit: pnl, rate, isKorea, changePct, todayProfitAmt, extQuotes, quoteDay });
         }
         let myCashKRW = 0, myCashUSD = 0;
         if (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.cashInfo) {
@@ -2942,13 +2944,17 @@
         ctx.fillStyle = lineColor; ctx.fill();
     }
 
-    // 시간외 줄: 🌙 After(거래소 애프터마켓 16:00~20:00) / ☀️ Pre(넥스트레이드 프리마켓 08:00~08:50).
+    // 시간외 줄: 국내 🌙 After(거래소 애프터마켓 16:00~20:00) / ☀️ Pre(넥스트레이드 프리마켓 08:00~08:50),
+    //   미국 ☀️ Pre(04:00~09:30 ET) / 🌙 After(16:00~20:00 ET, 네이버 해외주식 10/30).
     //   정규장 가격 아래, 등락은 정규장 가격 대비(인베스팅닷컴 방식 — 성일님 10/30). 평가액·손익은 정규장 기준 그대로.
+    function _fmtQuote(v, isKorea) {
+        return isKorea ? Math.round(v).toLocaleString() : Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
     function _extQuoteLines(item) {
         return (item.extQuotes || []).map(function(e) {
             var up = e.diff > 0, cls = up ? 'up' : (e.diff < 0 ? 'down' : ''), sg = up ? '+' : '';
             return '<div class="' + cls + '" style="font-size:12px;margin-top:2px;">' + (e.s === 'pre' ? '☀️ Pre ' : '🌙 After ')
-                + Math.round(e.price).toLocaleString() + ' ' + sg + Math.round(e.diff).toLocaleString() + ' (' + sg + Number(e.pct).toFixed(2) + '%)</div>';
+                + _fmtQuote(e.price, item.isKorea) + ' ' + sg + _fmtQuote(e.diff, item.isKorea) + ' (' + sg + Number(e.pct).toFixed(2) + '%)</div>';
         }).join('');
     }
 
@@ -2957,14 +2963,20 @@
         listDiv.innerHTML = '';
         if (balanceList.length === 0) { listDiv.innerHTML = '<p style="text-align:center; color:var(--text-sub); padding:20px;">보유 종목이 없습니다.</p>'; return; }
         balanceList.forEach(item => {
-            let colorClass = item.profit >= 0 ? 'up' : 'down';
-            let tSign = item.todayProfitAmt > 0 ? "+" : "";
-            let tColorClass = item.todayProfitAmt > 0 ? "up" : (item.todayProfitAmt < 0 ? "down" : "");
             let itemDiv = document.createElement('div');
             itemDiv.className = 'stock-item';
             itemDiv.style.cursor = 'pointer';
             itemDiv.onclick = () => openStockDetailModal(item);
-            itemDiv.innerHTML = `<div><div class="stock-name">${item.name}</div><div class="stock-ticker">${item.ticker}</div></div><div style="text-align:right;"><div class="stock-price" style="color:var(--text-main);">${Math.round(item.evalAmt).toLocaleString()}원</div><div class="stock-change ${colorClass}">${item.rate.toFixed(1)}% (${Math.round(item.profit).toLocaleString()}원)</div><div class="${tColorClass}" style="font-size:12px;margin-top:3px;font-weight:500;">오늘 ${tSign}${Math.round(item.todayProfitAmt).toLocaleString()}원 (${tSign}${item.changePct.toFixed(2)}%)</div>${_extQuoteLines(item)}</div>`;
+            // 홈은 인베스팅닷컴처럼 주가·등락만(평가액·손익은 잔고 탭) — 성일님 10/30
+            //   미국은 네이버 마지막 정규장 등락(구글 시세는 프리마켓 시작 전후 등락이 0으로 바뀜)
+            let qd = item.quoteDay;
+            let qCur = qd ? qd.price : item.curPrice;
+            let qDiff = qd ? qd.diff : item.curPrice - (item.prevPrice || item.curPrice);
+            let qPct = qd ? Number(qd.pct) : item.changePct;
+            let qSign = qPct > 0 ? "+" : "";
+            let qCls = qPct > 0 ? "up" : (qPct < 0 ? "down" : "");
+            let qPrice = item.isKorea ? _fmtQuote(qCur, true) + '원' : '$' + _fmtQuote(qCur, false);
+            itemDiv.innerHTML = `<div><div class="stock-name">${item.name}</div><div class="stock-ticker">${item.ticker}</div></div><div style="text-align:right;"><div class="stock-price" style="color:var(--text-main);">${qPrice}</div><div class="stock-change ${qCls}">${qSign}${_fmtQuote(qDiff, item.isKorea)} (${qSign}${qPct.toFixed(2)}%)</div>${_extQuoteLines(item)}</div>`;
             listDiv.appendChild(itemDiv);
         });
     }
