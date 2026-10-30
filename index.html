@@ -3464,7 +3464,7 @@
 
     // ── 기간별 투자수익 ──────────────────────────────
     let _pTab    = 'daily';
-    let _pCursor = new Date(new Date().setDate(new Date().getDate() - 1)); // 기본값: 어제
+    let _pCursor = new Date(); // 기본값: 오늘 (오늘 자산기록 전이면 '업데이트 대기중…')
 
     function setProfitPeriodTab(tab) {
         _pTab = tab;
@@ -3479,7 +3479,7 @@
         const customWrap = document.getElementById('pCustomWrap');
         if (navWrap)    navWrap.style.display    = (tab === 'custom' || tab === 'total') ? 'none' : 'flex';
         if (customWrap) customWrap.style.display  = tab === 'custom' ? 'flex' : 'none';
-        _pCursor = new Date(new Date().setDate(new Date().getDate() - 1)); // 탭 변경 시 어제로 리셋
+        _pCursor = new Date(); // 탭 변경 시 오늘로 리셋 (위 '오늘의 투자수익'과 같은 날)
         renderPeriodProfit();
     }
 
@@ -3608,7 +3608,11 @@
             let profit = yr ? (yr.profit || 0) : 0;
             const todayDow2 = now.getDay();
             const isWeekend2 = todayDow2 === 0 || todayDow2 === 6;
-            if (toStr >= todayStr && fromYear === now.getFullYear() && !isWeekend2) {
+            // 저녁 루틴 뒤엔 성과분석에 오늘 행이 이미 들어가 있음 → 그때 더하면 오늘 손익이 두 번 반영됨
+            const perfHasToday = typeof PERFORMANCE_DATA !== 'undefined' && PERFORMANCE_DATA.some(r =>
+                (currentUser === '가족 전체' ? (r[1] && r[1] !== '가족 전체') : r[1] === currentUser) &&
+                getDateNum(r[0]) === getDateNum(todayStr + 'T00:00:00'));
+            if (toStr >= todayStr && fromYear === now.getFullYear() && !isWeekend2 && !perfHasToday) {
                 profit += (window._totalTodayProfitKRW || 0);
             }
             return profit;
