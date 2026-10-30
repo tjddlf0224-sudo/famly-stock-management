@@ -3485,8 +3485,8 @@
 
     function moveProfitPeriod(dir) {
         if (_pTab === 'daily')        _pCursor.setDate(_pCursor.getDate() + dir);
-        else if (_pTab === 'monthly') _pCursor.setMonth(_pCursor.getMonth() + dir);
-        else if (_pTab === 'yearly')  _pCursor.setFullYear(_pCursor.getFullYear() + dir);
+        else if (_pTab === 'monthly') { _pCursor.setDate(1); _pCursor.setMonth(_pCursor.getMonth() + dir); } // 1일로 맞춘 뒤 이동(29~31일이면 2월 30일→3월로 넘침)
+        else if (_pTab === 'yearly')  { _pCursor.setDate(1); _pCursor.setFullYear(_pCursor.getFullYear() + dir); } // 2/29 → 평년 3/1 넘침 방지
         renderPeriodProfit();
     }
 
