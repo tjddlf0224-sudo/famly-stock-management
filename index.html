@@ -2257,7 +2257,7 @@
             }
 
             // 현재가를 GAS prices 배열 형식으로 변환
-            const pricesArray = Object.entries(pricesObj).map(([ticker, v]) => [ticker, v.price, v.changePct, v.prevClose]);
+            const pricesArray = Object.entries(pricesObj).map(([ticker, v]) => [ticker, v.price, v.changePct, v.prevClose, v.ext || []]);
 
             // Firestore에 없는 데이터만 GAS에서 보충 (현재가/성과분석 없을 때만)
             const needGas = pricesArray.length === 0
@@ -2331,7 +2331,7 @@
                         const quotes = (JSON.parse(qText).quotes) || {};
                         Object.keys(quotes).forEach(t => {
                             const v = quotes[t];
-                            if (v && v.price) pricesObj[t] = { price: v.price, changePct: v.changePct, prevClose: v.prevClose };
+                            if (v && v.price) pricesObj[t] = { price: v.price, changePct: v.changePct, prevClose: v.prevClose, ext: v.ext || [] };
                         });
                     }
                 }
@@ -2339,7 +2339,7 @@
                 console.warn("신규 종목 실시간 시세 보강 실패:", e.message);
             }
 
-            const pricesFinal = Object.entries(pricesObj).map(([ticker, v]) => [ticker, v.price, v.changePct, v.prevClose]);
+            const pricesFinal = Object.entries(pricesObj).map(([ticker, v]) => [ticker, v.price, v.changePct, v.prevClose, v.ext || []]);
 
             const data = {
                 status: "success",
@@ -2597,6 +2597,8 @@
             let rawCurrentPrice = fetchedPriceRow && !isNaN(fetchedPriceRow[1]) ? Number(fetchedPriceRow[1]) : (item.qty > 0 ? (item.totalAmtOrigin / item.qty) : 0);
             let changePct = fetchedPriceRow && !isNaN(fetchedPriceRow[2]) ? Number(fetchedPriceRow[2]) : 0;
             let yesterdayPrice = fetchedPriceRow && !isNaN(fetchedPriceRow[3]) ? Number(fetchedPriceRow[3]) : rawCurrentPrice;
+            // 시간외 가격(국내): [{ s:'after'|'pre', price, diff, pct }] — 정규장 가격과 다를 때만 GAS 가 넣음(2026-10-30)
+            let extQuotes = fetchedPriceRow && Array.isArray(fetchedPriceRow[4]) ? fetchedPriceRow[4] : [];
             let avgPrice = item.qty > 0 ? (item.totalAmtOrigin / item.qty) : 0;
             // ★ t는 processData 진입 시 이미 패딩됨 — 6자리 숫자 or 끝이 영문인 한국 티커(04020K 등)
             let isKorea = /^\d{6}$/.test(t) || /^\d+[A-Z]$/.test(t);
@@ -2610,7 +2612,7 @@
             let rate = item.totalCost === 0 ? 0 : (pnl / item.totalCost) * 100;
             let todayProfitAmt = item.qty * Math.round(finalPrice - finalYesterdayPrice);
             totalTodayProfitKRW += todayProfitAmt;
-            balanceList.push({ name: displayName, ticker: t, qty: item.qty, avgPrice, curPrice: rawCurrentPrice, evalAmt: evalAmount, profit: pnl, rate, isKorea, changePct, todayProfitAmt });
+            balanceList.push({ name: displayName, ticker: t, qty: item.qty, avgPrice, curPrice: rawCurrentPrice, evalAmt: evalAmount, profit: pnl, rate, isKorea, changePct, todayProfitAmt, extQuotes });
         }
         let myCashKRW = 0, myCashUSD = 0;
         if (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.cashInfo) {
@@ -2940,6 +2942,16 @@
         ctx.fillStyle = lineColor; ctx.fill();
     }
 
+    // 시간외 줄: 🌙 After(거래소 애프터마켓 16:00~20:00) / ☀️ Pre(넥스트레이드 프리마켓 08:00~08:50).
+    //   정규장 가격 아래, 등락은 정규장 가격 대비(인베스팅닷컴 방식 — 성일님 10/30). 평가액·손익은 정규장 기준 그대로.
+    function _extQuoteLines(item) {
+        return (item.extQuotes || []).map(function(e) {
+            var up = e.diff > 0, cls = up ? 'up' : (e.diff < 0 ? 'down' : ''), sg = up ? '+' : '';
+            return '<div class="' + cls + '" style="font-size:12px;margin-top:2px;">' + (e.s === 'pre' ? '☀️ Pre ' : '🌙 After ')
+                + Math.round(e.price).toLocaleString() + ' ' + sg + Math.round(e.diff).toLocaleString() + ' (' + sg + Number(e.pct).toFixed(2) + '%)</div>';
+        }).join('');
+    }
+
     function renderStockList(balanceList) {
         const listDiv = document.getElementById('stockList'); if (!listDiv) return;
         listDiv.innerHTML = '';
@@ -2952,7 +2964,7 @@
             itemDiv.className = 'stock-item';
             itemDiv.style.cursor = 'pointer';
             itemDiv.onclick = () => openStockDetailModal(item);
-            itemDiv.innerHTML = `<div><div class="stock-name">${item.name}</div><div class="stock-ticker">${item.ticker}</div></div><div style="text-align:right;"><div class="stock-price" style="color:var(--text-main);">${Math.round(item.evalAmt).toLocaleString()}원</div><div class="stock-change ${colorClass}">${item.rate.toFixed(1)}% (${Math.round(item.profit).toLocaleString()}원)</div><div class="${tColorClass}" style="font-size:12px;margin-top:3px;font-weight:500;">오늘 ${tSign}${Math.round(item.todayProfitAmt).toLocaleString()}원 (${tSign}${item.changePct.toFixed(2)}%)</div></div>`;
+            itemDiv.innerHTML = `<div><div class="stock-name">${item.name}</div><div class="stock-ticker">${item.ticker}</div></div><div style="text-align:right;"><div class="stock-price" style="color:var(--text-main);">${Math.round(item.evalAmt).toLocaleString()}원</div><div class="stock-change ${colorClass}">${item.rate.toFixed(1)}% (${Math.round(item.profit).toLocaleString()}원)</div><div class="${tColorClass}" style="font-size:12px;margin-top:3px;font-weight:500;">오늘 ${tSign}${Math.round(item.todayProfitAmt).toLocaleString()}원 (${tSign}${item.changePct.toFixed(2)}%)</div>${_extQuoteLines(item)}</div>`;
             listDiv.appendChild(itemDiv);
         });
     }
