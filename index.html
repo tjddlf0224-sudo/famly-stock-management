@@ -127,6 +127,9 @@
         .nav-icon { display: none; }
         #loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         #loadingText { color: var(--text-main); margin-top: 10px; }
+        #loadingStage { color: var(--text-sub); font-size: 12px; margin-top: 6px; min-height: 16px; font-variant-numeric: tabular-nums; }
+        #syncBadge { display: none; position: fixed; bottom: calc(env(safe-area-inset-bottom, 0px) + 84px); left: 50%; transform: translateX(-50%); z-index: 150; background: rgba(0,0,0,.72); color: #fff; font-size: 12px; padding: 5px 12px; border-radius: 14px; white-space: nowrap; pointer-events: none; }
+        #syncBadge.fail { background: #FF3B30; pointer-events: auto; cursor: pointer; }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .history-filter { display: flex; gap: 5px; margin-bottom: 15px; align-items: center; background: var(--card-bg); padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); }
@@ -554,7 +557,9 @@
 <div id="loader">
     <div class="spinner"></div>
     <div id="loadingText">데이터를 불러오는 중...</div>
+    <div id="loadingStage"></div>
 </div>
+<div id="syncBadge" onclick="_retrySync()"></div>
 
 <header>
     <h1>투자 관리</h1>
@@ -1861,8 +1866,28 @@
     let myCreditChart = null;
     let myFxChart = null;
 
-    function showLoading() { const l = document.getElementById('loader'); if (l) l.style.display = 'flex'; }
-    function hideLoading() { const l = document.getElementById('loader'); if (l) l.style.display = 'none'; }
+    // ★ 로딩 단계·경과 시간 표시(2026-11-09 성일님 "불러오는 중에서 너무 오래 걸려") — 느리면 캡처로 어느 단계인지 보이게.
+    //   경과 시간은 앱을 연 순간(performance.now)부터.
+    let _stageLabel = '로그인 확인 중', _stageTimer = null;
+    function _paintStage() { const el = document.getElementById('loadingStage'); if (el) el.textContent = _stageLabel + ' · ' + (performance.now() / 1000).toFixed(1) + '초'; }
+    function _loadStage(label) { _stageLabel = label; _paintStage(); }
+    function showLoading() { const l = document.getElementById('loader'); if (l) l.style.display = 'flex'; if (!_stageTimer) _stageTimer = setInterval(_paintStage, 200); _paintStage(); }
+    function hideLoading() { const l = document.getElementById('loader'); if (l) l.style.display = 'none'; if (_stageTimer) { clearInterval(_stageTimer); _stageTimer = null; } }
+    _stageTimer = setInterval(_paintStage, 200); _paintStage();   // 첫 화면은 HTML 에서 이미 로딩 표시 중
+
+    // ★ 지난 자료를 먼저 띄우고 뒤에서 새로 받을 때 위쪽 작은 표시(증권사 앱 방식, 11/09)
+    function _syncBadge(state, ts) {
+        const b = document.getElementById('syncBadge'); if (!b) return;
+        if (!state) { b.style.display = 'none'; return; }
+        const t = ts ? new Date(Number(ts)) : null;
+        // 30분 넘은 자료일 때만 'M/D HH:MM 자료' 붙임(글은 짧게)
+        const old = t && !isNaN(t) && (Date.now() - t) > 30 * 60000;
+        const hm = old ? (t.getMonth() + 1) + '/' + t.getDate() + ' ' + String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0') + ' 자료 · ' : '';
+        b.textContent = hm + (state === 'fail' ? '업데이트 실패 · 다시 시도' : '업데이트 중…');
+        b.className = state === 'fail' ? 'fail' : '';
+        b.style.display = 'block';
+    }
+    function _retrySync() { _syncBadge('busy', localStorage.getItem(CACHE_TIME_KEY)); fetchDataFromServer(true); }
 
     // ★ SHA-256 해시 (WebCrypto) — 그룹/관리자 비밀번호 평문 저장 완화용
     async function sha256Hex(str) {
@@ -1883,12 +1908,12 @@
         });
     });
 
-    window.onload = function() {
+    document.addEventListener('DOMContentLoaded', function() {   // 그림 다 받을 때(window load)까지 미루지 않음(11/09)
         document.getElementById('inputDate').valueAsDate = new Date();
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme) { document.body.className = savedTheme; updateThemeIcon(); }
         // ★ 로그인 확인·첫 데이터 불러오기는 firebase module 의 onAuthStateChanged 가 함(2026-10-27)
-    };
+    });
 
     function toggleTheme() {
         const body = document.body;
@@ -1943,7 +1968,8 @@
 
     const CACHE_KEY = 'portfolio_data_cache';
     const CACHE_TIME_KEY = 'portfolio_cache_time';
-    const CACHE_VALIDITY_MINUTES = 30;
+    // 저장 자료는 일주일까지 바로 띄우고(뒤에서 새로 받음), 그보다 오래되면 처음부터 받음 — 예전엔 30분 넘으면 매번 '불러오는 중'(11/09)
+    const CACHE_VALIDITY_MINUTES = 7 * 24 * 60;
 
     // ★ 종목 리스트(KR 약 4천·US 약 1.1만개, ~945KB)는 자동완성·종목명 조회에만 쓰이고 GAS가 주 1회 갱신하므로
     //   메인 데이터 캐시(30분)와 분리해 7일 캐시. 콜드 로딩마다 945KB 재다운로드하던 것을 제거.
@@ -2113,7 +2139,7 @@
     // ★ Firestore에서 이 그룹의 거래내역을 가져와 앱에 적용
     async function fetchDataFromServer(isBackground = false) {
         if (!currentGroupId) { console.warn("그룹 미로그인 상태"); return; }
-        if (!isBackground) showLoading();
+        if (!isBackground) { _loadStage('서버에서 자료 받는 중'); showLoading(); }
 
         try {
             const db = window._firestoreDb;
@@ -2359,7 +2385,9 @@
 
             saveToCache(data);
             _snapshotFresh = true;   // 서버에서 받은 신선한 데이터 → 이후 processData에서 스냅샷 저장 허용
+            if (!isBackground) { _loadStage('화면 계산 중'); await new Promise(r => setTimeout(r, 0)); }
             applyDataToApp(data);
+            _syncBadge(null);
 
             if (!isBackground) hideLoading();
             else {
@@ -2377,6 +2405,7 @@
             if (!isBackground) hideLoading();
             console.error("Firestore 데이터 로드 실패:", err);
             if (!isBackground) alert("데이터 로드 실패: " + err.message);
+            else _syncBadge('fail', localStorage.getItem(CACHE_TIME_KEY));
         }
     }
 
@@ -2476,9 +2505,17 @@
     }
 
     function fetchData() {
-        const cacheLoaded = loadFromCache();
-        if (cacheLoaded) { hideLoading(); setTimeout(() => fetchDataFromServer(true), 500); }
+        const cacheLoaded = showCachedFirst();
+        if (cacheLoaded) setTimeout(() => fetchDataFromServer(true), 50);
         else { showLoading(); fetchDataFromServer(false); }
+    }
+    // 저장된 지난 자료를 바로 화면에 + '업데이트 중' 표시. 없으면 false
+    function showCachedFirst() {
+        _loadStage('저장된 자료 여는 중');
+        if (!loadFromCache()) return false;
+        hideLoading();
+        _syncBadge('busy', localStorage.getItem(CACHE_TIME_KEY));
+        return true;
     }
 
     function forceRefresh() {
@@ -9102,11 +9139,23 @@
   let _started = false;
   onAuthStateChanged(auth, async (user) => {
     if (!user) { _showLogin(''); return; }
+    // ★ 지난번 자료 먼저(증권사 앱 방식, 11/09) — 이 기기에 이미 저장돼 있던 자료만, 허용 확인과 동시에. 거부되면 지우고 로그인 화면.
+    let early = false;
+    if (!_started && localStorage.getItem("myGroupId") === FAMILY_GROUP_ID) {
+      currentGroupId = FAMILY_GROUP_ID;
+      early = showCachedFirst();
+    }
+    if (!early) _loadStage('계정 확인 중');
     try {
       await getDoc(doc(db, "cache", "prices")); // 허용 계정인지 확인(규칙)
     } catch (e) {
       const denied = e && (e.code === 'permission-denied' || /permission/i.test(e.message || ''));
-      if (denied) { try { await signOut(auth); } catch (_) {} }
+      if (denied) {
+        localStorage.removeItem(CACHE_KEY); localStorage.removeItem(CACHE_TIME_KEY); localStorage.removeItem("myGroupId");
+        try { await signOut(auth); } catch (_) {}
+        if (early) { location.reload(); return; }
+      }
+      if (early && !denied) { _syncBadge('fail', localStorage.getItem(CACHE_TIME_KEY)); return; }   // 통신 문제: 지난 자료는 그대로
       _showLogin(denied ? '이 계정(' + (user.email || '') + ')은 허용되지 않았습니다.' : '확인 실패: ' + (e.message || e));
       return;
     }
@@ -9116,8 +9165,8 @@
     const m = document.getElementById('loginModal'); if (m) m.style.display = 'none';
     if (_started) return;
     _started = true;
-    const go = () => { if (typeof fetchData === 'function') fetchData(); };
-    if (document.readyState === 'complete') go(); else window.addEventListener('load', go);
+    // 그림 아이콘 등 다 받을 때(window load)까지 기다리지 않고 바로 시작(11/09 — 맥에서도 load 3.3초)
+    if (early) fetchDataFromServer(true); else fetchData();
   });
 </script>
 
