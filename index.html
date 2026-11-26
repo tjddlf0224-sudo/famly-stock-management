@@ -1017,16 +1017,17 @@
             </div>
             <div class="ma-card-updated" id="maKsDDUpdated">불러오는 중...</div>
             <div class="ma-ma-summary" id="maKsDDSummary">-</div>
+            <div class="ma-card-updated" id="maKsDDRec" style="display:none"></div>
             <table class="ma-range-table" id="maKsDDTable">
-                <tr style="color:var(--text-sub);font-size:11px;"><td>낙폭</td><td>횟수</td><td>1년 승률</td><td>1년 평균</td><td>2년 승률</td></tr>
-                <tr data-t="10"><td>-10%</td><td>12번</td><td>17%</td><td>-17.0%</td><td>25%</td></tr>
-                <tr data-t="20"><td>-20%</td><td>7번</td><td>29%</td><td>-19.0%</td><td>86%</td></tr>
-                <tr data-t="30"><td>-30%</td><td>5번</td><td>60%</td><td>+11.1%</td><td>100%</td></tr>
-                <tr data-t="40"><td>-40%</td><td>4번</td><td>50%</td><td>+26.3%</td><td>75%</td></tr>
-                <tr data-t="45"><td>-45%</td><td>3번</td><td>67%</td><td>+15.1%</td><td>100%</td></tr>
-                <tr data-t="50"><td>-50%</td><td>3번</td><td>100%</td><td>+40.8%</td><td>100%</td></tr>
+                <tr style="color:var(--text-sub);font-size:11px;"><td>낙폭</td><td>횟수</td><td>1년 승률</td><td>1년 평균</td><td>2년 승률</td><td>회복</td></tr>
+                <tr data-t="10"><td>-10%</td><td>12번</td><td>17%</td><td>-17.0%</td><td>25%</td><td>0.6년</td></tr>
+                <tr data-t="20"><td>-20%</td><td>7번</td><td>29%</td><td>-19.0%</td><td>86%</td><td>2.9년</td></tr>
+                <tr data-t="30"><td>-30%</td><td>5번</td><td>60%</td><td>+11.1%</td><td>100%</td><td>2.3년</td></tr>
+                <tr data-t="40"><td>-40%</td><td>4번</td><td>50%</td><td>+26.3%</td><td>75%</td><td>1.9년</td></tr>
+                <tr data-t="45"><td>-45%</td><td>3번</td><td>67%</td><td>+15.1%</td><td>100%</td><td>2.2년</td></tr>
+                <tr data-t="50"><td>-50%</td><td>3번</td><td>100%</td><td>+40.8%</td><td>100%</td><td>2.2년</td></tr>
             </table>
-            <div class="ma-card-updated">처음 그 선을 넘은 날 기준 · 코스피 1997~</div>
+            <div class="ma-card-updated">처음 그 선을 넘은 날 기준 · 코스피 1997~ (1994년 고점은 자료 밖)</div>
         </div>
 
         <!-- ② 코스피 이동평균선 분석 -->
@@ -1303,6 +1304,7 @@
             </div>
             <div class="ma-card-updated" id="maNasDDUpdated">불러오는 중...</div>
             <div class="ma-ma-summary" id="maNasDDSummary">-</div>
+            <div class="ma-card-updated" id="maNasDDGap" style="display:none"></div>
             <table class="ma-range-table" id="maNasDDTable">
                 <tr style="color:var(--text-sub);font-size:11px;"><td>낙폭</td><td>횟수</td><td>1년 승률</td><td>1년 평균</td><td>더 빠짐</td></tr>
                 <tr data-t="5"><td>-5%</td><td>61번</td><td>83%</td><td>+21.1%</td><td>-4.8%</td></tr>
@@ -6134,6 +6136,7 @@
             set('maNasDDValue', '-');
             set('maNasDDUpdated', '나스닥100 시세를 못 불러왔어요');
             set('maNasDDSummary', '-');
+            const g0 = document.getElementById('maNasDDGap'); if (g0) g0.style.display = 'none';
             maSetBadge('maNasDDBadge', '자료 없음', 'ma-info');
             document.querySelectorAll('#maNasDDTable tr[data-t]').forEach(tr => { tr.style.fontWeight = ''; tr.style.background = ''; });
             return;
@@ -6147,8 +6150,16 @@
         maSetBadge('maNasDDBadge', hit ? '-' + hit.t + '% 선 넘음' : '5% 미만', 'ma-info');
         set('maNasDDSummary', hit ? '과거 ' + hit.t + '% 넘게 빠졌을 때 1년 뒤 오른 비율 ' + hit.w1 + '% (' + hit.n + '번, 평균 ' + (hit.a1 >= 0 ? '+' : '') + hit.a1 + '%)' : '고점 대비 5% 미만 하락');
         document.querySelectorAll('#maNasDDTable tr[data-t]').forEach(tr => { const on = hit && Number(tr.dataset.t) === hit.t; tr.style.fontWeight = on ? '700' : ''; tr.style.background = on ? 'rgba(142,142,147,0.15)' : ''; });
+        const gEl = document.getElementById('maNasDDGap');
+        if (gEl) {
+            const g = (nd.gap200 === null || nd.gap200 === undefined || nd.gap200 === '') ? NaN : Number(nd.gap200);
+            if (isFinite(g)) {
+                gEl.innerHTML = '200일선 대비 ' + (g >= 0 ? '+' : '') + (g * 100).toFixed(1) + '%' + (g >= 0.25 ? '<br>⚠️ 과열 경고: 과거 6개월 안 10% 조정 45%(11번, 평소 31%) · 평균 수익은 +10.6%라 매도 신호 아님' : '');
+                gEl.style.display = '';
+            } else { gEl.style.display = 'none'; }
+        }
     }
-    const KS_DD_STATS = [{"t": 10, "n": 12, "w1": 17, "a1": -17.0, "w2": 25}, {"t": 20, "n": 7, "w1": 29, "a1": -19.0, "w2": 86}, {"t": 30, "n": 5, "w1": 60, "a1": 11.1, "w2": 100}, {"t": 40, "n": 4, "w1": 50, "a1": 26.3, "w2": 75}, {"t": 45, "n": 3, "w1": 67, "a1": 15.1, "w2": 100}, {"t": 50, "n": 3, "w1": 100, "a1": 40.8, "w2": 100}]; // 코스피(^KS11) 1996-12~: 고점 대비 처음 t% 빠진 날(신고점마다 다시 장전) → 1년 뒤 승률 w1%·평균 a1%, 2년 뒤 승률 w2%
+    const KS_DD_STATS = [{"t": 10, "n": 12, "w1": 17, "a1": -17.0, "w2": 25, "rec": 0.6, "rmin": 0.0, "rmax": 5.7, "rn": 14, "bmax": 21}, {"t": 20, "n": 7, "w1": 29, "a1": -19.0, "w2": 86, "rec": 2.9, "rmin": 0.2, "rmax": 5.7, "rn": 7, "bmax": 19}, {"t": 30, "n": 5, "w1": 60, "a1": 11.1, "w2": 100, "rec": 2.3, "rmin": 0.7, "rmax": 5.2, "rn": 5, "bmax": 17}, {"t": 40, "n": 4, "w1": 50, "a1": 26.3, "w2": 75, "rec": 1.9, "rmin": 0.7, "rmax": 4.8, "rn": 4, "bmax": 12}, {"t": 45, "n": 3, "w1": 67, "a1": 15.1, "w2": 100, "rec": 2.2, "rmin": 1.4, "rmax": 4.8, "rn": 3, "bmax": 12}, {"t": 50, "n": 3, "w1": 100, "a1": 40.8, "w2": 100, "rec": 2.2, "rmin": 1.4, "rmax": 4.8, "rn": 3, "bmax": 11}]; // 코스피(^KS11) 1996-12~: 고점 대비 처음 t% 빠진 날(신고점마다 다시 장전) → 1년 뒤 승률 w1%·평균 a1%, 2년 뒤 승률 w2%, rec=전고점 회복 중앙 년·rmin/rmax 최단/최장·rn 회복 횟수·bmax 바닥까지 최대 개월
     function renderKospiDD() {
         const set = (id, t) => { const e = document.getElementById(id); if (e) e.textContent = t; };
         const clear = () => document.querySelectorAll('#maKsDDTable tr[data-t]').forEach(tr => { tr.style.fontWeight = ''; tr.style.background = ''; });
@@ -6158,6 +6169,7 @@
             set('maKsDDValue', '-');
             set('maKsDDUpdated', '코스피 자료를 못 불러왔어요');
             set('maKsDDSummary', '-');
+            const r0 = document.getElementById('maKsDDRec'); if (r0) r0.style.display = 'none';
             maSetBadge('maKsDDBadge', '자료 없음', 'ma-info');
             clear();
             return;
@@ -6181,6 +6193,13 @@
         maSetBadge('maKsDDBadge', hit ? '-' + hit.t + '% 선 넘음' : '10% 미만', 'ma-info');
         set('maKsDDSummary', hit ? '과거 ' + hit.t + '% 넘게 빠졌을 때 1년 뒤 오른 비율 ' + hit.w1 + '% (' + hit.n + '번, 평균 ' + (hit.a1 >= 0 ? '+' : '') + hit.a1.toFixed(1) + '%) · 2년 뒤 ' + hit.w2 + '%' : '고점 대비 10% 미만 하락');
         document.querySelectorAll('#maKsDDTable tr[data-t]').forEach(tr => { const on = hit && Number(tr.dataset.t) === hit.t; tr.style.fontWeight = on ? '700' : ''; tr.style.background = on ? 'rgba(142,142,147,0.15)' : ''; });
+        const rEl = document.getElementById('maKsDDRec');
+        if (rEl) {
+            if (hit) {
+                rEl.textContent = '과거 ' + hit.t + '% 넘게 빠졌을 때 전고점 회복까지 ' + hit.rmin.toFixed(1) + '~' + hit.rmax.toFixed(1) + '년(중앙 ' + hit.rec.toFixed(1) + '년) · 바닥은 그날부터 ' + Math.round(hit.bmax) + '개월 안';
+                rEl.style.display = '';
+            } else { rEl.style.display = 'none'; }
+        }
     }
     function renderUSMA() {
         const market = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.market)
