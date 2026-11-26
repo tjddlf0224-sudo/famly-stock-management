@@ -966,41 +966,7 @@
         <button class="ma-tab-btn" id="maBtnUS" onclick="switchMarketView('us')">🇺🇸 미국 시장 지표</button>
     </div>
 
-    <!-- 국내 배너 -->
-    <div class="ma-signal-banner card" id="maSignalBannerKR" style="background: linear-gradient(135deg, #1C1C2E 0%, #2C2C4E 100%); color:#fff;">
-        <button class="signal-help-btn" onclick="openWeightModal('KR')" aria-label="가중치 설명">?</button>
-        <div class="ma-signal-emoji" id="maSignalEmojiKR">📊</div>
-        <div class="ma-signal-content">
-            <div class="ma-signal-label">🇰🇷 국내 시장 종합 신호</div>
-            <div class="ma-signal-value" id="maSignalValueKR">계산 중...</div>
-            <div class="ma-signal-desc" id="maSignalDescKR">지표를 불러오는 중입니다</div>
-        </div>
-        <div class="ma-signal-score-ring">
-            <svg viewBox="0 0 56 56">
-                <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="5"/>
-                <circle cx="28" cy="28" r="22" fill="none" stroke="white" stroke-width="5" stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="138.2" id="maScoreArcKR" transform="rotate(-90 28 28)" style="transition: stroke-dashoffset 1s ease;"/>
-            </svg>
-            <div class="ma-score-num" id="maScoreNumKR" style="color:white;">-</div>
-        </div>
-    </div>
-
-    <!-- 미국 배너 -->
-    <div class="ma-signal-banner card" id="maSignalBannerUS" style="background: linear-gradient(135deg, #1C2E1C 0%, #2C4E2C 100%); color:#fff; display:none;">
-        <button class="signal-help-btn" onclick="openWeightModal('US')" aria-label="가중치 설명">?</button>
-        <div class="ma-signal-emoji" id="maSignalEmojiUS">📊</div>
-        <div class="ma-signal-content">
-            <div class="ma-signal-label">🇺🇸 미국 시장 종합 신호</div>
-            <div class="ma-signal-value" id="maSignalValueUS">계산 중...</div>
-            <div class="ma-signal-desc" id="maSignalDescUS">지표를 불러오는 중입니다</div>
-        </div>
-        <div class="ma-signal-score-ring">
-            <svg viewBox="0 0 56 56">
-                <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="5"/>
-                <circle cx="28" cy="28" r="22" fill="none" stroke="white" stroke-width="5" stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="138.2" id="maScoreArcUS" transform="rotate(-90 28 28)" style="transition: stroke-dashoffset 1s ease;"/>
-            </svg>
-            <div class="ma-score-num" id="maScoreNumUS" style="color:white;">-</div>
-        </div>
-    </div>
+    <!-- 종합점수 배너는 2026-11-26 삭제(30년 시험에서 예측력 없음, 투자로그 60차) -->
 
     <div id="maViewKR">
     <div class="ma-section-title">🇰🇷 국내 시장 지표</div>
@@ -1247,47 +1213,7 @@
     <div class="ma-section-title">🇺🇸 미국 시장 지표</div>
     <div class="ma-grid">
 
-
-        <!-- ① S&P500 이동평균선 (25%) -->
-        <!-- ① S&P500 이동평균선 (후행 15%) -->
-        <div class="ma-card" id="maSPXMACard">
-            <div class="ma-card-top">
-                <div class="ma-card-name">📈 S&amp;P500 이동평균선 분석</div>
-                <div class="ma-card-badge" id="maSPXMABadge">-</div>
-            </div>
-            <div id="maSPXMAList" class="ma-ma-list">
-                <div class="ma-ma-row"><span class="ma-ma-label">20일선</span><span class="ma-ma-price" id="maSPXMA20Price">-</span><span class="ma-ma-signal nodata" id="maSPXMA20Signal">-</span></div>
-                <div class="ma-ma-row"><span class="ma-ma-label">50일선</span><span class="ma-ma-price" id="maSPXMA50Price">-</span><span class="ma-ma-signal nodata" id="maSPXMA50Signal">-</span></div>
-                <div class="ma-ma-row"><span class="ma-ma-label">100일선</span><span class="ma-ma-price" id="maSPXMA100Price">-</span><span class="ma-ma-signal nodata" id="maSPXMA100Signal">-</span></div>
-                <div class="ma-ma-row"><span class="ma-ma-label">125일선</span><span class="ma-ma-price" id="maSPXMA125Price">-</span><span class="ma-ma-signal nodata" id="maSPXMA125Signal">-</span></div>
-                <div class="ma-ma-row"><span class="ma-ma-label">200일선</span><span class="ma-ma-price" id="maSPXMA200Price">-</span><span class="ma-ma-signal nodata" id="maSPXMA200Signal">-</span></div>
-            </div>
-            <div class="ma-ma-updated" id="maSPXMAUpdated">차트 데이터 불러오는 중...</div>
-            <div class="ma-ma-summary" id="maSPXMASummary">💡 S&amp;P500 지수의 이동평균선 돌파 여부를 분석합니다</div>
-            <div class="ma-chart-wrap"><canvas id="maSPXMAChart"></canvas></div>
-        </div>
-
-        <!-- ② 나스닥 이동평균선 (25%) -->
-        <!-- ② 나스닥 이동평균선 -->
-        <div class="ma-card" id="maNASMACard">
-            <div class="ma-card-top">
-                <div class="ma-card-name">📈 나스닥 이동평균선 분석</div>
-                <div class="ma-card-badge" id="maNASMABadge">-</div>
-            </div>
-            <div id="maNASMAList" class="ma-ma-list">
-                <div class="ma-ma-row"><span class="ma-ma-label">20일선</span><span class="ma-ma-price" id="maNASMA20Price">-</span><span class="ma-ma-signal nodata" id="maNASMA20Signal">-</span></div>
-                <div class="ma-ma-row"><span class="ma-ma-label">50일선</span><span class="ma-ma-price" id="maNASMA50Price">-</span><span class="ma-ma-signal nodata" id="maNASMA50Signal">-</span></div>
-                <div class="ma-ma-row"><span class="ma-ma-label">100일선</span><span class="ma-ma-price" id="maNASMA100Price">-</span><span class="ma-ma-signal nodata" id="maNASMA100Signal">-</span></div>
-                <div class="ma-ma-row"><span class="ma-ma-label">125일선</span><span class="ma-ma-price" id="maNASMA125Price">-</span><span class="ma-ma-signal nodata" id="maNASMA125Signal">-</span></div>
-                <div class="ma-ma-row"><span class="ma-ma-label">200일선</span><span class="ma-ma-price" id="maNASMA200Price">-</span><span class="ma-ma-signal nodata" id="maNASMA200Signal">-</span></div>
-            </div>
-            <div class="ma-ma-updated" id="maNASMAUpdated">차트 데이터 불러오는 중...</div>
-            <div class="ma-ma-summary" id="maNASMASummary">💡 나스닥 지수의 이동평균선 돌파 여부를 분석합니다</div>
-            <div class="ma-chart-wrap"><canvas id="maNASMAChart"></canvas></div>
-        </div>
-
-        <!-- ③ CNN 공포탐욕지수 (20%) -->
-        <!-- ③ CNN 공포탐욕지수 -->
+        <!-- ① CNN 공포탐욕지수 (2026-11-26 맨 위로) -->
         <div class="ma-card" id="maFNGCard">
             <div class="ma-card-top">
                 <div class="ma-card-name">😱 CNN 공포탐욕지수</div>
@@ -1335,6 +1261,72 @@
             <div style="margin-top:10px;font-size:11px;color:var(--text-sub);line-height:1.5;">
                 💡 CNN Money에서 집계하는 투자심리 지수. 극단 공포 구간은 역발상 매수 기회, 극단 탐욕 구간은 과열 주의. 미국 장 마감 후 업데이트.
             </div>
+        </div>
+
+        <!-- ② 나스닥 고점 대비 낙폭 + 과거 승률 (2026-11-26, 나스닥 종합 1971~ 야후 일봉으로 계산, 투자로그 64차) -->
+        <div class="ma-card ma-info" id="maNasDDCard">
+            <div class="ma-card-top">
+                <div class="ma-card-name">📉 나스닥 고점 대비</div>
+                <div class="ma-card-badge" id="maNasDDBadge">-</div>
+            </div>
+            <div class="ma-card-value-row">
+                <div class="ma-card-value" id="maNasDDValue">-</div>
+                <div class="ma-card-unit">%</div>
+            </div>
+            <div class="ma-card-updated" id="maNasDDUpdated">불러오는 중...</div>
+            <div class="ma-ma-summary" id="maNasDDSummary">-</div>
+            <table class="ma-range-table" id="maNasDDTable">
+                <tr><td>낙폭</td><td>횟수</td><td>1년 뒤 승률</td><td>1년 평균</td><td>더 빠진 폭</td></tr>
+                <tr data-t="5"><td>-5%</td><td>58번</td><td>75%</td><td>+12.8%</td><td>-4.9%</td></tr>
+                <tr data-t="10"><td>-10%</td><td>32번</td><td>77%</td><td>+19.1%</td><td>-5.8%</td></tr>
+                <tr data-t="15"><td>-15%</td><td>18번</td><td>65%</td><td>+16.2%</td><td>-12.4%</td></tr>
+                <tr data-t="20"><td>-20%</td><td>13번</td><td>77%</td><td>+24.7%</td><td>-9.1%</td></tr>
+                <tr data-t="25"><td>-25%</td><td>9번</td><td>78%</td><td>+30.3%</td><td>-9.7%</td></tr>
+                <tr data-t="30"><td>-30%</td><td>7번</td><td>71%</td><td>+22.7%</td><td>-4.0%</td></tr>
+                <tr data-t="40"><td>-40%</td><td>2번</td><td>50%</td><td>-18.3%</td><td>-48.1%</td></tr>
+                <tr data-t="50"><td>-50%</td><td>2번</td><td>50%</td><td>-2.2%</td><td>-37.0%</td></tr>
+            </table>
+            <div class="ma-card-updated">처음 그 선을 넘은 날 기준 · 나스닥 종합 1971~</div>
+        </div>
+
+
+
+        <!-- ① S&P500 이동평균선 (25%) -->
+        <!-- ① S&P500 이동평균선 (후행 15%) -->
+        <div class="ma-card" id="maSPXMACard">
+            <div class="ma-card-top">
+                <div class="ma-card-name">📈 S&amp;P500 이동평균선 분석</div>
+                <div class="ma-card-badge" id="maSPXMABadge">-</div>
+            </div>
+            <div id="maSPXMAList" class="ma-ma-list">
+                <div class="ma-ma-row"><span class="ma-ma-label">20일선</span><span class="ma-ma-price" id="maSPXMA20Price">-</span><span class="ma-ma-signal nodata" id="maSPXMA20Signal">-</span></div>
+                <div class="ma-ma-row"><span class="ma-ma-label">50일선</span><span class="ma-ma-price" id="maSPXMA50Price">-</span><span class="ma-ma-signal nodata" id="maSPXMA50Signal">-</span></div>
+                <div class="ma-ma-row"><span class="ma-ma-label">100일선</span><span class="ma-ma-price" id="maSPXMA100Price">-</span><span class="ma-ma-signal nodata" id="maSPXMA100Signal">-</span></div>
+                <div class="ma-ma-row"><span class="ma-ma-label">125일선</span><span class="ma-ma-price" id="maSPXMA125Price">-</span><span class="ma-ma-signal nodata" id="maSPXMA125Signal">-</span></div>
+                <div class="ma-ma-row"><span class="ma-ma-label">200일선</span><span class="ma-ma-price" id="maSPXMA200Price">-</span><span class="ma-ma-signal nodata" id="maSPXMA200Signal">-</span></div>
+            </div>
+            <div class="ma-ma-updated" id="maSPXMAUpdated">차트 데이터 불러오는 중...</div>
+            <div class="ma-ma-summary" id="maSPXMASummary">💡 S&amp;P500 지수의 이동평균선 돌파 여부를 분석합니다</div>
+            <div class="ma-chart-wrap"><canvas id="maSPXMAChart"></canvas></div>
+        </div>
+
+        <!-- ② 나스닥 이동평균선 (25%) -->
+        <!-- ② 나스닥 이동평균선 -->
+        <div class="ma-card" id="maNASMACard">
+            <div class="ma-card-top">
+                <div class="ma-card-name">📈 나스닥 이동평균선 분석</div>
+                <div class="ma-card-badge" id="maNASMABadge">-</div>
+            </div>
+            <div id="maNASMAList" class="ma-ma-list">
+                <div class="ma-ma-row"><span class="ma-ma-label">20일선</span><span class="ma-ma-price" id="maNASMA20Price">-</span><span class="ma-ma-signal nodata" id="maNASMA20Signal">-</span></div>
+                <div class="ma-ma-row"><span class="ma-ma-label">50일선</span><span class="ma-ma-price" id="maNASMA50Price">-</span><span class="ma-ma-signal nodata" id="maNASMA50Signal">-</span></div>
+                <div class="ma-ma-row"><span class="ma-ma-label">100일선</span><span class="ma-ma-price" id="maNASMA100Price">-</span><span class="ma-ma-signal nodata" id="maNASMA100Signal">-</span></div>
+                <div class="ma-ma-row"><span class="ma-ma-label">125일선</span><span class="ma-ma-price" id="maNASMA125Price">-</span><span class="ma-ma-signal nodata" id="maNASMA125Signal">-</span></div>
+                <div class="ma-ma-row"><span class="ma-ma-label">200일선</span><span class="ma-ma-price" id="maNASMA200Price">-</span><span class="ma-ma-signal nodata" id="maNASMA200Signal">-</span></div>
+            </div>
+            <div class="ma-ma-updated" id="maNASMAUpdated">차트 데이터 불러오는 중...</div>
+            <div class="ma-ma-summary" id="maNASMASummary">💡 나스닥 지수의 이동평균선 돌파 여부를 분석합니다</div>
+            <div class="ma-chart-wrap"><canvas id="maNASMAChart"></canvas></div>
         </div>
 
         <!-- ④ 10년 국채금리 (15%) -->
@@ -5504,8 +5496,6 @@
         const isKR = view === 'kr';
         document.getElementById('maViewKR').style.display = isKR ? '' : 'none';
         document.getElementById('maViewUS').style.display = isKR ? 'none' : '';
-        document.getElementById('maSignalBannerKR').style.display = isKR ? '' : 'none';
-        document.getElementById('maSignalBannerUS').style.display = isKR ? 'none' : '';
         document.getElementById('maBtnKR').classList.toggle('active', isKR);
         document.getElementById('maBtnUS').classList.toggle('active', !isKR);
         if (!isKR) { renderUSMA(); renderSignalBannerUS(); }
@@ -6107,6 +6097,21 @@
     }
 
     // ====== 미국 이동평균선 (MarketData 시트 활용) ======
+    const NAS_DD_STATS = [{"t": 5, "n": 58, "w1": 75, "a1": 12.8, "ex": -4.9}, {"t": 10, "n": 32, "w1": 77, "a1": 19.1, "ex": -5.8}, {"t": 15, "n": 18, "w1": 65, "a1": 16.2, "ex": -12.4}, {"t": 20, "n": 13, "w1": 77, "a1": 24.7, "ex": -9.1}, {"t": 25, "n": 9, "w1": 78, "a1": 30.3, "ex": -9.7}, {"t": 30, "n": 7, "w1": 71, "a1": 22.7, "ex": -4.0}, {"t": 40, "n": 2, "w1": 50, "a1": -18.3, "ex": -48.1}, {"t": 50, "n": 2, "w1": 50, "a1": -2.2, "ex": -37.0}]; // 나스닥 종합 1971~: 고점 대비 처음 t% 빠진 날 → 1년 뒤 승률 w1%·평균 a1%, 신고점 전까지 더 빠진 폭 중앙 ex%
+    function renderNasDD(rows) {
+        const v = rows.filter(r => Number(r[2]) > 0); if (v.length < 2) return;
+        const closes = v.map(r => Number(r[2])), cur = closes[closes.length - 1];
+        let hi = -1, hiAt = 0; closes.forEach((c, i) => { if (c >= hi) { hi = c; hiAt = i; } });
+        const dd = (cur / hi - 1) * 100;
+        const md = x => { const d = new Date(x); if (isNaN(d)) return String(x).slice(5, 10); const k = new Date(d.getTime() + 9 * 3600000); return (k.getUTCMonth() + 1) + '/' + k.getUTCDate(); };
+        const set = (id, t) => { const e = document.getElementById(id); if (e) e.textContent = t; };
+        set('maNasDDValue', dd.toFixed(1));
+        set('maNasDDUpdated', '고점 ' + Math.round(hi).toLocaleString() + ' (' + md(v[hiAt][0]) + ') · 현재 ' + Math.round(cur).toLocaleString() + ' (' + md(v[v.length - 1][0]) + ')');
+        const hit = NAS_DD_STATS.filter(s => dd <= -s.t).pop();
+        maSetBadge('maNasDDBadge', hit ? '-' + hit.t + '% 선 넘음' : '5% 미만', 'ma-info');
+        set('maNasDDSummary', hit ? '과거 ' + hit.t + '% 넘게 빠졌을 때 1년 뒤 오른 비율 ' + hit.w1 + '% (' + hit.n + '번, 평균 ' + (hit.a1 >= 0 ? '+' : '') + hit.a1 + '%)' : '고점 대비 5% 미만 하락');
+        document.querySelectorAll('#maNasDDTable tr[data-t]').forEach(tr => { const on = hit && Number(tr.dataset.t) === hit.t; tr.style.fontWeight = on ? '700' : ''; tr.style.background = on ? 'rgba(142,142,147,0.15)' : ''; });
+    }
     function renderUSMA() {
         const market = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.market)
                        ? LAST_FETCHED_DATA.market : [];
@@ -6114,6 +6119,7 @@
         const spCloses = spRows.map(r => Number(r[1]));
         const nasRows  = market.filter(r => Number(r[2]) > 0);
         const nasCloses= nasRows.map(r => Number(r[2]));
+        try { renderNasDD(market); } catch (e) { console.warn('나스닥 낙폭 카드', e); }
         const _toMD_us = (v) => {
             if (!v) return '-';
             const d = (v instanceof Date) ? v : new Date(v);
@@ -6602,7 +6608,7 @@
         if(!data||data.value===undefined||data.value===null){maNoData('maCreditValue','maCreditUpdated');maSetBadge('maCreditBadge','데이터없음','');return;}
         const v=Number(data.value); document.getElementById('maCreditValue').textContent=v.toFixed(1);
         // 지수 대비 빚 = 신용잔고(조) ÷ 그날(또는 직전) 코스피 × 1000. 2021-11~2026-11 범위 3.2~4.6, 10/30/70/90% = 3.57/3.78/4.06/4.27
-        const dk=x=>{const m=String(x||'').match(/^(\d{4})[-.\/](\d{2})[-.\/](\d{2})/); if(m) return m[1]+m[2]+m[3]; const d=new Date(x); return isNaN(d)?'':''+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');};
+        const dk=x=>{const t=String(x||''); const m=t.match(/^(\d{4})[-.\/](\d{2})[-.\/](\d{2})$/); if(m) return m[1]+m[2]+m[3]; const d=new Date(x); if(isNaN(d)) return ''; const k=new Date(d.getTime()+9*3600000); return ''+k.getUTCFullYear()+String(k.getUTCMonth()+1).padStart(2,'0')+String(k.getUTCDate()).padStart(2,'0');};
         const t=dk(data.updated); let k=null;
         (MARKET_DATA||[]).forEach(b=>{const bd=dk(b.date); if(b.kospi>0&&bd&&bd<=t) k=b.kospi;});
         const r=k?v/k*1000:null;
@@ -6737,242 +6743,9 @@
         return { score, belowCount, total, crossDownCount };
     }
 
-    function renderSignalBannerKR() {
-        // ★ v61: 6개 지표 가중 평균 종합 신호
-        // 점수 0~100: 높을수록 강세/과열, 낮을수록 약세/바닥권
-        // 가중치(원점수): 20일선25 | RSI20 | 52주위치20 | VKOSPI15 | 외국인수급12 (신용잔고는 2026-11-26 제외, 합계 92로 정규화)
-        // (20일선·RSI·52주·외국인 수급 4개는 거래량 신뢰도 승수를 가중치에 곱해 실시간 조절)
-
-        const maData = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA)
-                       ? (LAST_FETCHED_DATA.marketAnalysis || null) : null;
-        const market = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.market)
-                       ? LAST_FETCHED_DATA.market : [];
-        const kRows  = market.filter(r => Number(r[3]) > 0);
-        const kClose = kRows.map(r => Number(r[3]));
-
-        // ★ 거래량 신뢰도 승수 — 설명 모달 약속대로 volApplied 지표(20일선·RSI·52주·외국인 수급)의
-        //    가중치를 실시간으로 조절. renderKospiVol()이 먼저 실행되어 window._kospiVolMult를 채움.
-        const volMult = (typeof window._kospiVolMult === 'number' && isFinite(window._kospiVolMult) && window._kospiVolMult > 0)
-                        ? window._kospiVolMult : 1;
-
-        let weightedSum = 0, weightTotal = 0, signals = [];
-
-        // ① 20일선 위/아래 (가중치 25 × 거래량 승수) — 위=강세(100), 아래=약세(0)
-        if (kClose.length >= 20) {
-            const ma20 = calcMA(kClose, 20);
-            const cur  = kClose[kClose.length - 1];
-            if (ma20 !== null) {
-                const s = cur >= ma20 ? 100 : 0;
-                weightedSum += s * 25 * volMult; weightTotal += 25 * volMult;
-                signals.push(cur >= ma20 ? '20일선 위✅' : '20일선 아래🔴');
-            }
-        }
-
-        // ② RSI(14) (가중치 20 × 거래량 승수) — 선형 매핑: RSI 그대로 0~100점
-        if (kClose.length >= 15) {
-            const rsiObj = calcRSI(kClose, 14);
-            if (rsiObj && rsiObj.rsi !== null) {
-                const rsi = rsiObj.rsi;
-                // RSI 50 기준 중립, 70+ 과열, 30- 과매도
-                // 점수 = RSI 값 그대로 (0~100)
-                weightedSum += rsi * 20 * volMult; weightTotal += 20 * volMult;
-                if (rsi >= 70) signals.push('RSI 과매수⚠️');
-                else if (rsi <= 30) signals.push('RSI 과매도🎯');
-            }
-        }
-
-        // ③ 52주 위치 (가중치 20 × 거래량 승수) — 위치% 그대로 점수화
-        if (kClose.length >= 50) {
-            const w52 = calc52Week(kClose);
-            if (w52 && w52.pct !== null) {
-                weightedSum += w52.pct * 20 * volMult; weightTotal += 20 * volMult;
-                if (w52.pct >= 80) signals.push('52주고점권⚠️');
-                else if (w52.pct <= 15) signals.push('52주저점권🎯');
-            }
-        }
-
-        // ④ VKOSPI (가중치 15) — 높을수록 공포 → 점수 반전 (100 - 정규화)
-        if (maData && maData.vkospi && maData.vkospi.value !== null) {
-            const v = Number(maData.vkospi.value);
-            // VKOSPI 정상범위 10~40, 극단 60+
-            // 낮을수록 안정(강세), 높을수록 공포(약세) → 점수 반전
-            const normalized = Math.min(100, Math.max(0, (v - 10) / 55 * 100));
-            const s = 100 - normalized;
-            weightedSum += s * 15; weightTotal += 15;
-            if (v >= 60) signals.push('VKOSPI 패닉🔴(' + v.toFixed(0) + ')');
-            else if (v >= 40) signals.push('VKOSPI 공포(' + v.toFixed(0) + ')');
-        }
-
-        // ⑤ 외국인 수급 — 삼성+하이닉스 (가중치 12 × 거래량 승수)
-        if (maData && maData.foreign) {
-            const ss = maData.foreign['005930'], sk = maData.foreign['000660'];
-            const ssVal = ss && ss.net5d !== null ? Number(ss.net5d) : null;
-            const skVal = sk && sk.net5d !== null ? Number(sk.net5d) : null;
-            if (ssVal !== null || skVal !== null) {
-                const bothBuy  = ssVal !== null && ssVal > 0 && skVal !== null && skVal > 0;
-                const bothSell = ssVal !== null && ssVal < 0 && skVal !== null && skVal < 0;
-                // 동반매수=100, 혼조=50, 동반매도=0
-                const s = bothBuy ? 100 : bothSell ? 0 : 50;
-                weightedSum += s * 12 * volMult; weightTotal += 12 * volMult;
-                if (bothBuy)  signals.push('외국인 동반매수📈');
-                else if (bothSell) signals.push('외국인 동반매도📉');
-            }
-        }
-
-        // ⑥ 신용융자잔고 — 2026-11-26 점수에서 뺌(5년 시험: 주가를 한 달 늦게 따라가고 앞날 예측력 없음). 카드에서 참고로만 표시
-
-        const score = weightTotal > 0 ? Math.round(weightedSum / weightTotal) : 50;
-        _applySignalBanner(score, signals, 'KR', 'linear-gradient(135deg,#1C1C2E 0%,#2C2C4E 100%)');
-    }
-
-    function renderSignalBannerUS() {
-        // US 종합신호 가중치:
-        //   ① S&P500 이동평균선  25% — 추세 확인
-        //   ② 나스닥 이동평균선   25% — 기술주 추세
-        //   ③ CNN 공포탐욕지수   20% — 심리 역발상
-        //   ④ 10년 국채금리      15% — 할인율/밸류에이션
-        //   ⑤ CPI 전년비         10% — Fed 정책 방향
-        //   ⑥ 실업률              5% — 경기 확인
-        const market = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.market)
-                       ? LAST_FETCHED_DATA.market : [];
-        const econ = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.econData)
-                     ? LAST_FETCHED_DATA.econData : null;
-
-        let weightedSum = 0, weightTotal = 0, signals = [];
-
-        const spCloses  = market.filter(r => Number(r[1]) > 0).map(r => Number(r[1]));
-        const nasCloses = market.filter(r => Number(r[2]) > 0).map(r => Number(r[2]));
-
-        // ① S&P500 이동평균선 (25%)
-        if (spCloses.length >= 20) {
-            const res = _calcMAScore(spCloses, [20, 50, 100, 125, 200]);
-            if (res.score !== null) {
-                const s = 100 - Math.round((res.score / 25) * 100);
-                weightedSum += s * 25; weightTotal += 25;
-                if (res.crossDownCount > 0) signals.push('S&P500 MA 하향돌파🔴');
-                else if (res.belowCount === 0) signals.push('S&P500 전선 위✅');
-                else if (res.belowCount === res.total) signals.push('S&P500 전선 아래📉');
-            }
-        }
-
-        // ② 나스닥 이동평균선 (25%)
-        if (nasCloses.length >= 20) {
-            const res = _calcMAScore(nasCloses, [20, 50, 100, 125, 200]);
-            if (res.score !== null) {
-                const s = 100 - Math.round((res.score / 25) * 100);
-                weightedSum += s * 25; weightTotal += 25;
-                if (res.crossDownCount > 0) signals.push('나스닥 MA 하향돌파🔴');
-                else if (res.belowCount === 0) signals.push('나스닥 전선 위✅');
-                else if (res.belowCount === res.total) signals.push('나스닥 전선 아래📉');
-            }
-        }
-
-        // ③ CNN 공포탐욕지수 (20%) — 역발상 (구간별 비선형)
-        if (_fngCache && _fngCache.value !== undefined) {
-            const fng = _fngCache.value;
-            let s;
-            if      (fng <= 25) s = 75 + (25 - fng);           // 극단공포: 75~100점
-            else if (fng <= 45) s = 55 + (45 - fng);           // 공포: 55~75점
-            else if (fng <= 55) s = 50;                         // 중립: 50점
-            else if (fng <= 75) s = 50 - (fng - 55);           // 탐욕: 30~50점
-            else                s = Math.max(0, 30 - (fng-75)); // 극단탐욕: 0~30점
-            weightedSum += s * 20; weightTotal += 20;
-            if (fng <= 25)      signals.push('극단공포🎯역발상(' + fng + ')');
-            else if (fng <= 45) signals.push('공포구간(' + fng + ')');
-            else if (fng >= 75) signals.push('극단탐욕🔴과열(' + fng + ')');
-            else if (fng >= 56) signals.push('탐욕구간(' + fng + ')');
-        }
-
-        // ④ 10년 국채금리 (15%) — 낮을수록 주식 우호
-        // 2%=90점, 3.5%=50점, 5%=10점
-        if (econ && econ.treasury10y && econ.treasury10y.value !== null) {
-            const r = econ.treasury10y.value;
-            let s;
-            if      (r <= 2)   s = 90;
-            else if (r <= 3.5) s = 90 - ((r - 2)   / 1.5) * 40;
-            else if (r <= 5)   s = 50 - ((r - 3.5) / 1.5) * 40;
-            else               s = Math.max(0, 10 - (r - 5) * 5);
-            s = Math.max(0, Math.min(100, Math.round(s)));
-            weightedSum += s * 15; weightTotal += 15;
-            if (r >= 5)        signals.push('국채금리 고위험🔴(' + r.toFixed(2) + '%)');
-            else if (r >= 4.5) signals.push('국채금리 부담⚠️(' + r.toFixed(2) + '%)');
-            else if (r <= 2)   signals.push('국채금리 우호🎯(' + r.toFixed(2) + '%)');
-        }
-
-        // ⑤ CPI 전년비 (10%) — 2% 목표 근접일수록 우호
-        // 2%=80점, 0%=50점, 5%=10점
-        if (econ && econ.cpiYoy && econ.cpiYoy.value !== null) {
-            const c = econ.cpiYoy.value;
-            let s;
-            if      (c < 0)  s = Math.max(0, 50 + c * 10);
-            else if (c <= 2) s = 50 + (c / 2) * 30;
-            else if (c <= 3) s = 80 - (c - 2) * 30;
-            else if (c <= 5) s = 50 - (c - 3) * 20;
-            else             s = Math.max(0, 10 - (c - 5) * 5);
-            s = Math.max(0, Math.min(100, Math.round(s)));
-            weightedSum += s * 10; weightTotal += 10;
-            if (c >= 5)        signals.push('CPI 고인플레🔴(' + c.toFixed(1) + '%)');
-            else if (c >= 3)   signals.push('CPI 목표초과⚠️(' + c.toFixed(1) + '%)');
-            else if (c <= 0)   signals.push('CPI 디플레위험(' + c.toFixed(1) + '%)');
-            else if (c <= 2.5) signals.push('CPI 목표근접✅(' + c.toFixed(1) + '%)');
-        }
-
-        // ⑥ 실업률 (5%) — 낮을수록 경기 강함
-        // 3.5%=90점, 4.5%=60점, 6%=10점
-        if (econ && econ.unemployment && econ.unemployment.value !== null) {
-            const u = econ.unemployment.value;
-            let s;
-            if      (u <= 3.5) s = 90;
-            else if (u <= 4.5) s = 90 - ((u - 3.5) / 1)   * 30;
-            else if (u <= 6)   s = 60 - ((u - 4.5) / 1.5) * 50;
-            else               s = Math.max(0, 10 - (u - 6) * 5);
-            s = Math.max(0, Math.min(100, Math.round(s)));
-            weightedSum += s * 5; weightTotal += 5;
-            if (u >= 6)        signals.push('실업률 위험🔴(' + u.toFixed(1) + '%)');
-            else if (u >= 5)   signals.push('실업률 경계⚠️(' + u.toFixed(1) + '%)');
-            else if (u <= 3.5) signals.push('완전고용🎯(' + u.toFixed(1) + '%)');
-        }
-
-        const score = weightTotal > 0 ? Math.round(weightedSum / weightTotal) : 50;
-        _applySignalBanner(score, signals, 'US', 'linear-gradient(135deg,#1C2E1C 0%,#2C4E2C 100%)');
-    }
-
-    function _applySignalBanner(score, signals, suffix, defaultGrad) {
-        // score 0~100: 높을수록 강세/과열, 낮을수록 약세/바닥권
-        let emoji, valueText, desc, bgGrad;
-        if (score >= 75) {
-            emoji = '🔴'; valueText = '과열 — 매수 자제';
-            desc = '대부분 지표가 과열을 가리킵니다. 고점 주의.';
-            bgGrad = 'linear-gradient(135deg,#3C0000 0%,#600000 100%)';
-        } else if (score >= 60) {
-            emoji = '⚠️'; valueText = '상승세 — 고점 주의';
-            desc = '강세 국면이나 과열 가능성을 점검하세요.';
-            bgGrad = 'linear-gradient(135deg,#3C1C00 0%,#5C3000 100%)';
-        } else if (score >= 42) {
-            emoji = '😐'; valueText = '중립 — 방향 탐색';
-            desc = '강세·약세 신호가 혼재합니다.';
-            bgGrad = defaultGrad;
-        } else if (score >= 28) {
-            emoji = '📉'; valueText = '약세 — 바닥권 접근';
-            desc = '약세 신호가 우세합니다. 일부 지표 저점 탐색 중.';
-            bgGrad = 'linear-gradient(135deg,#001a40 0%,#003060 100%)';
-        } else {
-            emoji = '🎯'; valueText = '강한 약세 — 바닥 신호';
-            desc = '여러 지표가 극단적 약세·공포를 가리킵니다.';
-            bgGrad = 'linear-gradient(135deg,#1a0050 0%,#2d0080 100%)';
-        }
-        const banner = document.getElementById('maSignalBanner' + suffix);
-        if (banner) banner.style.background = bgGrad;
-        const eEl = document.getElementById('maSignalEmoji' + suffix); if (eEl) eEl.textContent = emoji;
-        const vEl = document.getElementById('maSignalValue' + suffix); if (vEl) vEl.textContent = valueText;
-        const dEl = document.getElementById('maSignalDesc' + suffix);
-        if (dEl) dEl.textContent = desc + (signals.length ? ' (' + signals.slice(0, 3).join(', ') + ')' : '');
-        const arc = document.getElementById('maScoreArc' + suffix);
-        if (arc) arc.style.strokeDashoffset = 138.2 - (score / 100) * 138.2;
-        const num = document.getElementById('maScoreNum' + suffix); if (num) num.textContent = score;
-        window._mktSignal = window._mktSignal || {};                       // AI 분석 근거용(2026-10-10)
-        window._mktSignal[suffix] = { score: score, label: valueText, signals: signals.slice(0, 4) };
-    }
+    // 종합점수는 2026-11-26 삭제(구성 지표 모두 앞날 예측력 없음, 투자로그 58·60차). 부르는 곳이 여러 군데라 빈 함수로 남김
+    function renderSignalBannerKR() {}
+    function renderSignalBannerUS() {}
 
 
     window.onclick = function(event) {
@@ -7743,17 +7516,12 @@
             }
             rows[t] = r;
         });
-        // 시장 국면(앱 계산 점수) — 시장분석 탭을 안 열었어도 계산되게 한 번 그림
-        try { if (typeof renderSignalBannerKR === 'function') renderSignalBannerKR(); } catch (e) {}
         if ((typeof _fngCache === 'undefined' || !_fngCache) && typeof fetchFearGreed === 'function') {
             try { fetchFearGreed(); } catch (e) {}
             for (var w = 0; w < 16 && (typeof _fngCache === 'undefined' || !_fngCache); w++) await new Promise(function(r) { setTimeout(r, 250); });
         }
-        try { if (typeof renderSignalBannerUS === 'function') renderSignalBannerUS(); } catch (e) {}
-        var ms = window._mktSignal || {}, ma0 = (LAST_FETCHED_DATA && LAST_FETCHED_DATA.marketAnalysis) || {};
+        var ma0 = (LAST_FETCHED_DATA && LAST_FETCHED_DATA.marketAnalysis) || {};
         var market = {
-            kr: ms.KR ? ms.KR.score + '/100 (' + ms.KR.label + ')' : null,
-            us: ms.US ? ms.US.score + '/100 (' + ms.US.label + ')' : null,
             vkospi: ma0.vkospi && ma0.vkospi.value != null ? ma0.vkospi.value : null,
             fng: (typeof _fngCache !== 'undefined' && _fngCache && _fngCache.value != null) ? _fngCache.value : null,
             usd: fx
@@ -7840,8 +7608,8 @@
         L.push('기준일: ' + _aiTodayStr() + ' (현재가는 앱의 최근 시세, 차트 지표는 종가 기준)');
         L.push('=== 계좌 ===');
         L.push('총평가 ' + _aiWon(ex.total) + ' = 주식 ' + _aiWon(ex.stockKRW) + ' + 예수금 ' + _aiWon(ex.cashKRW) + ' (예수금 비율 ' + _aiRatio(ex.total ? ex.cashKRW / ex.total : 0) + ')');
-        L.push('=== 시장 국면 (앱이 계산한 점수, 0=약세·100=과열) ===');
-        L.push('국내 종합 ' + (ex.market.kr || '-') + ' · 미국 종합 ' + (ex.market.us || '-') + ' · VKOSPI ' + (ex.market.vkospi == null ? '-' : ex.market.vkospi) + ' · CNN 공포탐욕 ' + (ex.market.fng == null ? '-' : ex.market.fng) + ' · 원/달러 ' + Math.round(ex.market.usd).toLocaleString() + '원');
+        L.push('=== 시장 공포지수 (종합점수는 예측력이 없어 쓰지 않음) ===');
+        L.push('VKOSPI ' + (ex.market.vkospi == null ? '-' : ex.market.vkospi) + ' · CNN 공포탐욕 ' + (ex.market.fng == null ? '-' : ex.market.fng) + ' · 원/달러 ' + Math.round(ex.market.usd).toLocaleString() + '원');
         L.push('=== 보유 종목 (가격 단위: 국내=원, 해외=달러) ===');
         Object.keys(holdings).forEach(function(t) {
             var h = holdings[t], r = ex.rows[t] || {};
@@ -7892,7 +7660,7 @@
             '6. change_mind: 어떤 수치가 어떻게 바뀌면 판단을 바꿀지 구체적으로. vs_last: 지난 분석이 있으면 무엇이 달라졌는지, 없으면 "첫 분석".',
             '7. portfolio: 비중 쏠림·예수금 비율·시장 국면을 고려한 리밸런싱 제언. 문장은 짧고 쉽게.',
             '8. stocks에는 위 보유 종목을 모두, 같은 순서로 넣으세요.',
-            '9. druckenmiller: 아래 "드러켄밀러 원칙"만 근거로, 그가 이 계좌를 맡았다면 어떻게 했을지 쓰세요. stance=한 줄 총평, liquidity=유동성·시장 국면 판단(위 시장 점수 인용), sizing=확신·비중 판단(목표 비중 시장50·산업30·종목20 대비 현재 비중 인용), actions=구체적 행동 3~4개, avoid=그가 경고했을 실수 2~3개, horizon=18~24개월 앞을 본 관점. 원칙에 없는 말을 그의 말처럼 지어내지 마세요.',
+            '9. druckenmiller: 아래 "드러켄밀러 원칙"만 근거로, 그가 이 계좌를 맡았다면 어떻게 했을지 쓰세요. stance=한 줄 총평, liquidity=유동성·시장 국면 판단(위 공포지수 인용), sizing=확신·비중 판단(목표 비중 시장50·산업30·종목20 대비 현재 비중 인용), actions=구체적 행동 3~4개, avoid=그가 경고했을 실수 2~3개, horizon=18~24개월 앞을 본 관점. 원칙에 없는 말을 그의 말처럼 지어내지 마세요.',
             '', '=== 드러켄밀러 원칙(공개 발언 정리) ===', DRUCK_PRINCIPLES,
             forGemini ? '\n아래 JSON 스키마에 맞는 JSON만 출력하세요(설명·코드블록 없이):\n' + JSON.stringify(SA_SCHEMA) : ''
         ].join('\n');
@@ -7960,7 +7728,7 @@
             + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;"><span style="background:var(--bg);border:1px solid var(--border-color);border-radius:20px;padding:3px 11px;font-size:11px;color:var(--text-sub);">🕐 ' + meta.dateStr + '</span>'
             + '<span style="background:rgba(52,199,89,0.12);border-radius:20px;padding:3px 11px;font-size:11px;color:#1a7a35;font-weight:600;">✦ ' + _aiEsc(_aiModelLabel(meta.model)) + '</span>'
             + '<span style="background:var(--bg);border-radius:20px;padding:3px 11px;font-size:11px;color:var(--text-sub);">' + (meta.newsUsed ? '📰 최신 뉴스 반영' : '뉴스 미반영') + '</span></div>'
-            + (ex.market.kr || ex.market.us ? '<div style="font-size:11.5px;color:var(--text-sub);margin-top:8px;">시장 국면 · 국내 ' + _aiEsc(ex.market.kr || '-') + ' · 미국 ' + _aiEsc(ex.market.us || '-') + '</div>' : '') + '</div>';
+            + '</div>';
         var foot = '<div class="card" style="text-align:center;padding:10px;"><div style="font-size:11px;color:var(--text-sub);">' + _aiEsc(_aiModelLabel(meta.model)) + ' · 앱 데이터 기준 분석이며 투자 판단은 본인 책임입니다</div></div>';
         var dk = data.druckenmiller, dkCard = '';
         if (dk) {
