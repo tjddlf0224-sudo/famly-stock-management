@@ -527,6 +527,10 @@
         .dd-panel .dd-note { color: var(--text-sub); font-size: 11px; }
         #maNasDDTable td { white-space: nowrap; padding: 6px 4px; text-align: right; }
         #maNasDDTable td:first-child { text-align: left; }
+        #maKsDDDates { margin: 6px 0 8px; font-size: 12px; line-height: 1.5; }
+        #maKsDDDates .kd-r { display: flex; justify-content: space-between; gap: 8px; white-space: nowrap; }
+        #maKsDDDates .kd-r span:first-child { color: var(--text-sub); }
+        #maKsDDDates .kd-r span:last-child { text-align: right; }
         #maKsDDTable td { white-space: nowrap; padding: 6px 4px; text-align: right; }
         #maKsDDTable td:first-child { text-align: left; }
         .ma-update-notice { text-align: center; font-size: 11px; color: var(--text-sub); padding: 12px 0 4px; }
@@ -1038,6 +1042,7 @@
                 <div class="ma-card-unit">%</div>
             </div>
             <div class="ma-card-updated" id="maKsDDUpdated">불러오는 중...</div>
+            <div id="maKsDDDates" style="display:none"></div>
             <table class="ma-range-table" id="maKsDDTable">
                 <tr style="color:var(--text-sub);font-size:11px;"><td>낙폭</td><td>횟수</td><td>1년 승률</td><td>1년 평균</td><td>2년 승률</td><td>회복</td></tr>
                 <tr data-t="10"><td>-10%</td><td>12번</td><td>17%</td><td>-17.0%</td><td>25%</td><td>0.6년</td></tr>
@@ -6329,6 +6334,7 @@
     }
     const KS_DD_STATS = [{"t": 10, "n": 12, "w1": 17, "a1": -17.0, "w2": 25, "rec": 0.6, "rmin": 0.0, "rmax": 5.7, "rn": 14, "bmax": 21, "h": {"3m": {"n": 15, "w": 40, "a": 3.5}, "6m": {"n": 13, "w": 62, "a": 4.0}, "1y": {"n": 12, "w": 17, "a": -17.0}, "2y": {"n": 12, "w": 25, "a": -5.3}}}, {"t": 20, "n": 7, "w1": 29, "a1": -19.0, "w2": 86, "rec": 2.9, "rmin": 0.2, "rmax": 5.7, "rn": 7, "bmax": 19, "h": {"3m": {"n": 8, "w": 62, "a": -3.6}, "6m": {"n": 7, "w": 29, "a": -3.6}, "1y": {"n": 7, "w": 29, "a": -19.0}, "2y": {"n": 7, "w": 86, "a": 5.9}}}, {"t": 30, "n": 5, "w1": 60, "a1": 11.1, "w2": 100, "rec": 2.3, "rmin": 0.7, "rmax": 5.2, "rn": 5, "bmax": 17, "h": {"3m": {"n": 6, "w": 33, "a": -0.6}, "6m": {"n": 5, "w": 20, "a": -8.7}, "1y": {"n": 5, "w": 60, "a": 11.1}, "2y": {"n": 5, "w": 100, "a": 39.5}}}, {"t": 40, "n": 4, "w1": 50, "a1": 26.3, "w2": 75, "rec": 1.9, "rmin": 0.7, "rmax": 4.8, "rn": 4, "bmax": 12, "h": {"3m": {"n": 4, "w": 50, "a": 9.3}, "6m": {"n": 4, "w": 50, "a": 9.4}, "1y": {"n": 4, "w": 50, "a": 26.3}, "2y": {"n": 4, "w": 75, "a": 61.2}}}, {"t": 45, "n": 3, "w1": 67, "a1": 15.1, "w2": 100, "rec": 2.2, "rmin": 1.4, "rmax": 4.8, "rn": 3, "bmax": 12, "h": {"3m": {"n": 3, "w": 33, "a": 4.1}, "6m": {"n": 3, "w": 33, "a": -4.1}, "1y": {"n": 3, "w": 67, "a": 15.1}, "2y": {"n": 3, "w": 100, "a": 67.2}}}, {"t": 50, "n": 3, "w1": 100, "a1": 40.8, "w2": 100, "rec": 2.2, "rmin": 1.4, "rmax": 4.8, "rn": 3, "bmax": 11, "h": {"3m": {"n": 3, "w": 100, "a": 24.4}, "6m": {"n": 3, "w": 67, "a": 8.8}, "1y": {"n": 3, "w": 100, "a": 40.8}, "2y": {"n": 3, "w": 100, "a": 90.5}}}]; // 코스피(^KS11) 1996-12~: 고점 대비 처음 t% 빠진 날(신고점마다 다시 장전) → 1년 뒤 승률 w1%·평균 a1%, 2년 뒤 승률 w2%, rec=전고점 회복 중앙 년·rmin/rmax 최단/최장·rn 회복 횟수·bmax 바닥까지 최대 개월
     function renderKospiDD() {
+        const dEl = document.getElementById('maKsDDDates'); if (dEl) { dEl.style.display = 'none'; dEl.innerHTML = ''; }
         const set = (id, t) => { const e = document.getElementById(id); if (e) e.textContent = t; };
         const clear = () => document.querySelectorAll('#maKsDDTable tr[data-t]').forEach(tr => { tr.style.fontWeight = ''; tr.style.background = ''; });
         const market = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.market) ? LAST_FETCHED_DATA.market : [];
@@ -6359,6 +6365,33 @@
         const hit = KS_DD_STATS.filter(s => dd <= -s.t).pop();
         maSetBadge('maKsDDBadge', hit ? '-' + hit.t + '% 선 넘음' : '10% 미만', 'ma-info');
         document.querySelectorAll('#maKsDDTable tr[data-t]').forEach(tr => { const on = hit && Number(tr.dataset.t) === hit.t; tr.style.fontWeight = on ? '700' : ''; tr.style.background = on ? 'rgba(142,142,147,0.15)' : ''; });
+        if (dEl && hit) {
+            const ymd = x => {
+                const q = String(x == null ? '' : x);
+                const m = q.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                if (m) return Date.UTC(+m[1], +m[2] - 1, +m[3]);
+                const d = new Date(q);
+                if (isNaN(d.getTime())) return NaN;
+                const k = new Date(d.getTime() + 9 * 3600 * 1000);
+                return Date.UTC(k.getUTCFullYear(), k.getUTCMonth(), k.getUTCDate());
+            };
+            const hiT = ymd(hiRow[0]);
+            const lim = hi * (1 - hit.t / 100);
+            let crT = NaN;
+            for (let i = rows.indexOf(hiRow) + 1; i < rows.length; i++) { if (Number(rows[i][3]) <= lim) { crT = ymd(rows[i][0]); break; } }
+            if (!isNaN(hiT) && !isNaN(crT)) {
+                const addY = (t, n) => { const d = new Date(t); const y = d.getUTCFullYear() + n, mo = d.getUTCMonth(), dy = d.getUTCDate(); const r = new Date(Date.UTC(y, mo, dy)); return r.getUTCMonth() !== mo ? Date.UTC(y, mo, 28) : r.getTime(); };
+                const addD = (t, n) => t + Math.round(n) * 86400000;
+                const p2 = n => String(n).padStart(2, '0');
+                const f = t => { const d = new Date(t); return d.getUTCFullYear() + '.' + p2(d.getUTCMonth() + 1) + '.' + p2(d.getUTCDate()); };
+                const fm = t => f(t).slice(0, 7);
+                const recT = addD(crT, hit.rec * 365.25);
+                const R = (l, v) => '<div class="kd-r"><span>' + l + '</span><span>' + v + '</span></div>';
+                dEl.innerHTML = R(hit.t + '% 선 넘은 날', f(crT)) + R('고점 1년 뒤', f(addY(hiT, 1))) + R('1년 뒤', f(addY(crT, 1))) + R('2년 뒤', f(addY(crT, 2)))
+                    + R('회복 예상', f(recT) + ' (' + fm(addD(crT, hit.rmin * 365.25)) + '~' + fm(addD(crT, hit.rmax * 365.25)) + ')');
+                dEl.style.display = '';
+            }
+        }
         ddPanelRender('maKsDD', 'ks', { buy: ddBuyHTML(hit, KS_DD_BASE, 10), sell: ddSellHTML('ks', null) }, renderKospiDD, ddSignal(hit, KS_DD_BASE));
     }
     function renderUSMA() {
