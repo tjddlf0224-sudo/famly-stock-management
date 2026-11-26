@@ -509,8 +509,15 @@
         .ma-fear   { --ma-accent: #007AFF; color: #007AFF; }
         .ma-panic  { --ma-accent: #5856D6; color: #5856D6; }
         .ma-info   { --ma-accent: #8E8E93; color: #8E8E93; }
-        .dd-btns { display: inline-flex; margin: 2px 0 8px; }
-        .dd-btns button { width: 74px; }
+        .dd-sig { margin: 2px 0 8px; }
+        .dd-sig-row { display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
+        .dd-sig-lab { font-size: 12px; color: var(--text-sub); width: 78px; flex: none; white-space: nowrap; }
+        .dd-sig-row button { flex: 1 1 0; min-width: 0; padding: 6px 0; border: 0; border-radius: 8px; font-size: 13px; background: rgba(120,120,128,0.15); color: var(--text-sub); opacity: 0.45; font-weight: 400; cursor: pointer; }
+        .dd-sig-row button.lit { opacity: 1; color: #fff; font-weight: 700; }
+        .dd-sig-row button.lit[data-v="buy"] { background: #FF3B30; }
+        .dd-sig-row button.lit[data-v="hold"] { background: #8E8E93; }
+        .dd-sig-row button.lit[data-v="sell"] { background: #007AFF; }
+        .dd-sig-note { font-size: 11px; color: var(--text-sub); }
         .dd-panel { display: none; margin: 4px 0 10px; padding: 8px 10px; border-radius: 10px; background: rgba(120,120,128,0.08); font-size: 12px; line-height: 1.5; color: var(--text-main); }
         .dd-panel table { width: 100%; border-collapse: collapse; margin: 6px 0; }
         .dd-panel td { white-space: nowrap; padding: 4px 2px; text-align: right; }
@@ -1018,9 +1025,10 @@
                 <div class="ma-card-name">📉 코스피 고점 대비</div>
                 <div class="ma-card-badge" id="maKsDDBadge">-</div>
             </div>
-            <div class="fng-range dd-btns" id="maKsDDBtns">
-                <button type="button" id="maKsDDBuy" data-k="buy">📈 매수</button>
-                <button type="button" id="maKsDDSell" data-k="sell">📉 매도</button>
+            <div class="dd-sig" id="maKsDDSig">
+                <div class="dd-sig-row"><span class="dd-sig-lab">단기 3~6개월</span><button type="button" data-g="s" data-v="buy">매수</button><button type="button" data-g="s" data-v="hold">관망</button><button type="button" data-g="s" data-v="sell">매도</button></div>
+                <div class="dd-sig-row"><span class="dd-sig-lab">장기 1~2년</span><button type="button" data-g="l" data-v="buy">매수</button><button type="button" data-g="l" data-v="hold">관망</button><button type="button" data-g="l" data-v="sell">매도</button></div>
+                <div class="dd-sig-note">과거 통계 기준 표시 · 판단은 직접</div>
             </div>
             <div class="dd-panel" id="maKsDDPanel"></div>
             <div class="ma-card-value-row">
@@ -1310,9 +1318,10 @@
                 <div class="ma-card-name">📉 나스닥100 고점 대비</div>
                 <div class="ma-card-badge" id="maNasDDBadge">-</div>
             </div>
-            <div class="fng-range dd-btns" id="maNasDDBtns">
-                <button type="button" id="maNasDDBuy" data-k="buy">📈 매수</button>
-                <button type="button" id="maNasDDSell" data-k="sell">📉 매도</button>
+            <div class="dd-sig" id="maNasDDSig">
+                <div class="dd-sig-row"><span class="dd-sig-lab">단기 3~6개월</span><button type="button" data-g="s" data-v="buy">매수</button><button type="button" data-g="s" data-v="hold">관망</button><button type="button" data-g="s" data-v="sell">매도</button></div>
+                <div class="dd-sig-row"><span class="dd-sig-lab">장기 1~2년</span><button type="button" data-g="l" data-v="buy">매수</button><button type="button" data-g="l" data-v="hold">관망</button><button type="button" data-g="l" data-v="sell">매도</button></div>
+                <div class="dd-sig-note">과거 통계 기준 표시 · 판단은 직접</div>
             </div>
             <div class="dd-panel" id="maNasDDPanel"></div>
             <div class="ma-card-value-row">
@@ -6179,17 +6188,32 @@
             : '과열 경고 꺼짐 (200일선 +25% 이상일 때 켜짐)');
         return out + '<br>' + tail + ' — 과열 뒤에도 평균은 올랐음. 매도는 목표가·비중 규칙으로.';
     }
-    function ddPanelRender(p, kind, html, rerender) {
-        const buy = document.getElementById(p + 'Buy'), sell = document.getElementById(p + 'Sell'), panel = document.getElementById(p + 'Panel'), box = document.getElementById(p + 'Btns');
-        const open = DD_OPEN[kind];
-        if (buy) buy.classList.toggle('on', open === 'buy');
-        if (sell) sell.classList.toggle('on', open === 'sell');
-        if (box) box.onclick = ev => {
-            const k = ev && ev.target && ev.target.dataset ? ev.target.dataset.k : null;
-            if (k !== 'buy' && k !== 'sell') return;
-            DD_OPEN[kind] = DD_OPEN[kind] === k ? null : k;
-            rerender();
+    // 신호등: 기간 묶음(단기 3m·6m / 장기 1y·2y)별 매수·관망·매도 중 하나만 켬 (과거 통계 기준 표시)
+    function ddSignal(hit, base, nasGap) {
+        const grp = ks => {
+            if (!hit) return 'hold';
+            let good = 0, bad = 0;
+            ks.forEach(k => { const t = ddVerdictOf(hit.h[k], base[k]).t; if (t.indexOf('유리') >= 0 && t.indexOf('불리') < 0) good++; else if (t.indexOf('불리') >= 0) bad++; });
+            return (good > 0 && bad === 0) ? 'buy' : 'hold';
         };
+        const sig = { s: grp(['3m', '6m']), l: grp(['1y', '2y']) };
+        if (nasGap !== undefined && nasGap !== null && nasGap !== '' && isFinite(Number(nasGap)) && Number(nasGap) >= 0.25) sig.s = 'sell';
+        return sig;
+    }
+    function ddPanelRender(p, kind, html, rerender, sig) {
+        const box = document.getElementById(p + 'Sig'), panel = document.getElementById(p + 'Panel');
+        const open = DD_OPEN[kind];
+        if (box) {
+            box.style.display = sig ? '' : 'none';
+            box.querySelectorAll('button[data-g]').forEach(b => { b.classList.toggle('lit', !!sig && sig[b.dataset.g] === b.dataset.v); });
+            box.onclick = ev => {
+                const v = ev && ev.target && ev.target.dataset ? ev.target.dataset.v : null;
+                if (!v) return;
+                const k = v === 'sell' ? 'sell' : 'buy';
+                DD_OPEN[kind] = DD_OPEN[kind] === k ? null : k;
+                rerender();
+            };
+        }
         if (panel) {
             if (open) { panel.innerHTML = html[open]; panel.style.display = 'block'; }
             else { panel.innerHTML = ''; panel.style.display = 'none'; }
@@ -6206,7 +6230,7 @@
             const g0 = document.getElementById('maNasDDGap'); if (g0) g0.style.display = 'none';
             maSetBadge('maNasDDBadge', '자료 없음', 'ma-info');
             document.querySelectorAll('#maNasDDTable tr[data-t]').forEach(tr => { tr.style.fontWeight = ''; tr.style.background = ''; });
-            ddPanelRender('maNasDD', 'nas', { buy: '시세를 못 불러왔어요', sell: ddSellHTML('nas', null) }, renderNasDD);
+            ddPanelRender('maNasDD', 'nas', { buy: '시세를 못 불러왔어요', sell: ddSellHTML('nas', null) }, renderNasDD, null);
             return;
         }
         const cur = Number(nd.close), hi = Number(nd.high);
@@ -6218,7 +6242,7 @@
         maSetBadge('maNasDDBadge', hit ? '-' + hit.t + '% 선 넘음' : '5% 미만', 'ma-info');
         set('maNasDDSummary', hit ? '과거 ' + hit.t + '% 넘게 빠졌을 때 1년 뒤 오른 비율 ' + hit.w1 + '% (' + hit.n + '번, 평균 ' + (hit.a1 >= 0 ? '+' : '') + hit.a1 + '%)' : '고점 대비 5% 미만 하락');
         document.querySelectorAll('#maNasDDTable tr[data-t]').forEach(tr => { const on = hit && Number(tr.dataset.t) === hit.t; tr.style.fontWeight = on ? '700' : ''; tr.style.background = on ? 'rgba(142,142,147,0.15)' : ''; });
-        ddPanelRender('maNasDD', 'nas', { buy: ddBuyHTML(hit, NAS_DD_BASE, 5), sell: ddSellHTML('nas', nd) }, renderNasDD);
+        ddPanelRender('maNasDD', 'nas', { buy: ddBuyHTML(hit, NAS_DD_BASE, 5), sell: ddSellHTML('nas', nd) }, renderNasDD, ddSignal(hit, NAS_DD_BASE, nd.gap200));
         const gEl = document.getElementById('maNasDDGap');
         if (gEl) {
             const g = (nd.gap200 === null || nd.gap200 === undefined || nd.gap200 === '') ? NaN : Number(nd.gap200);
@@ -6241,7 +6265,7 @@
             const r0 = document.getElementById('maKsDDRec'); if (r0) r0.style.display = 'none';
             maSetBadge('maKsDDBadge', '자료 없음', 'ma-info');
             clear();
-            ddPanelRender('maKsDD', 'ks', { buy: '자료를 못 불러왔어요', sell: ddSellHTML('ks', null) }, renderKospiDD);
+            ddPanelRender('maKsDD', 'ks', { buy: '자료를 못 불러왔어요', sell: ddSellHTML('ks', null) }, renderKospiDD, null);
             return;
         }
         let hiRow = rows[0];
@@ -6263,7 +6287,7 @@
         maSetBadge('maKsDDBadge', hit ? '-' + hit.t + '% 선 넘음' : '10% 미만', 'ma-info');
         set('maKsDDSummary', hit ? '과거 ' + hit.t + '% 넘게 빠졌을 때 1년 뒤 오른 비율 ' + hit.w1 + '% (' + hit.n + '번, 평균 ' + (hit.a1 >= 0 ? '+' : '') + hit.a1.toFixed(1) + '%) · 2년 뒤 ' + hit.w2 + '%' : '고점 대비 10% 미만 하락');
         document.querySelectorAll('#maKsDDTable tr[data-t]').forEach(tr => { const on = hit && Number(tr.dataset.t) === hit.t; tr.style.fontWeight = on ? '700' : ''; tr.style.background = on ? 'rgba(142,142,147,0.15)' : ''; });
-        ddPanelRender('maKsDD', 'ks', { buy: ddBuyHTML(hit, KS_DD_BASE, 10), sell: ddSellHTML('ks', null) }, renderKospiDD);
+        ddPanelRender('maKsDD', 'ks', { buy: ddBuyHTML(hit, KS_DD_BASE, 10), sell: ddSellHTML('ks', null) }, renderKospiDD, ddSignal(hit, KS_DD_BASE));
         const rEl = document.getElementById('maKsDDRec');
         if (rEl) {
             if (hit) {
