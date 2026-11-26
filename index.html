@@ -508,6 +508,7 @@
         .ma-hot    { --ma-accent: #FF3B30; color: #FF3B30; }
         .ma-fear   { --ma-accent: #007AFF; color: #007AFF; }
         .ma-panic  { --ma-accent: #5856D6; color: #5856D6; }
+        .ma-info   { --ma-accent: #8E8E93; color: #8E8E93; }
         .ma-update-notice { text-align: center; font-size: 11px; color: var(--text-sub); padding: 12px 0 4px; }
         /* RSI + 52주 카드 */
         .rsi-bar-wrap { margin: 10px 0 4px; height: 8px; border-radius: 4px; background: linear-gradient(to right, #007AFF 0%, #34C759 30%, #FFCC00 50%, #FF9500 70%, #FF3B30 100%); position: relative; }
@@ -1062,8 +1063,8 @@
             <div class="ma-chart-wrap"><canvas id="maKospiMAChart"></canvas></div>
         </div>
 
-        <!-- ③ 신용융자잔고 -->
-        <div class="ma-card" id="maCreditCard">
+        <!-- ③ 신용융자잔고 (2026-11-26: 코스피만·지수 대비 비율·점수 미반영) -->
+        <div class="ma-card ma-info" id="maCreditCard">
             <div class="ma-card-top">
                 <div class="ma-card-name">💳 코스피 신용융자잔고</div>
                 <div class="ma-card-badge" id="maCreditBadge">-</div>
@@ -1075,22 +1076,20 @@
             <div class="ma-card-updated" id="maCreditUpdated">GAS market 시트에서 가져오는 중...</div>
             <div class="ma-chart-wrap"><canvas id="maCreditChart"></canvas></div>
             <div class="ma-spectrum">
-                <div class="ma-spectrum-track" style="background: linear-gradient(to right, #5856D6 0%, #007AFF 15%, #34C759 35%, #FFCC00 60%, #FF9500 80%, #FF3B30 100%);">
+                <div class="ma-spectrum-track" style="background: linear-gradient(to right, #C7C7CC 0%, #8E8E93 100%);">
                     <div class="ma-spectrum-thumb" id="maCreditThumb" style="left:0%"></div>
                 </div>
                 <div class="ma-spectrum-labels">
-                    <span class="ma-spectrum-label">0</span><span class="ma-spectrum-label">5조</span>
-                    <span class="ma-spectrum-label">8조</span><span class="ma-spectrum-label">11조</span>
-                    <span class="ma-spectrum-label">14조+</span>
+                    <span class="ma-spectrum-label">3.2</span><span class="ma-spectrum-label">3.6</span>
+                    <span class="ma-spectrum-label">3.9</span><span class="ma-spectrum-label">4.3</span>
+                    <span class="ma-spectrum-label">4.6</span>
                 </div>
             </div>
             <table class="ma-range-table" id="maCreditTable">
-                <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>~5조</td><td>극도침체</td><td>🎯 바닥권 신호</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#007AFF"></span>5~8조</td><td>침체</td><td>투자심리 위축</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#34C759"></span>8~11조</td><td>정상</td><td>코스피 역사적 평균</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF9500"></span>11~14조</td><td>과열주의</td><td>빚투 증가, 조정 리스크</td></tr>
-                <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>14조+</td><td>과열</td><td>⚠️ 역대 최고치 수준</td></tr>
+                <tr><td>지수 대비 빚</td><td id="maCreditRatio">-</td><td>5년 범위 3.2~4.6</td></tr>
+                <tr><td>20일 변화</td><td id="maCreditChg">-</td><td>빚이 늘었나 줄었나</td></tr>
             </table>
+            <div class="ma-card-updated">참고용 · 종합점수 미반영 (주가를 늦게 따라감)</div>
         </div>
         <!-- ④ 외국인 수급 -->
         <div class="ma-card" id="maForeignCard">
@@ -6601,10 +6600,21 @@
 
     function renderCredit(data){
         if(!data||data.value===undefined||data.value===null){maNoData('maCreditValue','maCreditUpdated');maSetBadge('maCreditBadge','데이터없음','');return;}
-        const v=Number(data.value); document.getElementById('maCreditValue').textContent=v.toFixed(1); document.getElementById('maCreditUpdated').textContent='업데이트: '+fmtDateSlash(data.updated||'-');
-        let label,colorClass,activeIdx; if(v<5){label='침체 바닥 🎯';colorClass='ma-panic';activeIdx=0;} else if(v<8){label='침체 📉';colorClass='ma-fear';activeIdx=1;} else if(v<11){label='정상 ✅';colorClass='ma-cool';activeIdx=2;} else if(v<14){label='과열 주의 ⚠️';colorClass='ma-warn';activeIdx=3;} else{label='과열 🔴';colorClass='ma-hot';activeIdx=4;}
-        maSetCard('maCreditCard',colorClass); maSetBadge('maCreditBadge',label,colorClass); maHighlightRange('maCreditTable',activeIdx);
-        const thumb=document.getElementById('maCreditThumb'); if(thumb) thumb.style.left=maThumbPos(v,0,18);
+        const v=Number(data.value); document.getElementById('maCreditValue').textContent=v.toFixed(1);
+        // 지수 대비 빚 = 신용잔고(조) ÷ 그날(또는 직전) 코스피 × 1000. 2021-11~2026-11 범위 3.2~4.6, 10/30/70/90% = 3.57/3.78/4.06/4.27
+        const dk=x=>{const m=String(x||'').match(/^(\d{4})[-.\/](\d{2})[-.\/](\d{2})/); if(m) return m[1]+m[2]+m[3]; const d=new Date(x); return isNaN(d)?'':''+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');};
+        const t=dk(data.updated); let k=null;
+        (MARKET_DATA||[]).forEach(b=>{const bd=dk(b.date); if(b.kospi>0&&bd&&bd<=t) k=b.kospi;});
+        const r=k?v/k*1000:null;
+        const hist=(typeof LAST_FETCHED_DATA!=='undefined'&&LAST_FETCHED_DATA)?LAST_FETCHED_DATA.marketAnalysisHistory:null;
+        const cs=hist&&hist.credit?hist.credit.filter(x=>x!==null&&x!==undefined):[];
+        const chg=cs.length>20?v/cs[cs.length-21]-1:null;
+        document.getElementById('maCreditUpdated').textContent='업데이트: '+fmtDateSlash(data.updated||'-');
+        const rEl=document.getElementById('maCreditRatio'); if(rEl) rEl.textContent=r?r.toFixed(2):'-';
+        const cEl=document.getElementById('maCreditChg'); if(cEl){cEl.textContent=chg===null?'-':(chg>0?'+':'')+(chg*100).toFixed(1)+'%'; cEl.style.color=chg===null?'':(chg>0?'var(--up)':'var(--down)');}
+        const label=r===null?'-':r<3.57?'빚 적은 편':r<3.78?'조금 적음':r<4.06?'보통':r<4.27?'조금 많음':'빚 많은 편';
+        maSetCard('maCreditCard','ma-info'); maSetBadge('maCreditBadge',label,'ma-info');
+        const thumb=document.getElementById('maCreditThumb'); if(thumb) thumb.style.left=r?maThumbPos(r,3.17,4.62):'50%';
     }
     function renderCreditChart(hist){
         const canvas = document.getElementById('maCreditChart');
@@ -6687,7 +6697,7 @@
     //
     // KR 지표 (각 25점):
     //   ① VKOSPI          : 0(안정) ~ 25(패닉60+)
-    //   ② 신용융자잔고      : 0(과열) ~ 25(극침체)
+    //   ② 신용융자잔고      : 2026-11-26 제외(예측력 없음, 카드 참고용)
     //   ③ 외국인 수급       : 0(동반매도) ~ 25(동반매수) — 데이터 없으면 제외
     //   ④ A/D Ratio        : 0(과열70%+) ~ 25(극공포~20%)
     //   ⑤ 코스피 이동평균선 : 0(전선 위) ~ 25(전선 아래+돌파)
@@ -6730,7 +6740,7 @@
     function renderSignalBannerKR() {
         // ★ v61: 6개 지표 가중 평균 종합 신호
         // 점수 0~100: 높을수록 강세/과열, 낮을수록 약세/바닥권
-        // 가중치: 20일선25% | RSI20% | 52주위치20% | VKOSPI15% | 외국인수급12% | 신용잔고8%
+        // 가중치(원점수): 20일선25 | RSI20 | 52주위치20 | VKOSPI15 | 외국인수급12 (신용잔고는 2026-11-26 제외, 합계 92로 정규화)
         // (20일선·RSI·52주·외국인 수급 4개는 거래량 신뢰도 승수를 가중치에 곱해 실시간 조절)
 
         const maData = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA)
@@ -6809,17 +6819,7 @@
             }
         }
 
-        // ⑥ 신용융자잔고 (가중치 8) — 높을수록 과열(약세), 낮을수록 안전
-        if (maData && maData.creditBalance && maData.creditBalance.value !== null) {
-            const v = Number(maData.creditBalance.value);
-            // 정상 8~14조, 과열 18조+, 바닥 5조 이하
-            // 높을수록 약세 → 반전
-            const normalized = Math.min(100, Math.max(0, (v - 5) / 20 * 100));
-            const s = 100 - normalized;
-            weightedSum += s * 8; weightTotal += 8;
-            if (v >= 18) signals.push('신용잔고 과열🔴(' + v.toFixed(1) + '조)');
-            else if (v <= 7) signals.push('신용잔고 낮음✅');
-        }
+        // ⑥ 신용융자잔고 — 2026-11-26 점수에서 뺌(5년 시험: 주가를 한 달 늦게 따라가고 앞날 예측력 없음). 카드에서 참고로만 표시
 
         const score = weightTotal > 0 ? Math.round(weightedSum / weightTotal) : 50;
         _applySignalBanner(score, signals, 'KR', 'linear-gradient(135deg,#1C1C2E 0%,#2C2C4E 100%)');
@@ -6989,18 +6989,16 @@
         KR: {
             title: '🇰🇷 국내 시장 종합신호 — 가중치',
             items: [
-                { icon: '📈', name: '코스피 이동평균선', pct: 25, max: 25,
+                { icon: '📈', name: '코스피 이동평균선', pct: 27, max: 25,
                   desc: '20일선 기준 위/아래. 거래량 승수 적용 — 고거래량 시 신호 강화', volApplied: true },
-                { icon: '💹', name: 'RSI (14일)', pct: 20, max: 25,
+                { icon: '💹', name: 'RSI (14일)', pct: 22, max: 25,
                   desc: 'RSI 0~100을 점수로 직접 반영. 30↓ 과매도, 70↑ 과매수. 거래량 승수 적용', volApplied: true },
-                { icon: '📊', name: '52주 고저 위치', pct: 20, max: 25,
+                { icon: '📊', name: '52주 고저 위치', pct: 22, max: 25,
                   desc: '52주 최고가~최저가 사이 현재 위치(%). 거래량 승수 적용', volApplied: true },
-                { icon: '😰', name: 'VKOSPI', pct: 15, max: 25,
+                { icon: '😰', name: 'VKOSPI', pct: 16, max: 25,
                   desc: '변동성지수. 높을수록 공포→점수 반전. 파생상품 기반으로 거래량 승수 미적용', volApplied: false },
-                { icon: '🏦', name: '외국인 핵심 수급', pct: 12, max: 25,
+                { icon: '🏦', name: '외국인 핵심 수급', pct: 13, max: 25,
                   desc: '삼성전자+SK하이닉스 5일 순매수. 동반매수=100점. 거래량 승수 적용', volApplied: true },
-                { icon: '💳', name: '신용융자잔고', pct: 8, max: 25,
-                  desc: '높을수록 과열→점수 반전. 주간 단위 지표로 거래량 승수 미적용', volApplied: false },
             ]
         },
         US: {
