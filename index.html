@@ -301,7 +301,9 @@
             position: relative; width: 100%; height: 440px;
             touch-action: pan-y; user-select: none;   /* 세로 스와이프 = 페이지 스크롤, 가로·핀치 = 차트 */
         }
-        .ohlc-line { padding: 2px 16px 4px; font-size: 10.5px; color: var(--text-sub); min-height: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+        .ohlc-line { padding: 2px 16px 4px; font-size: 10.5px; color: var(--text-sub); min-height: 15px; white-space: normal; line-height: 1.5; font-variant-numeric: tabular-nums; }
+        .ohlc-chg { white-space: nowrap; font-weight: 600; }
+        .hl-lbl { position: absolute; z-index: 3; pointer-events: none; font-size: 11px; font-weight: 600; line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums; text-shadow: 0 0 3px var(--card-bg), 0 0 3px var(--card-bg); }
         .candle-empty { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; justify-content: center; color: var(--text-sub); font-size: 13px; background: var(--card-bg); }
         .tv-credit { padding: 6px 16px 10px; font-size: 9.5px; color: var(--text-sub); text-align: right; opacity: 0.8; }
         .tv-credit a { color: var(--text-sub); }
@@ -1036,8 +1038,6 @@
                 <div class="ma-card-unit">%</div>
             </div>
             <div class="ma-card-updated" id="maKsDDUpdated">불러오는 중...</div>
-            <div class="ma-ma-summary" id="maKsDDSummary">-</div>
-            <div class="ma-card-updated" id="maKsDDRec" style="display:none"></div>
             <table class="ma-range-table" id="maKsDDTable">
                 <tr style="color:var(--text-sub);font-size:11px;"><td>낙폭</td><td>횟수</td><td>1년 승률</td><td>1년 평균</td><td>2년 승률</td><td>회복</td></tr>
                 <tr data-t="10"><td>-10%</td><td>12번</td><td>17%</td><td>-17.0%</td><td>25%</td><td>0.6년</td></tr>
@@ -4702,6 +4702,7 @@
             _tv.candle.setData([]); _tv.vol.setData([]);
             _tv.maSeries.forEach(s => s.setData([]));
             _tv.markers.setMarkers([]);
+            if (_tv.hiEl) { _tv.hiEl.style.display = 'none'; _tv.loEl.style.display = 'none'; }
         }
     }
 
@@ -4825,7 +4826,61 @@
             ? (v >= 100000 ? (v / 1e4).toLocaleString('ko-KR', { maximumFractionDigits: 1 }) + '만' : Math.round(v).toLocaleString('ko-KR'))
             : '$' + Number(v).toFixed(2);
         const col = b.close >= b.open ? CANDLE_UP : CANDLE_DOWN;
-        el.innerHTML = `시 ${k(b.open)} · 고 ${k(b.high)} · 저 ${k(b.low)} · <b style="color:${col}">종 ${_fmtChartPrice(b.close, kr)}${kr ? '원' : ''}</b>`;
+        // 전봉 종가 대비 증감 (보이는 봉 기준 · 주/월봉이면 전주/전월 대비)
+        let chg = '';
+        const idx = _tv.barIdx ? _tv.barIdx[b.time] : undefined;
+        if (idx !== undefined && idx > 0) {
+            const prev = _tv.bars[idx - 1].close, diff = b.close - prev;
+            const pct = prev ? diff / prev * 100 : 0;
+            const c2 = diff > 0 ? 'var(--up)' : diff < 0 ? 'var(--down)' : 'var(--text-sub)';
+            const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '';
+            const amt = kr ? Math.round(Math.abs(diff)).toLocaleString('ko-KR') : '$' + Math.abs(diff).toFixed(2);
+            chg = ` <span class="ohlc-chg" style="color:${c2}">${arrow}${amt} (${_fmtPct(pct)})</span>`;
+        }
+        el.innerHTML = `시 ${k(b.open)} · 고 ${k(b.high)} · 저 ${k(b.low)} · <b style="color:${col}">종 ${_fmtChartPrice(b.close, kr)}${kr ? '원' : ''}</b>${chg}`;
+    }
+
+    // 등락률 문자열: +2.43% / −2.43% / 0.00%
+    function _fmtPct(p, d) {
+        d = d == null ? 2 : d;
+        const r = Number(Math.abs(p).toFixed(d));
+        return (r === 0 ? '' : p > 0 ? '+' : '−') + r.toFixed(d) + '%';
+    }
+
+    // 보이는 구간의 최고가/최저가 라벨 (미래에셋 앱 스타일) — HTML 라벨, 차트 안쪽으로 가둠
+    function _tvUpdateHiLo() {
+        if (!_tv || !_tv.bars || !_tv.bars.length) return;
+        const { chart, candle, bars } = _tv;
+        const hi = _tv.hiEl, lo = _tv.loEl;
+        const hide = () => { hi.style.display = 'none'; lo.style.display = 'none'; };
+        const r = chart.timeScale().getVisibleLogicalRange();
+        if (!r) { hide(); return; }
+        const i0 = Math.max(0, Math.ceil(r.from)), i1 = Math.min(bars.length - 1, Math.floor(r.to));
+        if (i1 < i0) { hide(); return; }
+        let hiI = i0, loI = i0;
+        for (let i = i0; i <= i1; i++) {
+            if (bars[i].high > bars[hiI].high) hiI = i;
+            if (bars[i].low < bars[loI].low) loI = i;
+        }
+        const cur = _tv.lastBar.close, kr = _tv.isKorea;
+        const fmtDate = t => { const [y, m, d] = t.split('-'); return currentCandleType === 'M' ? `${y.slice(2)}.${m}` : `${y.slice(2)}.${m}.${d}`; };
+        const place = (el, idx, price, above) => {
+            const x = chart.timeScale().logicalToCoordinate(idx);
+            const y = candle.priceToCoordinate(price);
+            if (x === null || y === null) { el.style.display = 'none'; return; }
+            el.textContent = `${_fmtChartPrice(price, kr)}(${fmtDate(bars[idx].time)}) ${_fmtPct((cur / price - 1) * 100, 1)}`;
+            el.style.display = 'block';
+            const w = el.offsetWidth, h = el.offsetHeight;
+            const maxX = chart.timeScale().width() - w - 2;     // 오른쪽 가격축 침범 방지
+            el.style.left = Math.max(2, Math.min(x - w / 2, maxX)) + 'px';
+            el.style.top = (above ? y - h - 5 : y + 5) + 'px';
+        };
+        place(hi, hiI, bars[hiI].high, true);
+        place(lo, loI, bars[loI].low, false);
+    }
+    function _tvScheduleHiLo() {
+        if (!_tv || _tv.hlRaf) return;
+        _tv.hlRaf = requestAnimationFrame(() => { _tv.hlRaf = 0; _tvUpdateHiLo(); });
     }
 
     // 매수/매도 화살표 — 실제 체결 가격 위치에 표시 (매수=가격 아래에서 위로, 매도=가격 위에서 아래로)
@@ -4906,6 +4961,11 @@
         const markers = LC.createSeriesMarkers(candle, []);
 
         _tv = { LC, chart, candle, vol, maSeries, markers, avgLine: null, lastBar: null, isKorea: true, wrap };
+        _tv.hiEl = document.createElement('div'); _tv.hiEl.className = 'hl-lbl'; _tv.hiEl.style.color = 'var(--up)'; _tv.hiEl.style.display = 'none';
+        _tv.loEl = document.createElement('div'); _tv.loEl.className = 'hl-lbl'; _tv.loEl.style.color = 'var(--down)'; _tv.loEl.style.display = 'none';
+        wrap.appendChild(_tv.hiEl); wrap.appendChild(_tv.loEl);
+        chart.timeScale().subscribeVisibleLogicalRangeChange(_tvScheduleHiLo);
+        chart.timeScale().subscribeSizeChange(_tvScheduleHiLo);
 
         chart.subscribeCrosshairMove(p => {
             const b = p && p.seriesData ? p.seriesData.get(candle) : null;
@@ -4969,8 +5029,13 @@
             if (!bars.length) { showCandleEmpty(); return; }
             _tv.bars = bars;
             _tv.lastBar = bars[bars.length - 1];
+            _tv.barIdx = {}; bars.forEach((b, i) => { _tv.barIdx[b.time] = i; });
 
+            // 현재가 라벨 옆에 전봉 대비 등락률 표시 (라이브러리 축 라벨은 한 줄 → 시리즈 title 사용)
+            const _pb = bars.length > 1 ? bars[bars.length - 2].close : 0;
+            const _lastPct = _pb ? (_tv.lastBar.close / _pb - 1) * 100 : 0;
             _tv.candle.applyOptions({
+                title: _pb ? _fmtPct(_lastPct) : '',
                 priceFormat: isKorea
                     ? { type: 'custom', minMove: 1, formatter: v => Math.round(v).toLocaleString('ko-KR') }
                     : { type: 'custom', minMove: 0.01, formatter: v => '$' + Number(v).toFixed(2) },
@@ -5001,6 +5066,7 @@
             const show = currentCandleType === 'D' ? 60 : currentCandleType === 'W' ? 52 : bars.length;
             _tv.chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, bars.length - show) - 0.5, to: bars.length + 3 });
             _showOhlc(_tv.lastBar);
+            _tvUpdateHiLo(); _tvScheduleHiLo();   // 범위 설정 직후 + 가격축 재계산 이후 한 번 더
         } catch (e) {
             console.error('[renderCandleChart 오류]', e);
             showCandleEmpty('차트를 그리는 중 오류가 발생했습니다.');
@@ -6261,8 +6327,6 @@
         if (rows.length < 2) {
             set('maKsDDValue', '-');
             set('maKsDDUpdated', '코스피 자료를 못 불러왔어요');
-            set('maKsDDSummary', '-');
-            const r0 = document.getElementById('maKsDDRec'); if (r0) r0.style.display = 'none';
             maSetBadge('maKsDDBadge', '자료 없음', 'ma-info');
             clear();
             ddPanelRender('maKsDD', 'ks', { buy: '자료를 못 불러왔어요', sell: ddSellHTML('ks', null) }, renderKospiDD, null);
@@ -6285,16 +6349,8 @@
         set('maKsDDUpdated', '고점 ' + Math.round(hi).toLocaleString() + ' (' + md(hiRow[0]) + ') · 현재 ' + Math.round(cur).toLocaleString() + ' (' + md(last[0]) + ')');
         const hit = KS_DD_STATS.filter(s => dd <= -s.t).pop();
         maSetBadge('maKsDDBadge', hit ? '-' + hit.t + '% 선 넘음' : '10% 미만', 'ma-info');
-        set('maKsDDSummary', hit ? '과거 ' + hit.t + '% 넘게 빠졌을 때 1년 뒤 오른 비율 ' + hit.w1 + '% (' + hit.n + '번, 평균 ' + (hit.a1 >= 0 ? '+' : '') + hit.a1.toFixed(1) + '%) · 2년 뒤 ' + hit.w2 + '%' : '고점 대비 10% 미만 하락');
         document.querySelectorAll('#maKsDDTable tr[data-t]').forEach(tr => { const on = hit && Number(tr.dataset.t) === hit.t; tr.style.fontWeight = on ? '700' : ''; tr.style.background = on ? 'rgba(142,142,147,0.15)' : ''; });
         ddPanelRender('maKsDD', 'ks', { buy: ddBuyHTML(hit, KS_DD_BASE, 10), sell: ddSellHTML('ks', null) }, renderKospiDD, ddSignal(hit, KS_DD_BASE));
-        const rEl = document.getElementById('maKsDDRec');
-        if (rEl) {
-            if (hit) {
-                rEl.textContent = '과거 ' + hit.t + '% 넘게 빠졌을 때 전고점 회복까지 ' + hit.rmin.toFixed(1) + '~' + hit.rmax.toFixed(1) + '년(중앙 ' + hit.rec.toFixed(1) + '년) · 바닥은 그날부터 ' + Math.round(hit.bmax) + '개월 안';
-                rEl.style.display = '';
-            } else { rEl.style.display = 'none'; }
-        }
     }
     function renderUSMA() {
         const market = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.market)
