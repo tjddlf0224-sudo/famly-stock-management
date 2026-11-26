@@ -509,6 +509,8 @@
         .ma-fear   { --ma-accent: #007AFF; color: #007AFF; }
         .ma-panic  { --ma-accent: #5856D6; color: #5856D6; }
         .ma-info   { --ma-accent: #8E8E93; color: #8E8E93; }
+        #maNasDDTable td { white-space: nowrap; padding: 6px 4px; text-align: right; }
+        #maNasDDTable td:first-child { text-align: left; }
         .ma-update-notice { text-align: center; font-size: 11px; color: var(--text-sub); padding: 12px 0 4px; }
         /* RSI + 52주 카드 */
         .rsi-bar-wrap { margin: 10px 0 4px; height: 8px; border-radius: 4px; background: linear-gradient(to right, #007AFF 0%, #34C759 30%, #FFCC00 50%, #FF9500 70%, #FF3B30 100%); position: relative; }
@@ -1276,7 +1278,7 @@
             <div class="ma-card-updated" id="maNasDDUpdated">불러오는 중...</div>
             <div class="ma-ma-summary" id="maNasDDSummary">-</div>
             <table class="ma-range-table" id="maNasDDTable">
-                <tr><td>낙폭</td><td>횟수</td><td>1년 뒤 승률</td><td>1년 평균</td><td>더 빠진 폭</td></tr>
+                <tr style="color:var(--text-sub);font-size:11px;"><td>낙폭</td><td>횟수</td><td>1년 승률</td><td>1년 평균</td><td>더 빠짐</td></tr>
                 <tr data-t="5"><td>-5%</td><td>58번</td><td>75%</td><td>+12.8%</td><td>-4.9%</td></tr>
                 <tr data-t="10"><td>-10%</td><td>32번</td><td>77%</td><td>+19.1%</td><td>-5.8%</td></tr>
                 <tr data-t="15"><td>-15%</td><td>18번</td><td>65%</td><td>+16.2%</td><td>-12.4%</td></tr>
