@@ -1265,10 +1265,10 @@
             </div>
         </div>
 
-        <!-- ② 나스닥 고점 대비 낙폭 + 과거 승률 (2026-11-26, 나스닥 종합 1971~ 야후 일봉으로 계산, 투자로그 64차) -->
+        <!-- ② 나스닥 고점 대비 낙폭 + 과거 승률 (2026-11-26, 나스닥100 1985~ 야후 일봉으로 계산, 투자로그 64차) -->
         <div class="ma-card ma-info" id="maNasDDCard">
             <div class="ma-card-top">
-                <div class="ma-card-name">📉 나스닥 고점 대비</div>
+                <div class="ma-card-name">📉 나스닥100 고점 대비</div>
                 <div class="ma-card-badge" id="maNasDDBadge">-</div>
             </div>
             <div class="ma-card-value-row">
@@ -1279,16 +1279,16 @@
             <div class="ma-ma-summary" id="maNasDDSummary">-</div>
             <table class="ma-range-table" id="maNasDDTable">
                 <tr style="color:var(--text-sub);font-size:11px;"><td>낙폭</td><td>횟수</td><td>1년 승률</td><td>1년 평균</td><td>더 빠짐</td></tr>
-                <tr data-t="5"><td>-5%</td><td>58번</td><td>75%</td><td>+12.8%</td><td>-4.9%</td></tr>
-                <tr data-t="10"><td>-10%</td><td>32번</td><td>77%</td><td>+19.1%</td><td>-5.8%</td></tr>
-                <tr data-t="15"><td>-15%</td><td>18번</td><td>65%</td><td>+16.2%</td><td>-12.4%</td></tr>
-                <tr data-t="20"><td>-20%</td><td>13번</td><td>77%</td><td>+24.7%</td><td>-9.1%</td></tr>
-                <tr data-t="25"><td>-25%</td><td>9번</td><td>78%</td><td>+30.3%</td><td>-9.7%</td></tr>
-                <tr data-t="30"><td>-30%</td><td>7번</td><td>71%</td><td>+22.7%</td><td>-4.0%</td></tr>
-                <tr data-t="40"><td>-40%</td><td>2번</td><td>50%</td><td>-18.3%</td><td>-48.1%</td></tr>
-                <tr data-t="50"><td>-50%</td><td>2번</td><td>50%</td><td>-2.2%</td><td>-37.0%</td></tr>
+                <tr data-t="5"><td>-5%</td><td>61번</td><td>83%</td><td>+21.1%</td><td>-4.8%</td></tr>
+                <tr data-t="10"><td>-10%</td><td>35번</td><td>81%</td><td>+25.8%</td><td>-3.1%</td></tr>
+                <tr data-t="15"><td>-15%</td><td>16번</td><td>87%</td><td>+31.5%</td><td>-4.4%</td></tr>
+                <tr data-t="20"><td>-20%</td><td>8번</td><td>75%</td><td>+33.9%</td><td>-9.9%</td></tr>
+                <tr data-t="25"><td>-25%</td><td>5번</td><td>80%</td><td>+22.5%</td><td>-12.4%</td></tr>
+                <tr data-t="30"><td>-30%</td><td>4번</td><td>75%</td><td>+17.8%</td><td>-8.1%</td></tr>
+                <tr data-t="40"><td>-40%</td><td>1번</td><td>0%</td><td>-42.3%</td><td>-71.2%</td></tr>
+                <tr data-t="50"><td>-50%</td><td>1번</td><td>0%</td><td>-27.3%</td><td>-63.6%</td></tr>
             </table>
-            <div class="ma-card-updated">처음 그 선을 넘은 날 기준 · 나스닥 종합 1971~</div>
+            <div class="ma-card-updated">처음 그 선을 넘은 날 기준 · 나스닥100 1985~</div>
         </div>
 
 
@@ -6099,16 +6099,23 @@
     }
 
     // ====== 미국 이동평균선 (MarketData 시트 활용) ======
-    const NAS_DD_STATS = [{"t": 5, "n": 58, "w1": 75, "a1": 12.8, "ex": -4.9}, {"t": 10, "n": 32, "w1": 77, "a1": 19.1, "ex": -5.8}, {"t": 15, "n": 18, "w1": 65, "a1": 16.2, "ex": -12.4}, {"t": 20, "n": 13, "w1": 77, "a1": 24.7, "ex": -9.1}, {"t": 25, "n": 9, "w1": 78, "a1": 30.3, "ex": -9.7}, {"t": 30, "n": 7, "w1": 71, "a1": 22.7, "ex": -4.0}, {"t": 40, "n": 2, "w1": 50, "a1": -18.3, "ex": -48.1}, {"t": 50, "n": 2, "w1": 50, "a1": -2.2, "ex": -37.0}]; // 나스닥 종합 1971~: 고점 대비 처음 t% 빠진 날 → 1년 뒤 승률 w1%·평균 a1%, 신고점 전까지 더 빠진 폭 중앙 ex%
-    function renderNasDD(rows) {
-        const v = rows.filter(r => Number(r[2]) > 0); if (v.length < 2) return;
-        const closes = v.map(r => Number(r[2])), cur = closes[closes.length - 1];
-        let hi = -1, hiAt = 0; closes.forEach((c, i) => { if (c >= hi) { hi = c; hiAt = i; } });
-        const dd = (cur / hi - 1) * 100;
-        const md = x => { const d = new Date(x); if (isNaN(d)) return String(x).slice(5, 10); const k = new Date(d.getTime() + 9 * 3600000); return (k.getUTCMonth() + 1) + '/' + k.getUTCDate(); };
+    const NAS_DD_STATS = [{"t": 5, "n": 61, "w1": 83, "a1": 21.1, "ex": -4.8}, {"t": 10, "n": 35, "w1": 81, "a1": 25.8, "ex": -3.1}, {"t": 15, "n": 16, "w1": 87, "a1": 31.5, "ex": -4.4}, {"t": 20, "n": 8, "w1": 75, "a1": 33.9, "ex": -9.9}, {"t": 25, "n": 5, "w1": 80, "a1": 22.5, "ex": -12.4}, {"t": 30, "n": 4, "w1": 75, "a1": 17.8, "ex": -8.1}, {"t": 40, "n": 1, "w1": 0, "a1": -42.3, "ex": -71.2}, {"t": 50, "n": 1, "w1": 0, "a1": -27.3, "ex": -63.6}]; // 나스닥100(^NDX) 1985~: 고점 대비 처음 t% 빠진 날(신고점마다 다시 장전) → 1년 뒤 승률 w1%·평균 a1%, 신고점 전까지 더 빠진 폭 중앙 ex%
+    function renderNasDD() {
         const set = (id, t) => { const e = document.getElementById(id); if (e) e.textContent = t; };
+        const nd = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA) ? LAST_FETCHED_DATA.ndxDD : null;
+        if (!nd || !(Number(nd.close) > 0) || !(Number(nd.high) > 0)) {
+            set('maNasDDValue', '-');
+            set('maNasDDUpdated', '나스닥100 시세를 못 불러왔어요');
+            set('maNasDDSummary', '-');
+            maSetBadge('maNasDDBadge', '자료 없음', 'ma-info');
+            document.querySelectorAll('#maNasDDTable tr[data-t]').forEach(tr => { tr.style.fontWeight = ''; tr.style.background = ''; });
+            return;
+        }
+        const cur = Number(nd.close), hi = Number(nd.high);
+        const dd = (cur / hi - 1) * 100;
+        const md = x => { const m = String(x || '').match(/^\d{4}-(\d{2})-(\d{2})/); return m ? (Number(m[1]) + '/' + Number(m[2])) : '-'; };
         set('maNasDDValue', dd.toFixed(1));
-        set('maNasDDUpdated', '고점 ' + Math.round(hi).toLocaleString() + ' (' + md(v[hiAt][0]) + ') · 현재 ' + Math.round(cur).toLocaleString() + ' (' + md(v[v.length - 1][0]) + ')');
+        set('maNasDDUpdated', '고점 ' + Math.round(hi).toLocaleString() + ' (' + md(nd.highDate) + ') · 현재 ' + Math.round(cur).toLocaleString() + ' (' + md(nd.date) + ')');
         const hit = NAS_DD_STATS.filter(s => dd <= -s.t).pop();
         maSetBadge('maNasDDBadge', hit ? '-' + hit.t + '% 선 넘음' : '5% 미만', 'ma-info');
         set('maNasDDSummary', hit ? '과거 ' + hit.t + '% 넘게 빠졌을 때 1년 뒤 오른 비율 ' + hit.w1 + '% (' + hit.n + '번, 평균 ' + (hit.a1 >= 0 ? '+' : '') + hit.a1 + '%)' : '고점 대비 5% 미만 하락');
@@ -6121,7 +6128,7 @@
         const spCloses = spRows.map(r => Number(r[1]));
         const nasRows  = market.filter(r => Number(r[2]) > 0);
         const nasCloses= nasRows.map(r => Number(r[2]));
-        try { renderNasDD(market); } catch (e) { console.warn('나스닥 낙폭 카드', e); }
+        try { renderNasDD(); } catch (e) { console.warn('나스닥 낙폭 카드', e); }
         const _toMD_us = (v) => {
             if (!v) return '-';
             const d = (v instanceof Date) ? v : new Date(v);
