@@ -1308,10 +1308,10 @@
             </table>
         </div>
 
-        <!-- ② 나스닥 고점 대비 낙폭 + 과거 승률 (2026-11-26, 나스닥100 1985~ 야후 일봉으로 계산, 투자로그 64차) -->
+        <!-- ② 나스닥 고점 대비 낙폭 + 과거 승률 (2026-11-26, 나스닥 종합 1971~ MarketData 시트 일봉으로 계산, 투자로그 64차) -->
         <div class="ma-card ma-info" id="maNasDDCard">
             <div class="ma-card-top">
-                <div class="ma-card-name">📉 나스닥100 고점 대비</div>
+                <div class="ma-card-name">📉 나스닥 고점 대비</div>
                 <div class="ma-card-badge" id="maNasDDBadge">-</div>
             </div>
             <div class="dd-sig" id="maNasDDSig">
@@ -1329,16 +1329,16 @@
             <div class="ma-card-updated" id="maNasDDGap" style="display:none"></div>
             <table class="ma-range-table" id="maNasDDTable">
                 <tr style="color:var(--text-sub);font-size:11px;"><td>낙폭</td><td>횟수</td><td>1년 승률</td><td>1년 평균</td><td>더 빠짐</td></tr>
-                <tr data-t="5"><td>-5%</td><td>59번</td><td>83%</td><td>+21.1%</td><td>-4.8%</td></tr>
-                <tr data-t="10"><td>-10%</td><td>32번</td><td>81%</td><td>+25.8%</td><td>-3.1%</td></tr>
-                <tr data-t="15"><td>-15%</td><td>15번</td><td>87%</td><td>+31.5%</td><td>-4.4%</td></tr>
-                <tr data-t="20"><td>-20%</td><td>8번</td><td>75%</td><td>+33.9%</td><td>-9.9%</td></tr>
-                <tr data-t="25"><td>-25%</td><td>5번</td><td>80%</td><td>+22.5%</td><td>-12.4%</td></tr>
-                <tr data-t="30"><td>-30%</td><td>4번</td><td>75%</td><td>+17.8%</td><td>-8.1%</td></tr>
-                <tr data-t="40"><td>-40%</td><td>1번</td><td>0%</td><td>-42.3%</td><td>-71.2%</td></tr>
-                <tr data-t="50"><td>-50%</td><td>1번</td><td>0%</td><td>-27.3%</td><td>-63.6%</td></tr>
+                <tr data-t="5"><td>-5%</td><td>56번</td><td>75%</td><td>+12.8%</td><td>-4.9%</td></tr>
+                <tr data-t="10"><td>-10%</td><td>30번</td><td>77%</td><td>+19.1%</td><td>-5.8%</td></tr>
+                <tr data-t="15"><td>-15%</td><td>17번</td><td>65%</td><td>+16.2%</td><td>-12.4%</td></tr>
+                <tr data-t="20"><td>-20%</td><td>13번</td><td>77%</td><td>+24.7%</td><td>-9.1%</td></tr>
+                <tr data-t="25"><td>-25%</td><td>9번</td><td>78%</td><td>+30.3%</td><td>-9.7%</td></tr>
+                <tr data-t="30"><td>-30%</td><td>7번</td><td>71%</td><td>+22.7%</td><td>-4.0%</td></tr>
+                <tr data-t="40"><td>-40%</td><td>2번</td><td>50%</td><td>-18.3%</td><td>-48.1%</td></tr>
+                <tr data-t="50"><td>-50%</td><td>2번</td><td>50%</td><td>-2.2%</td><td>-37.0%</td></tr>
             </table>
-            <div class="ma-card-updated">처음 그 선을 넘은 날 기준 · 나스닥100 1985~</div>
+            <div class="ma-card-updated">처음 그 선을 넘은 날 기준 · 나스닥 종합 1971~</div>
         </div>
 
 
@@ -6218,7 +6218,7 @@
     // ====== 미국 이동평균선 (MarketData 시트 활용) ======
     // ===== 고점 대비 카드 공용: 매수/매도 패널 (과거 통계 표시용, 권유 아님) =====
     const DD_HLABEL = { '3m': '3개월', '6m': '6개월', '1y': '1년', '2y': '2년' };
-    const NAS_DD_BASE = {"3m": {"w": 70, "a": 4.2}, "6m": {"w": 74, "a": 8.4}, "1y": {"w": 82, "a": 17.6}, "2y": {"w": 86, "a": 38.0}}; // 아무 날이나 샀을 때(평소) 기간별 승률 w%·평균 a%
+    const NAS_DD_BASE = {"3m": {"w": 66, "a": 3.1}, "6m": {"w": 70, "a": 6.3}, "1y": {"w": 77, "a": 13.1}, "2y": {"w": 81, "a": 26.8}}; // 아무 날이나 샀을 때(평소) 기간별 승률 w%·평균 a% (나스닥 종합 1971~)
     const KS_DD_BASE = {"3m": {"w": 60, "a": 2.9}, "6m": {"w": 57, "a": 6.5}, "1y": {"w": 64, "a": 13.7}, "2y": {"w": 70, "a": 21.8}};
     const DD_OPEN = { nas: null, ks: null }; // 열린 패널: 'buy' | 'sell' | null (저장 안 함)
     function ddFmtA(a) { return (a >= 0 ? '+' : '') + Number(a).toFixed(1) + '%'; }
@@ -6241,17 +6241,13 @@
         return out;
     }
     function ddSellHTML(kind, nd) {
-        const tail = '검증된 매도 신호 없음';
-        if (kind === 'ks') return tail + ' — 매도는 목표가·비중 규칙으로.';
+        const tail = '검증된 매도 신호 없음 — 매도는 목표가·비중 규칙으로.';
+        if (kind === 'ks') return tail;
         const g = (!nd || nd.gap200 === null || nd.gap200 === undefined || nd.gap200 === '') ? NaN : Number(nd.gap200);
-        let out = isFinite(g) ? '200일선 대비 ' + (g >= 0 ? '+' : '') + (g * 100).toFixed(1) + '%' : '200일선 자료 없음';
-        out += '<br>' + (isFinite(g) && g >= 0.25
-            ? '⚠️ 과열 경고 켜짐: 과거 3개월 하락 36%(평소 30%) · 6개월 안 10% 조정 45%(평소 31%) · 평균 수익은 +10.6%로 평소보다 높음'
-            : '과열 경고 꺼짐 (200일선 +25% 이상일 때 켜짐)');
-        return out + '<br>' + tail + ' — 과열 뒤에도 평균은 올랐음. 매도는 목표가·비중 규칙으로.';
+        return (isFinite(g) ? '200일선 대비 ' + (g >= 0 ? '+' : '') + (g * 100).toFixed(1) + '%' : '200일선 자료 없음') + '<br>' + tail;
     }
     // 신호등: 기간 묶음(단기 3m·6m / 장기 1y·2y)별 매수·관망·매도 중 하나만 켬 (과거 통계 기준 표시)
-    function ddSignal(hit, base, nasGap) {
+    function ddSignal(hit, base) {
         const grp = ks => {
             if (!hit) return 'hold';
             let good = 0, bad = 0;
@@ -6259,7 +6255,6 @@
             return (good > 0 && bad === 0) ? 'buy' : 'hold';
         };
         const sig = { s: grp(['3m', '6m']), l: grp(['1y', '2y']) };
-        if (nasGap !== undefined && nasGap !== null && nasGap !== '' && isFinite(Number(nasGap)) && Number(nasGap) >= 0.25) sig.s = 'sell';
         return sig;
     }
     function ddPanelRender(p, kind, html, rerender, sig) {
@@ -6281,13 +6276,14 @@
             else { panel.innerHTML = ''; panel.style.display = 'none'; }
         }
     }
-    const NAS_DD_STATS = [{"t": 5, "n": 59, "w1": 83, "a1": 21.1, "ex": -4.8, "h": {"3m": {"n": 60, "w": 65, "a": 3.7}, "6m": {"n": 59, "w": 78, "a": 11.9}, "1y": {"n": 59, "w": 83, "a": 21.1}, "2y": {"n": 56, "w": 80, "a": 45.2}}}, {"t": 10, "n": 32, "w1": 81, "a1": 25.8, "ex": -3.1, "h": {"3m": {"n": 34, "w": 74, "a": 8.1}, "6m": {"n": 33, "w": 88, "a": 19.2}, "1y": {"n": 32, "w": 81, "a": 25.8}, "2y": {"n": 31, "w": 77, "a": 43.0}}}, {"t": 15, "n": 15, "w1": 87, "a1": 31.5, "ex": -4.4, "h": {"3m": {"n": 15, "w": 80, "a": 9.6}, "6m": {"n": 15, "w": 87, "a": 22.1}, "1y": {"n": 15, "w": 87, "a": 31.5}, "2y": {"n": 14, "w": 93, "a": 82.6}}}, {"t": 20, "n": 8, "w1": 75, "a1": 33.9, "ex": -9.9, "h": {"3m": {"n": 8, "w": 75, "a": 14.2}, "6m": {"n": 8, "w": 75, "a": 25.6}, "1y": {"n": 8, "w": 75, "a": 33.9}, "2y": {"n": 7, "w": 86, "a": 73.2}}}, {"t": 25, "n": 5, "w1": 80, "a1": 22.5, "ex": -12.4, "h": {"3m": {"n": 5, "w": 100, "a": 14.0}, "6m": {"n": 5, "w": 80, "a": 19.5}, "1y": {"n": 5, "w": 80, "a": 22.5}, "2y": {"n": 5, "w": 80, "a": 37.2}}}, {"t": 30, "n": 4, "w1": 75, "a1": 17.8, "ex": -8.1, "h": {"3m": {"n": 4, "w": 100, "a": 13.7}, "6m": {"n": 4, "w": 100, "a": 22.6}, "1y": {"n": 4, "w": 75, "a": 17.8}, "2y": {"n": 4, "w": 75, "a": 37.8}}}, {"t": 40, "n": 1, "w1": 0, "a1": -42.3, "ex": -71.2, "h": {"3m": {"n": 1, "w": 0, "a": -27.2}, "6m": {"n": 1, "w": 0, "a": -29.9}, "1y": {"n": 1, "w": 0, "a": -42.3}, "2y": {"n": 1, "w": 0, "a": -61.1}}}, {"t": 50, "n": 1, "w1": 0, "a1": -27.3, "ex": -63.6, "h": {"3m": {"n": 1, "w": 0, "a": -22.9}, "6m": {"n": 1, "w": 0, "a": -21.8}, "1y": {"n": 1, "w": 0, "a": -27.3}, "2y": {"n": 1, "w": 0, "a": -54.9}}}]; // 나스닥100(^NDX) 1985~: 고점 대비 처음 t% 빠진 날(신고점마다 다시 장전) → 1년 뒤 승률 w1%·평균 a1%, 신고점 전까지 더 빠진 폭 중앙 ex%, h=기간별(3m/6m/1y/2y) 횟수 n·승률 w%·평균 a% (매수 패널용)
+    const NAS_DD_STATS = [{"t": 5, "ex": -4.9, "h": {"3m": {"n": 57, "w": 68, "a": 3.5}, "6m": {"n": 56, "w": 73, "a": 10.1}, "1y": {"n": 56, "w": 75, "a": 12.8}, "2y": {"n": 54, "w": 70, "a": 20.6}}, "n": 56, "w1": 75, "a1": 12.8}, {"t": 10, "ex": -5.8, "h": {"3m": {"n": 31, "w": 65, "a": 4.7}, "6m": {"n": 31, "w": 74, "a": 14.0}, "1y": {"n": 30, "w": 77, "a": 19.1}, "2y": {"n": 29, "w": 79, "a": 33.6}}, "n": 30, "w1": 77, "a1": 19.1}, {"t": 15, "ex": -12.4, "h": {"3m": {"n": 17, "w": 76, "a": 6.6}, "6m": {"n": 17, "w": 71, "a": 13.6}, "1y": {"n": 17, "w": 65, "a": 16.2}, "2y": {"n": 16, "w": 88, "a": 38.8}}, "n": 17, "w1": 65, "a1": 16.2}, {"t": 20, "ex": -9.1, "h": {"3m": {"n": 13, "w": 62, "a": 12.0}, "6m": {"n": 13, "w": 77, "a": 18.9}, "1y": {"n": 13, "w": 77, "a": 24.7}, "2y": {"n": 12, "w": 83, "a": 49.7}}, "n": 13, "w1": 77, "a1": 24.7}, {"t": 25, "ex": -9.7, "h": {"3m": {"n": 9, "w": 78, "a": 10.2}, "6m": {"n": 9, "w": 67, "a": 17.4}, "1y": {"n": 9, "w": 78, "a": 30.3}, "2y": {"n": 9, "w": 78, "a": 45.7}}, "n": 9, "w1": 78, "a1": 30.3}, {"t": 30, "ex": -4.0, "h": {"3m": {"n": 7, "w": 86, "a": 15.7}, "6m": {"n": 7, "w": 71, "a": 18.9}, "1y": {"n": 7, "w": 71, "a": 22.7}, "2y": {"n": 7, "w": 71, "a": 42.0}}, "n": 7, "w1": 71, "a1": 22.7}, {"t": 40, "ex": -48.1, "h": {"3m": {"n": 2, "w": 0, "a": -19.7}, "6m": {"n": 2, "w": 0, "a": -25.9}, "1y": {"n": 2, "w": 50, "a": -18.3}, "2y": {"n": 2, "w": 50, "a": -22.2}}, "n": 2, "w1": 50, "a1": -18.3}, {"t": 50, "ex": -37.0, "h": {"3m": {"n": 2, "w": 0, "a": -13.6}, "6m": {"n": 2, "w": 50, "a": -5.8}, "1y": {"n": 2, "w": 50, "a": -2.2}, "2y": {"n": 2, "w": 50, "a": -4.5}}, "n": 2, "w1": 50, "a1": -2.2}];
     function renderNasDD() {
         const set = (id, t) => { const e = document.getElementById(id); if (e) e.textContent = t; };
-        const nd = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA) ? LAST_FETCHED_DATA.ndxDD : null;
-        if (!nd || !(Number(nd.close) > 0) || !(Number(nd.high) > 0)) {
+        const mk = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && Array.isArray(LAST_FETCHED_DATA.market)) ? LAST_FETCHED_DATA.market : [];
+        const rows = mk.filter(r => r && Number(r[2]) > 0);
+        if (rows.length < 2) {
             set('maNasDDValue', '-');
-            set('maNasDDUpdated', '나스닥100 시세를 못 불러왔어요');
+            set('maNasDDUpdated', '나스닥 시세를 못 불러왔어요');
             set('maNasDDSummary', '-');
             const g0 = document.getElementById('maNasDDGap'); if (g0) g0.style.display = 'none';
             maSetBadge('maNasDDBadge', '자료 없음', 'ma-info');
@@ -6295,21 +6291,38 @@
             ddPanelRender('maNasDD', 'nas', { buy: '시세를 못 불러왔어요', sell: ddSellHTML('nas', null) }, renderNasDD, null);
             return;
         }
-        const cur = Number(nd.close), hi = Number(nd.high);
+        const cur = Number(rows[rows.length - 1][2]);
+        let hi = 0, hiRow = null;
+        rows.forEach(r => { const v = Number(r[2]); if (v >= hi) { hi = v; hiRow = r; } });
         const dd = (cur / hi - 1) * 100;
-        const md = x => { const m = String(x || '').match(/^\d{4}-(\d{2})-(\d{2})/); return m ? (Number(m[1]) + '/' + Number(m[2])) : '-'; };
+        let gap200 = null;
+        if (rows.length >= 200) {
+            const last = rows.slice(-200);
+            const ma200 = last.reduce((a, r) => a + Number(r[2]), 0) / 200;
+            gap200 = cur / ma200 - 1;
+        }
+        const nd = { gap200: gap200 };
+        // 날짜 M/D (한국 시간): 'yyyy-MM-dd'는 그대로, 시간 붙은 ISO(UTC)는 +9시간
+        const md = x => {
+            const s = String(x || '');
+            let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (m) return Number(m[2]) + '/' + Number(m[3]);
+            const t = new Date(s);
+            if (isNaN(t.getTime())) { m = s.match(/^\d{4}-(\d{2})-(\d{2})/); return m ? (Number(m[1]) + '/' + Number(m[2])) : '-'; }
+            const k = new Date(t.getTime() + 9 * 3600000);
+            return (k.getUTCMonth() + 1) + '/' + k.getUTCDate();
+        };
         set('maNasDDValue', dd.toFixed(1));
-        set('maNasDDUpdated', '고점 ' + Math.round(hi).toLocaleString() + ' (' + md(nd.highDate) + ') · 현재 ' + Math.round(cur).toLocaleString() + ' (' + md(nd.date) + ')');
+        set('maNasDDUpdated', '고점 ' + Math.round(hi).toLocaleString() + ' (' + md(hiRow[0]) + ') · 현재 ' + Math.round(cur).toLocaleString() + ' (' + md(rows[rows.length - 1][0]) + ')');
         const hit = NAS_DD_STATS.filter(s => dd <= -s.t).pop();
         maSetBadge('maNasDDBadge', hit ? '-' + hit.t + '% 선 넘음' : '5% 미만', 'ma-info');
         set('maNasDDSummary', hit ? '과거 ' + hit.t + '% 넘게 빠졌을 때 1년 뒤 오른 비율 ' + hit.w1 + '% (' + hit.n + '번, 평균 ' + (hit.a1 >= 0 ? '+' : '') + hit.a1 + '%)' : '고점 대비 5% 미만 하락');
         document.querySelectorAll('#maNasDDTable tr[data-t]').forEach(tr => { const on = hit && Number(tr.dataset.t) === hit.t; tr.style.fontWeight = on ? '700' : ''; tr.style.background = on ? 'rgba(142,142,147,0.15)' : ''; });
-        ddPanelRender('maNasDD', 'nas', { buy: ddBuyHTML(hit, NAS_DD_BASE, 5), sell: ddSellHTML('nas', nd) }, renderNasDD, ddSignal(hit, NAS_DD_BASE, nd.gap200));
+        ddPanelRender('maNasDD', 'nas', { buy: ddBuyHTML(hit, NAS_DD_BASE, 5), sell: ddSellHTML('nas', nd) }, renderNasDD, ddSignal(hit, NAS_DD_BASE));
         const gEl = document.getElementById('maNasDDGap');
         if (gEl) {
-            const g = (nd.gap200 === null || nd.gap200 === undefined || nd.gap200 === '') ? NaN : Number(nd.gap200);
-            if (isFinite(g)) {
-                gEl.innerHTML = '200일선 대비 ' + (g >= 0 ? '+' : '') + (g * 100).toFixed(1) + '%' + (g >= 0.25 ? '<br>⚠️ 과열 경고: 과거 6개월 안 10% 조정 45%(11번, 평소 31%) · 평균 수익은 +10.6%라 매도 신호 아님' : '');
+            if (gap200 !== null && isFinite(gap200)) {
+                gEl.textContent = '200일선 대비 ' + (gap200 >= 0 ? '+' : '') + (gap200 * 100).toFixed(1) + '%';
                 gEl.style.display = '';
             } else { gEl.style.display = 'none'; }
         }
