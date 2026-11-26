@@ -511,6 +511,8 @@
         .ma-info   { --ma-accent: #8E8E93; color: #8E8E93; }
         #maNasDDTable td { white-space: nowrap; padding: 6px 4px; text-align: right; }
         #maNasDDTable td:first-child { text-align: left; }
+        #maKsDDTable td { white-space: nowrap; padding: 6px 4px; text-align: right; }
+        #maKsDDTable td:first-child { text-align: left; }
         .ma-update-notice { text-align: center; font-size: 11px; color: var(--text-sub); padding: 12px 0 4px; }
         /* RSI + 52주 카드 */
         .rsi-bar-wrap { margin: 10px 0 4px; height: 8px; border-radius: 4px; background: linear-gradient(to right, #007AFF 0%, #34C759 30%, #FFCC00 50%, #FF9500 70%, #FF3B30 100%); position: relative; }
@@ -1001,6 +1003,30 @@
                 <tr><td><span class="ma-range-dot" style="background:#FF3B30"></span>40~60</td><td>공포</td><td>바닥 탐색 가능성</td></tr>
                 <tr><td><span class="ma-range-dot" style="background:#5856D6"></span>60+</td><td>패닉</td><td>🎯 역사적 바닥 근처</td></tr>
             </table>
+        </div>
+
+        <!-- ② 코스피 고점 대비 낙폭 + 과거 승률 (2026-11-26, 야후 ^KS11 1996-12~, 투자로그 67차) -->
+        <div class="ma-card ma-info" id="maKsDDCard">
+            <div class="ma-card-top">
+                <div class="ma-card-name">📉 코스피 고점 대비</div>
+                <div class="ma-card-badge" id="maKsDDBadge">-</div>
+            </div>
+            <div class="ma-card-value-row">
+                <div class="ma-card-value" id="maKsDDValue">-</div>
+                <div class="ma-card-unit">%</div>
+            </div>
+            <div class="ma-card-updated" id="maKsDDUpdated">불러오는 중...</div>
+            <div class="ma-ma-summary" id="maKsDDSummary">-</div>
+            <table class="ma-range-table" id="maKsDDTable">
+                <tr style="color:var(--text-sub);font-size:11px;"><td>낙폭</td><td>횟수</td><td>1년 승률</td><td>1년 평균</td><td>2년 승률</td></tr>
+                <tr data-t="10"><td>-10%</td><td>12번</td><td>17%</td><td>-17.0%</td><td>25%</td></tr>
+                <tr data-t="20"><td>-20%</td><td>7번</td><td>29%</td><td>-19.0%</td><td>86%</td></tr>
+                <tr data-t="30"><td>-30%</td><td>5번</td><td>60%</td><td>+11.1%</td><td>100%</td></tr>
+                <tr data-t="40"><td>-40%</td><td>4번</td><td>50%</td><td>+26.3%</td><td>75%</td></tr>
+                <tr data-t="45"><td>-45%</td><td>3번</td><td>67%</td><td>+15.1%</td><td>100%</td></tr>
+                <tr data-t="50"><td>-50%</td><td>3번</td><td>100%</td><td>+40.8%</td><td>100%</td></tr>
+            </table>
+            <div class="ma-card-updated">처음 그 선을 넘은 날 기준 · 코스피 1997~</div>
         </div>
 
         <!-- ② 코스피 이동평균선 분석 -->
@@ -5529,6 +5555,7 @@
         renderForeign(ma ? ma.foreign : null);
         renderADRatio(ma ? ma.adRatio : null);
         renderKospiMA();
+        try { renderKospiDD(); } catch (e) { console.warn('renderKospiDD', e); }
         renderKospiVol();
         renderSignalBannerKR();
         updateLastUpdated(ma);
@@ -6120,6 +6147,40 @@
         maSetBadge('maNasDDBadge', hit ? '-' + hit.t + '% 선 넘음' : '5% 미만', 'ma-info');
         set('maNasDDSummary', hit ? '과거 ' + hit.t + '% 넘게 빠졌을 때 1년 뒤 오른 비율 ' + hit.w1 + '% (' + hit.n + '번, 평균 ' + (hit.a1 >= 0 ? '+' : '') + hit.a1 + '%)' : '고점 대비 5% 미만 하락');
         document.querySelectorAll('#maNasDDTable tr[data-t]').forEach(tr => { const on = hit && Number(tr.dataset.t) === hit.t; tr.style.fontWeight = on ? '700' : ''; tr.style.background = on ? 'rgba(142,142,147,0.15)' : ''; });
+    }
+    const KS_DD_STATS = [{"t": 10, "n": 12, "w1": 17, "a1": -17.0, "w2": 25}, {"t": 20, "n": 7, "w1": 29, "a1": -19.0, "w2": 86}, {"t": 30, "n": 5, "w1": 60, "a1": 11.1, "w2": 100}, {"t": 40, "n": 4, "w1": 50, "a1": 26.3, "w2": 75}, {"t": 45, "n": 3, "w1": 67, "a1": 15.1, "w2": 100}, {"t": 50, "n": 3, "w1": 100, "a1": 40.8, "w2": 100}]; // 코스피(^KS11) 1996-12~: 고점 대비 처음 t% 빠진 날(신고점마다 다시 장전) → 1년 뒤 승률 w1%·평균 a1%, 2년 뒤 승률 w2%
+    function renderKospiDD() {
+        const set = (id, t) => { const e = document.getElementById(id); if (e) e.textContent = t; };
+        const clear = () => document.querySelectorAll('#maKsDDTable tr[data-t]').forEach(tr => { tr.style.fontWeight = ''; tr.style.background = ''; });
+        const market = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.market) ? LAST_FETCHED_DATA.market : [];
+        const rows = market.filter(r => Number(r[3]) > 0);
+        if (rows.length < 2) {
+            set('maKsDDValue', '-');
+            set('maKsDDUpdated', '코스피 자료를 못 불러왔어요');
+            set('maKsDDSummary', '-');
+            maSetBadge('maKsDDBadge', '자료 없음', 'ma-info');
+            clear();
+            return;
+        }
+        let hiRow = rows[0];
+        rows.forEach(r => { if (Number(r[3]) > Number(hiRow[3])) hiRow = r; });
+        const last = rows[rows.length - 1];
+        const cur = Number(last[3]), hi = Number(hiRow[3]);
+        const dd = (cur / hi - 1) * 100;
+        const md = x => {
+            const s = String(x == null ? '' : x);
+            if (/^\d{4}-\d{2}-\d{2}$/.test(s)) { const m = s.match(/^\d{4}-(\d{2})-(\d{2})$/); return Number(m[1]) + '/' + Number(m[2]); }
+            const d = new Date(s);
+            if (isNaN(d.getTime())) return '-';
+            const k = new Date(d.getTime() + 9 * 3600 * 1000);
+            return (k.getUTCMonth() + 1) + '/' + k.getUTCDate();
+        };
+        set('maKsDDValue', dd.toFixed(1));
+        set('maKsDDUpdated', '고점 ' + Math.round(hi).toLocaleString() + ' (' + md(hiRow[0]) + ') · 현재 ' + Math.round(cur).toLocaleString() + ' (' + md(last[0]) + ')');
+        const hit = KS_DD_STATS.filter(s => dd <= -s.t).pop();
+        maSetBadge('maKsDDBadge', hit ? '-' + hit.t + '% 선 넘음' : '10% 미만', 'ma-info');
+        set('maKsDDSummary', hit ? '과거 ' + hit.t + '% 넘게 빠졌을 때 1년 뒤 오른 비율 ' + hit.w1 + '% (' + hit.n + '번, 평균 ' + (hit.a1 >= 0 ? '+' : '') + hit.a1.toFixed(1) + '%) · 2년 뒤 ' + hit.w2 + '%' : '고점 대비 10% 미만 하락');
+        document.querySelectorAll('#maKsDDTable tr[data-t]').forEach(tr => { const on = hit && Number(tr.dataset.t) === hit.t; tr.style.fontWeight = on ? '700' : ''; tr.style.background = on ? 'rgba(142,142,147,0.15)' : ''; });
     }
     function renderUSMA() {
         const market = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA && LAST_FETCHED_DATA.market)
