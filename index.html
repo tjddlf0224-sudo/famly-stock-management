@@ -509,6 +509,13 @@
         .ma-fear   { --ma-accent: #007AFF; color: #007AFF; }
         .ma-panic  { --ma-accent: #5856D6; color: #5856D6; }
         .ma-info   { --ma-accent: #8E8E93; color: #8E8E93; }
+        .dd-btns { display: inline-flex; margin: 2px 0 8px; }
+        .dd-btns button { width: 74px; }
+        .dd-panel { display: none; margin: 4px 0 10px; padding: 8px 10px; border-radius: 10px; background: rgba(120,120,128,0.08); font-size: 12px; line-height: 1.5; color: var(--text-main); }
+        .dd-panel table { width: 100%; border-collapse: collapse; margin: 6px 0; }
+        .dd-panel td { white-space: nowrap; padding: 4px 2px; text-align: right; }
+        .dd-panel td:first-child { text-align: left; }
+        .dd-panel .dd-note { color: var(--text-sub); font-size: 11px; }
         #maNasDDTable td { white-space: nowrap; padding: 6px 4px; text-align: right; }
         #maNasDDTable td:first-child { text-align: left; }
         #maKsDDTable td { white-space: nowrap; padding: 6px 4px; text-align: right; }
@@ -1011,6 +1018,11 @@
                 <div class="ma-card-name">📉 코스피 고점 대비</div>
                 <div class="ma-card-badge" id="maKsDDBadge">-</div>
             </div>
+            <div class="fng-range dd-btns" id="maKsDDBtns">
+                <button type="button" id="maKsDDBuy" data-k="buy">📈 매수</button>
+                <button type="button" id="maKsDDSell" data-k="sell">📉 매도</button>
+            </div>
+            <div class="dd-panel" id="maKsDDPanel"></div>
             <div class="ma-card-value-row">
                 <div class="ma-card-value" id="maKsDDValue">-</div>
                 <div class="ma-card-unit">%</div>
@@ -1298,6 +1310,11 @@
                 <div class="ma-card-name">📉 나스닥100 고점 대비</div>
                 <div class="ma-card-badge" id="maNasDDBadge">-</div>
             </div>
+            <div class="fng-range dd-btns" id="maNasDDBtns">
+                <button type="button" id="maNasDDBuy" data-k="buy">📈 매수</button>
+                <button type="button" id="maNasDDSell" data-k="sell">📉 매도</button>
+            </div>
+            <div class="dd-panel" id="maNasDDPanel"></div>
             <div class="ma-card-value-row">
                 <div class="ma-card-value" id="maNasDDValue">-</div>
                 <div class="ma-card-unit">%</div>
@@ -6128,7 +6145,57 @@
     }
 
     // ====== 미국 이동평균선 (MarketData 시트 활용) ======
-    const NAS_DD_STATS = [{"t": 5, "n": 61, "w1": 83, "a1": 21.1, "ex": -4.8}, {"t": 10, "n": 35, "w1": 81, "a1": 25.8, "ex": -3.1}, {"t": 15, "n": 16, "w1": 87, "a1": 31.5, "ex": -4.4}, {"t": 20, "n": 8, "w1": 75, "a1": 33.9, "ex": -9.9}, {"t": 25, "n": 5, "w1": 80, "a1": 22.5, "ex": -12.4}, {"t": 30, "n": 4, "w1": 75, "a1": 17.8, "ex": -8.1}, {"t": 40, "n": 1, "w1": 0, "a1": -42.3, "ex": -71.2}, {"t": 50, "n": 1, "w1": 0, "a1": -27.3, "ex": -63.6}]; // 나스닥100(^NDX) 1985~: 고점 대비 처음 t% 빠진 날(신고점마다 다시 장전) → 1년 뒤 승률 w1%·평균 a1%, 신고점 전까지 더 빠진 폭 중앙 ex%
+    // ===== 고점 대비 카드 공용: 매수/매도 패널 (과거 통계 표시용, 권유 아님) =====
+    const DD_HLABEL = { '3m': '3개월', '6m': '6개월', '1y': '1년', '2y': '2년' };
+    const NAS_DD_BASE = {"3m": {"w": 70, "a": 4.2}, "6m": {"w": 74, "a": 8.4}, "1y": {"w": 82, "a": 17.6}, "2y": {"w": 86, "a": 38.0}}; // 아무 날이나 샀을 때(평소) 기간별 승률 w%·평균 a%
+    const KS_DD_BASE = {"3m": {"w": 60, "a": 2.9}, "6m": {"w": 57, "a": 6.5}, "1y": {"w": 64, "a": 13.7}, "2y": {"w": 70, "a": 21.8}};
+    const DD_OPEN = { nas: null, ks: null }; // 열린 패널: 'buy' | 'sell' | null (저장 안 함)
+    function ddFmtA(a) { return (a >= 0 ? '+' : '') + Number(a).toFixed(1) + '%'; }
+    function ddVerdictOf(x, b) {
+        if (x.w >= b.w + 10 && x.a > b.a) return { t: '📈 유리', bg: 'rgba(52,199,89,.15)' };
+        if (x.w <= b.w - 10 || x.a < 0) return { t: '📉 불리', bg: 'rgba(255,59,48,.12)' };
+        return { t: '➖ 비슷', bg: 'rgba(142,142,147,.15)' };
+    }
+    function ddBuyHTML(hit, base, minPct) {
+        if (!hit) return '고점 대비 ' + minPct + '% 미만 — 과거 기준 매수 신호 없음';
+        let out = '지금 -' + hit.t + '% 선 넘음 → 과거 같은 때 산 경우<table><tr class="dd-note"><td>기간</td><td>오른 비율</td><td>평균</td><td>평소</td><td>판정</td></tr>';
+        let few = null;
+        ['3m', '6m', '1y', '2y'].forEach(k => {
+            const x = hit.h[k], b = base[k], v = ddVerdictOf(x, b);
+            out += '<tr><td>' + DD_HLABEL[k] + '</td><td>' + x.w + '%</td><td>' + ddFmtA(x.a) + '</td><td>' + b.w + '%·' + ddFmtA(b.a) + '</td><td style="background:' + v.bg + ';border-radius:6px;text-align:center;padding:4px 3px">' + v.t + '</td></tr>';
+            if (x.n < 5 && (few === null || x.n < few)) few = x.n;
+        });
+        out += '</table>';
+        if (few !== null) out += '<div class="dd-note">사례 ' + few + '번뿐 — 참고만</div>';
+        return out;
+    }
+    function ddSellHTML(kind, nd) {
+        const tail = '검증된 매도 신호 없음';
+        if (kind === 'ks') return tail + ' — 매도는 목표가·비중 규칙으로.';
+        const g = (!nd || nd.gap200 === null || nd.gap200 === undefined || nd.gap200 === '') ? NaN : Number(nd.gap200);
+        let out = isFinite(g) ? '200일선 대비 ' + (g >= 0 ? '+' : '') + (g * 100).toFixed(1) + '%' : '200일선 자료 없음';
+        out += '<br>' + (isFinite(g) && g >= 0.25
+            ? '⚠️ 과열 경고 켜짐: 과거 3개월 하락 36%(평소 30%) · 6개월 안 10% 조정 45%(평소 31%) · 평균 수익은 +10.6%로 평소보다 높음'
+            : '과열 경고 꺼짐 (200일선 +25% 이상일 때 켜짐)');
+        return out + '<br>' + tail + ' — 과열 뒤에도 평균은 올랐음. 매도는 목표가·비중 규칙으로.';
+    }
+    function ddPanelRender(p, kind, html, rerender) {
+        const buy = document.getElementById(p + 'Buy'), sell = document.getElementById(p + 'Sell'), panel = document.getElementById(p + 'Panel'), box = document.getElementById(p + 'Btns');
+        const open = DD_OPEN[kind];
+        if (buy) buy.classList.toggle('on', open === 'buy');
+        if (sell) sell.classList.toggle('on', open === 'sell');
+        if (box) box.onclick = ev => {
+            const k = ev && ev.target && ev.target.dataset ? ev.target.dataset.k : null;
+            if (k !== 'buy' && k !== 'sell') return;
+            DD_OPEN[kind] = DD_OPEN[kind] === k ? null : k;
+            rerender();
+        };
+        if (panel) {
+            if (open) { panel.innerHTML = html[open]; panel.style.display = 'block'; }
+            else { panel.innerHTML = ''; panel.style.display = 'none'; }
+        }
+    }
+    const NAS_DD_STATS = [{"t": 5, "n": 61, "w1": 83, "a1": 21.1, "ex": -4.8, "h": {"3m": {"n": 60, "w": 65, "a": 3.7}, "6m": {"n": 59, "w": 78, "a": 11.9}, "1y": {"n": 59, "w": 83, "a": 21.1}, "2y": {"n": 56, "w": 80, "a": 45.2}}}, {"t": 10, "n": 35, "w1": 81, "a1": 25.8, "ex": -3.1, "h": {"3m": {"n": 34, "w": 74, "a": 8.1}, "6m": {"n": 33, "w": 88, "a": 19.2}, "1y": {"n": 32, "w": 81, "a": 25.8}, "2y": {"n": 31, "w": 77, "a": 43.0}}}, {"t": 15, "n": 16, "w1": 87, "a1": 31.5, "ex": -4.4, "h": {"3m": {"n": 15, "w": 80, "a": 9.6}, "6m": {"n": 15, "w": 87, "a": 22.1}, "1y": {"n": 15, "w": 87, "a": 31.5}, "2y": {"n": 14, "w": 93, "a": 82.6}}}, {"t": 20, "n": 8, "w1": 75, "a1": 33.9, "ex": -9.9, "h": {"3m": {"n": 8, "w": 75, "a": 14.2}, "6m": {"n": 8, "w": 75, "a": 25.6}, "1y": {"n": 8, "w": 75, "a": 33.9}, "2y": {"n": 7, "w": 86, "a": 73.2}}}, {"t": 25, "n": 5, "w1": 80, "a1": 22.5, "ex": -12.4, "h": {"3m": {"n": 5, "w": 100, "a": 14.0}, "6m": {"n": 5, "w": 80, "a": 19.5}, "1y": {"n": 5, "w": 80, "a": 22.5}, "2y": {"n": 5, "w": 80, "a": 37.2}}}, {"t": 30, "n": 4, "w1": 75, "a1": 17.8, "ex": -8.1, "h": {"3m": {"n": 4, "w": 100, "a": 13.7}, "6m": {"n": 4, "w": 100, "a": 22.6}, "1y": {"n": 4, "w": 75, "a": 17.8}, "2y": {"n": 4, "w": 75, "a": 37.8}}}, {"t": 40, "n": 1, "w1": 0, "a1": -42.3, "ex": -71.2, "h": {"3m": {"n": 1, "w": 0, "a": -27.2}, "6m": {"n": 1, "w": 0, "a": -29.9}, "1y": {"n": 1, "w": 0, "a": -42.3}, "2y": {"n": 1, "w": 0, "a": -61.1}}}, {"t": 50, "n": 1, "w1": 0, "a1": -27.3, "ex": -63.6, "h": {"3m": {"n": 1, "w": 0, "a": -22.9}, "6m": {"n": 1, "w": 0, "a": -21.8}, "1y": {"n": 1, "w": 0, "a": -27.3}, "2y": {"n": 1, "w": 0, "a": -54.9}}}]; // 나스닥100(^NDX) 1985~: 고점 대비 처음 t% 빠진 날(신고점마다 다시 장전) → 1년 뒤 승률 w1%·평균 a1%, 신고점 전까지 더 빠진 폭 중앙 ex%, h=기간별(3m/6m/1y/2y) 횟수 n·승률 w%·평균 a% (매수 패널용)
     function renderNasDD() {
         const set = (id, t) => { const e = document.getElementById(id); if (e) e.textContent = t; };
         const nd = (typeof LAST_FETCHED_DATA !== 'undefined' && LAST_FETCHED_DATA) ? LAST_FETCHED_DATA.ndxDD : null;
@@ -6139,6 +6206,7 @@
             const g0 = document.getElementById('maNasDDGap'); if (g0) g0.style.display = 'none';
             maSetBadge('maNasDDBadge', '자료 없음', 'ma-info');
             document.querySelectorAll('#maNasDDTable tr[data-t]').forEach(tr => { tr.style.fontWeight = ''; tr.style.background = ''; });
+            ddPanelRender('maNasDD', 'nas', { buy: '시세를 못 불러왔어요', sell: ddSellHTML('nas', null) }, renderNasDD);
             return;
         }
         const cur = Number(nd.close), hi = Number(nd.high);
@@ -6150,6 +6218,7 @@
         maSetBadge('maNasDDBadge', hit ? '-' + hit.t + '% 선 넘음' : '5% 미만', 'ma-info');
         set('maNasDDSummary', hit ? '과거 ' + hit.t + '% 넘게 빠졌을 때 1년 뒤 오른 비율 ' + hit.w1 + '% (' + hit.n + '번, 평균 ' + (hit.a1 >= 0 ? '+' : '') + hit.a1 + '%)' : '고점 대비 5% 미만 하락');
         document.querySelectorAll('#maNasDDTable tr[data-t]').forEach(tr => { const on = hit && Number(tr.dataset.t) === hit.t; tr.style.fontWeight = on ? '700' : ''; tr.style.background = on ? 'rgba(142,142,147,0.15)' : ''; });
+        ddPanelRender('maNasDD', 'nas', { buy: ddBuyHTML(hit, NAS_DD_BASE, 5), sell: ddSellHTML('nas', nd) }, renderNasDD);
         const gEl = document.getElementById('maNasDDGap');
         if (gEl) {
             const g = (nd.gap200 === null || nd.gap200 === undefined || nd.gap200 === '') ? NaN : Number(nd.gap200);
@@ -6159,7 +6228,7 @@
             } else { gEl.style.display = 'none'; }
         }
     }
-    const KS_DD_STATS = [{"t": 10, "n": 12, "w1": 17, "a1": -17.0, "w2": 25, "rec": 0.6, "rmin": 0.0, "rmax": 5.7, "rn": 14, "bmax": 21}, {"t": 20, "n": 7, "w1": 29, "a1": -19.0, "w2": 86, "rec": 2.9, "rmin": 0.2, "rmax": 5.7, "rn": 7, "bmax": 19}, {"t": 30, "n": 5, "w1": 60, "a1": 11.1, "w2": 100, "rec": 2.3, "rmin": 0.7, "rmax": 5.2, "rn": 5, "bmax": 17}, {"t": 40, "n": 4, "w1": 50, "a1": 26.3, "w2": 75, "rec": 1.9, "rmin": 0.7, "rmax": 4.8, "rn": 4, "bmax": 12}, {"t": 45, "n": 3, "w1": 67, "a1": 15.1, "w2": 100, "rec": 2.2, "rmin": 1.4, "rmax": 4.8, "rn": 3, "bmax": 12}, {"t": 50, "n": 3, "w1": 100, "a1": 40.8, "w2": 100, "rec": 2.2, "rmin": 1.4, "rmax": 4.8, "rn": 3, "bmax": 11}]; // 코스피(^KS11) 1996-12~: 고점 대비 처음 t% 빠진 날(신고점마다 다시 장전) → 1년 뒤 승률 w1%·평균 a1%, 2년 뒤 승률 w2%, rec=전고점 회복 중앙 년·rmin/rmax 최단/최장·rn 회복 횟수·bmax 바닥까지 최대 개월
+    const KS_DD_STATS = [{"t": 10, "n": 12, "w1": 17, "a1": -17.0, "w2": 25, "rec": 0.6, "rmin": 0.0, "rmax": 5.7, "rn": 14, "bmax": 21, "h": {"3m": {"n": 15, "w": 40, "a": 3.5}, "6m": {"n": 13, "w": 62, "a": 4.0}, "1y": {"n": 12, "w": 17, "a": -17.0}, "2y": {"n": 12, "w": 25, "a": -5.3}}}, {"t": 20, "n": 7, "w1": 29, "a1": -19.0, "w2": 86, "rec": 2.9, "rmin": 0.2, "rmax": 5.7, "rn": 7, "bmax": 19, "h": {"3m": {"n": 8, "w": 62, "a": -3.6}, "6m": {"n": 7, "w": 29, "a": -3.6}, "1y": {"n": 7, "w": 29, "a": -19.0}, "2y": {"n": 7, "w": 86, "a": 5.9}}}, {"t": 30, "n": 5, "w1": 60, "a1": 11.1, "w2": 100, "rec": 2.3, "rmin": 0.7, "rmax": 5.2, "rn": 5, "bmax": 17, "h": {"3m": {"n": 6, "w": 33, "a": -0.6}, "6m": {"n": 5, "w": 20, "a": -8.7}, "1y": {"n": 5, "w": 60, "a": 11.1}, "2y": {"n": 5, "w": 100, "a": 39.5}}}, {"t": 40, "n": 4, "w1": 50, "a1": 26.3, "w2": 75, "rec": 1.9, "rmin": 0.7, "rmax": 4.8, "rn": 4, "bmax": 12, "h": {"3m": {"n": 4, "w": 50, "a": 9.3}, "6m": {"n": 4, "w": 50, "a": 9.4}, "1y": {"n": 4, "w": 50, "a": 26.3}, "2y": {"n": 4, "w": 75, "a": 61.2}}}, {"t": 45, "n": 3, "w1": 67, "a1": 15.1, "w2": 100, "rec": 2.2, "rmin": 1.4, "rmax": 4.8, "rn": 3, "bmax": 12, "h": {"3m": {"n": 3, "w": 33, "a": 4.1}, "6m": {"n": 3, "w": 33, "a": -4.1}, "1y": {"n": 3, "w": 67, "a": 15.1}, "2y": {"n": 3, "w": 100, "a": 67.2}}}, {"t": 50, "n": 3, "w1": 100, "a1": 40.8, "w2": 100, "rec": 2.2, "rmin": 1.4, "rmax": 4.8, "rn": 3, "bmax": 11, "h": {"3m": {"n": 3, "w": 100, "a": 24.4}, "6m": {"n": 3, "w": 67, "a": 8.8}, "1y": {"n": 3, "w": 100, "a": 40.8}, "2y": {"n": 3, "w": 100, "a": 90.5}}}]; // 코스피(^KS11) 1996-12~: 고점 대비 처음 t% 빠진 날(신고점마다 다시 장전) → 1년 뒤 승률 w1%·평균 a1%, 2년 뒤 승률 w2%, rec=전고점 회복 중앙 년·rmin/rmax 최단/최장·rn 회복 횟수·bmax 바닥까지 최대 개월
     function renderKospiDD() {
         const set = (id, t) => { const e = document.getElementById(id); if (e) e.textContent = t; };
         const clear = () => document.querySelectorAll('#maKsDDTable tr[data-t]').forEach(tr => { tr.style.fontWeight = ''; tr.style.background = ''; });
@@ -6172,6 +6241,7 @@
             const r0 = document.getElementById('maKsDDRec'); if (r0) r0.style.display = 'none';
             maSetBadge('maKsDDBadge', '자료 없음', 'ma-info');
             clear();
+            ddPanelRender('maKsDD', 'ks', { buy: '자료를 못 불러왔어요', sell: ddSellHTML('ks', null) }, renderKospiDD);
             return;
         }
         let hiRow = rows[0];
@@ -6193,6 +6263,7 @@
         maSetBadge('maKsDDBadge', hit ? '-' + hit.t + '% 선 넘음' : '10% 미만', 'ma-info');
         set('maKsDDSummary', hit ? '과거 ' + hit.t + '% 넘게 빠졌을 때 1년 뒤 오른 비율 ' + hit.w1 + '% (' + hit.n + '번, 평균 ' + (hit.a1 >= 0 ? '+' : '') + hit.a1.toFixed(1) + '%) · 2년 뒤 ' + hit.w2 + '%' : '고점 대비 10% 미만 하락');
         document.querySelectorAll('#maKsDDTable tr[data-t]').forEach(tr => { const on = hit && Number(tr.dataset.t) === hit.t; tr.style.fontWeight = on ? '700' : ''; tr.style.background = on ? 'rgba(142,142,147,0.15)' : ''; });
+        ddPanelRender('maKsDD', 'ks', { buy: ddBuyHTML(hit, KS_DD_BASE, 10), sell: ddSellHTML('ks', null) }, renderKospiDD);
         const rEl = document.getElementById('maKsDDRec');
         if (rEl) {
             if (hit) {
